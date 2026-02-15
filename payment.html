@@ -327,7 +327,6 @@
         openModal('receiptModal');
     };
 
-    // 履歴のフラグ（済/未）を更新する関数
     function updateHistoryFlag(field) {
         if (!lastHistoryId) return;
         const history = JSON.parse(localStorage.getItem(STORAGE_KEYS.HISTORY) || '[]');
@@ -357,27 +356,31 @@
             if(info.cashReceived > 0) { 
                 t += `預り:              ¥${info.cashReceived.toLocaleString().padStart(8)}\n釣銭:              ¥${info.change.toLocaleString().padStart(8)}\n`; 
             }
+            t += `------------------------------\nありがとうございました\n`;
+            if(d.memo) t += `${d.memo}\n`;
         } else {
             const label = d.receiptType || "商品代";
             t += `        領 収 書\n${info.date.toLocaleDateString()}\n            様\n\n`;
             t += `金額: ¥${info.totalAmount.toLocaleString()} -\n\n但 ${label}として正に領収いたしました\n--------------------------------\n`;
             t += `発行者: ${d.companyName || ""}\n`;
+            if(d.address) t += `住所: ${d.address}\n`;
+            if(d.tel) t += `電話: ${d.tel}\n`;
+            t += `------------------------------\nありがとうございました\n`;
         }
-        t += `------------------------------\nありがとうございました\n`;
         document.getElementById('receiptPreview').innerText = t;
     };
 
     document.getElementById('backBtn').onclick = () => { location.href = 'register.html'; };
 
-    // ボタンクリック時にフラグを更新
     document.getElementById('btnPrintReceipt').onclick = () => { 
-        updateHistoryFlag('receiptIssued'); // レシート済にする
+        generateContent('receipt');
+        updateHistoryFlag('receiptIssued');
         window.print(); 
     };
 
     document.getElementById('btnPrintBill').onclick = () => { 
-        updateHistoryFlag('billIssued');    // 領収書済にする
         generateContent('bill'); 
+        updateHistoryFlag('billIssued');
         window.print(); 
     };
 
