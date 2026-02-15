@@ -51,16 +51,18 @@
         
         .product-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; overflow-y: auto; align-content: start; flex: 1; }
         
-        /* 修正箇所：aspect-ratioを削除し、最低の高さを指定することで文字量に合わせて伸びるように変更 */
-        .product-card { min-height: 120px; background: var(--white); border: 2px solid var(--black); display: flex; flex-direction: column; cursor: pointer; box-shadow: 2px 2px 0px var(--black); position: relative; overflow: hidden; }
+        /* 修正：最低高さを確保し、中身が詰まっても伸びるように設定 */
+        .product-card { min-height: 110px; background: var(--white); border: 2px solid var(--black); display: flex; flex-direction: column; cursor: pointer; box-shadow: 2px 2px 0px var(--black); position: relative; overflow: hidden; }
         .product-card:active { transform: translate(1px, 1px); box-shadow: none; }
         .product-card.out-of-stock { opacity: 0.5; cursor: not-allowed; background: #eee; }
         .out-of-stock-label { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: red; color: white; padding: 2px 5px; font-size: 0.7rem; font-weight: 900; z-index: 10; pointer-events: none; }
 
-        .empty-slot { min-height: 120px; border: 1px solid transparent; }
-        .p-img { width: 100%; height: 60px; object-fit: cover; border-bottom: 1px solid var(--black); flex-shrink: 0; }
-        .p-info { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 800; font-size: 0.7rem; padding: 5px 2px; text-align: center; line-height: 1.2;}
-        .p-stock { font-size: 0.6rem; color: #666; margin-top: 2px; }
+        .empty-slot { min-height: 110px; border: 1px solid transparent; }
+        
+        /* 修正：PC版の画像高さを少し抑え、文字スペースを確保 */
+        .p-img { width: 100%; height: 55px; object-fit: cover; border-bottom: 1px solid var(--black); flex-shrink: 0; }
+        .p-info { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 800; font-size: 0.7rem; padding: 4px 2px; text-align: center; line-height: 1.2; overflow: visible; }
+        .p-stock { font-size: 0.6rem; color: #666; margin-top: 1px; }
         .stock-alert { color: #ff0000 !important; font-weight: 900 !important; }
 
         /* 注文リスト */
@@ -93,8 +95,10 @@
             .product-section { flex: none; height: 50vh; }
             .product-grid { grid-template-columns: repeat(4, 1fr); }
 
-            /* スマホ版の高さ調整 */
-            .product-card { min-height: 90px; }
+            /* 修正：スマホ版のカード高さを少し上げ、画像を小さくして文字の欠けを防止 */
+            .product-card { min-height: 95px; }
+            .p-img { height: 40px; } 
+            .p-info { padding: 2px; }
             .empty-slot { min-height: 0; height: 0; }
 
             .cart-section { flex: 1; border-left: none; border-top: 3px solid var(--black); }
