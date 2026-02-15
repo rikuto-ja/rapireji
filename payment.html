@@ -167,7 +167,6 @@
         STOCK_CONFIG: 'rapireji_stock_config'
     };
 
-    // 店舗情報読み込み（undefined対策の強化）
     const savedProfile = JSON.parse(localStorage.getItem(STORAGE_KEYS.PROFILE)) || {};
     let shopInfo = {
         companyName: savedProfile.companyName || "らぴレジ店舗",
@@ -180,7 +179,7 @@
     let order = JSON.parse(sessionStorage.getItem('currentOrder'));
     let discountVal = 0, keypadBuffer = "0", keypadMode = "";
     let discountUnit = "¥";
-    let lastPaymentInfo = {};
+    let lastHistoryId = null; // 現在の取引IDを保持
 
     document.addEventListener('DOMContentLoaded', () => {
         if (!order) { location.href = "register.html"; return; }
@@ -276,6 +275,8 @@
 
     window.processPayment = (method, cashReceived = 0) => {
         const finalTotal = Math.max(0, order.totalAmount - discountVal);
+        const now = new Date();
+        lastHistoryId = Date.now(); // IDを保存
         
         let products = JSON.parse(localStorage.getItem(STORAGE_KEYS.PRODUCTS) || '[]');
         const stockConfig = JSON.parse(localStorage.getItem(STORAGE_KEYS.STOCK_CONFIG) || '{"enabled":false}');
@@ -299,8 +300,8 @@
             localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products));
         }
 
-        const historyData = {
-            id: Date.now(),
+        const historyEntry = {
+            id: lastHistoryId,
             items: order.items,
             subtotal: order.totalAmount,
             discount: discountVal,
@@ -308,23 +309,37 @@
             paymentMethod: method,
             cashReceived: cashReceived,
             change: (cashReceived > 0) ? (cashReceived - finalTotal) : 0,
-            createdAt: new Date().toISOString(),
-            receiptIssued: true, // 履歴画面で「レ済」にするために追加
-            billIssued: false
+            createdAt: now.toISOString(),
+            isVoided: false,
+            receiptIssued: false, // 最初はfalse
+            billIssued: false    // 最初はfalse
         };
 
         let history = JSON.parse(localStorage.getItem(STORAGE_KEYS.HISTORY) || '[]');
-        history.push(historyData);
+        history.push(historyEntry);
         localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(history));
 
-        lastPaymentInfo = { ...historyData, date: new Date() };
+        // プレビュー用にデータを保持
+        window.currentPaymentData = { ...historyEntry, date: now };
+        
         sessionStorage.removeItem('currentOrder');
         generateContent('receipt'); 
         openModal('receiptModal');
     };
 
+    // 履歴のフラグ（済/未）を更新する関数
+    function updateHistoryFlag(field) {
+        if (!lastHistoryId) return;
+        const history = JSON.parse(localStorage.getItem(STORAGE_KEYS.HISTORY) || '[]');
+        const idx = history.findIndex(h => h.id === lastHistoryId);
+        if (idx !== -1) {
+            history[idx][field] = true;
+            localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(history));
+        }
+    }
+
     window.generateContent = (type) => {
-        const info = lastPaymentInfo; const d = shopInfo; let t = "";
+        const info = window.currentPaymentData; const d = shopInfo; let t = "";
         const dateStr = info.date.toLocaleString();
         
         if (type === 'receipt') {
@@ -353,8 +368,19 @@
     };
 
     document.getElementById('backBtn').onclick = () => { location.href = 'register.html'; };
-    document.getElementById('btnPrintReceipt').onclick = () => { window.print(); };
-    document.getElementById('btnPrintBill').onclick = () => { generateContent('bill'); window.print(); };
+
+    // ボタンクリック時にフラグを更新
+    document.getElementById('btnPrintReceipt').onclick = () => { 
+        updateHistoryFlag('receiptIssued'); // レシート済にする
+        window.print(); 
+    };
+
+    document.getElementById('btnPrintBill').onclick = () => { 
+        updateHistoryFlag('billIssued');    // 領収書済にする
+        generateContent('bill'); 
+        window.print(); 
+    };
+
     window.openModal = (id) => document.getElementById(id).classList.remove('hidden');
     window.closeModal = (id) => document.getElementById(id).classList.add('hidden');
 </script>
