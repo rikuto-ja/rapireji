@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>在庫管理 | らぴレジ</title>
+    <style>
+        :root {
+            --black: #000000; --white: #ffffff; --gray-bg: #f8f9fa;
+            --gray-light: #e9ecef; --danger: #ff0000; --header-h: 60px;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; }
+        
+        body { 
+            background-color: var(--gray-bg); 
+            min-height: 100vh; 
+            display: flex; 
+            flex-direction: column; 
+        }
+        
+        header { 
+            height: var(--header-h); border-bottom: 3px solid var(--black); 
+            display: flex; align-items: center; padding: 0 20px; 
+            background: var(--white); position: sticky; top: 0; z-index: 1100;
+            justify-content: space-between;
+        }
+        .header-left { display: flex; align-items: center; }
+        header h1 { font-size: 1.5rem; font-weight: 900; margin-left: 20px; white-space: nowrap; }
+
+        .header-ad-space {
+            flex: 1; margin-left: 20px; height: 50px; background: #fff;
+            display: flex; align-items: center; justify-content: center;
+            border: 1px dashed #ccc; overflow: hidden;
+        }
+
+        .menu-trigger { width: 30px; height: 22px; cursor: pointer; position: relative; }
+        .menu-trigger span { display: block; width: 100%; height: 4px; background: var(--black); position: absolute; left: 0; transition: all 0.3s; }
+        .menu-trigger span:nth-child(1) { top: 0; }
+        .menu-trigger span:nth-child(2) { top: 9px; }
+        .menu-trigger span:nth-child(3) { top: 18px; }
+        .menu-trigger.open span:nth-child(1) { transform: translateY(9px) rotate(45deg); }
+        .menu-trigger.open span:nth-child(2) { opacity: 0; }
+        .menu-trigger.open span:nth-child(3) { transform: translateY(-9px) rotate(-45deg); }
+
+        .side-nav {
+            position: fixed; top: var(--header-h); left: 0; width: 250px; height: 100%;
+            background: var(--white); border-right: 3px solid var(--black);
+            z-index: 1050; transition: transform 0.3s; padding: 20px;
+        }
+        .side-nav.hidden { transform: translateX(-100%); }
+        .menu-link { display: block; padding: 15px; color: var(--black); font-weight: 800; text-decoration: none; border-bottom: 1px solid var(--gray-light); }
+
+        .container { max-width: 800px; width: 100%; margin: 0 auto; padding: 20px; flex: 1; }
+        
+        .config-card { background: #fff; border: 4px solid #000; padding: 20px; margin-bottom: 20px; box-shadow: 6px 6px 0 #000; }
+        .toggle-section { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; }
+        
+        .toggle-btn { 
+            padding: 10px 20px; font-weight: 900; border: 3px solid #000; cursor: pointer; 
+            background: #fff; border-radius: 0; appearance: none; -webkit-appearance: none;
+        }
+        .toggle-btn.active { background: #000; color: #fff; }
+        
+        .alert-config { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; font-weight: bold; }
+        .alert-config input { 
+            width: 70px; padding: 8px; border: 3px solid #000; text-align: center; font-weight: 900; 
+            border-radius: 0; appearance: none; -webkit-appearance: none;
+        }
+
+        .stock-list { display: flex; flex-direction: column; gap: 12px; }
+        .stock-item { 
+            background: #fff; border: 3px solid #000; padding: 15px; cursor: pointer; 
+            display: flex; justify-content: space-between; align-items: center;
+            transition: transform 0.1s;
+        }
+        .stock-item:active { transform: scale(0.98); }
+        .stock-item.low-stock { border-color: var(--danger); background: #fff5f5; box-shadow: 4px 4px 0 var(--danger); }
+        
+        .item-info { flex: 1; }
+        .item-name { font-weight: 900; font-size: 1.1rem; margin-bottom: 4px; }
+        .item-count { font-weight: 900; font-size: 1.3rem; }
+        .item-count.low { color: var(--danger); }
+
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 2000; padding: 20px; }
+        .modal-content { background: #fff; padding: 25px; border: 4px solid #000; width: 100%; max-width: 400px; box-shadow: 10px 10px 0 #000; }
+        .hidden { display: none !important; }
+        
+        .input-group { margin: 20px 0; }
+        label { display: block; font-weight: 900; margin-bottom: 8px; }
+        input[type="number"] { 
+            width: 100%; padding: 12px; border: 3px solid #000; font-weight: 900; font-size: 1.2rem;
+            border-radius: 0; appearance: none; -webkit-appearance: none;
+        }
+        
+        .btn-black { 
+            width: 100%; background: #000; color: #fff; padding: 15px; border: none; font-weight: 900; 
+            font-size: 1.1rem; cursor: pointer; margin-top: 10px; border-radius: 0;
+        }
+        .btn-outline { 
+            width: 100%; background: #fff; color: #000; padding: 13px; border: 3px solid #000; font-weight: 900; 
+            cursor: pointer; margin-top: 10px; border-radius: 0;
+        }
+
+        .purchase-link-text {
+            display: inline-block; margin-top: 8px; color: #007bff; font-weight: 800; text-decoration: underline;
+        }
+
+        @media screen and (max-width: 768px) {
+            header { padding: 0 10px; }
+            header h1 { font-size: 0.9rem; margin-left: 10px; flex-shrink: 0; }
+            .header-ad-space { display: flex !important; flex: 1; margin-left: 10px; height: 35px; min-width: 80px; border: 1px solid #ddd; font-size: 8px; }
+            .container { padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-left">
+        <div class="menu-trigger" id="menu-btn"><span></span><span></span><span></span></div>
+        <h1>在庫管理</h1>
+    </div>
+    <div class="header-ad-space" id="ad-top">
+        <span style="color:#ccc; font-size: 8px; font-weight: 900;">AD</span>
+    </div>
+</header>
+
+<nav class="side-nav hidden" id="side-menu">
+    <a href="register.html" class="menu-link">レジ操作</a>
+    <a href="product.html" class="menu-link">商品管理</a>
+    <a href="history.html" class="menu-link">販売履歴</a>
+    <a href="settings.html" class="menu-link">設定</a>
+</nav>
+
+<main class="container">
+    <div class="config-card">
+        <div class="toggle-section">
+            <span style="font-weight: 900;">在庫管理機能</span>
+            <button id="masterToggle" class="toggle-btn" onclick="toggleStockSystem()">読み込み中...</button>
+        </div>
+        <div id="alertConfigArea" class="alert-config hidden">
+            <span>在庫が</span>
+            <input type="number" id="thresholdInput" onchange="saveThreshold()" min="0">
+            <span>個未満でアラート</span>
+        </div>
+    </div>
+
+    <div id="stockListContainer" class="stock-list"></div>
+</main>
+
+<div id="stockModal" class="modal hidden">
+    <div class="modal-content">
+        <h3 id="modalItemName" style="font-weight: 900; border-left: 8px solid #000; padding-left: 10px; margin-bottom: 15px;">商品名</h3>
+        
+        <div class="input-group">
+            <label>現在の在庫数</label>
+            <input type="number" id="editStockValue" inputmode="numeric">
+        </div>
+
+        <div id="urlArea" class="hidden" style="margin-bottom: 15px; padding: 10px; background: var(--gray-light); border: 2px solid #000;">
+            <p style="font-size: 0.8rem; font-weight: 800;">再注文用リンク：</p>
+            <a id="purchaseLink" href="#" target="_blank" class="purchase-link-text">商品ページを開く</a>
+        </div>
+
+        <button onclick="updateStock()" class="btn-black">在庫数を更新</button>
+        <button onclick="closeModal()" class="btn-outline">キャンセル</button>
+    </div>
+</div>
+
+<script>
+    const STORAGE_KEYS = {
+        PRODUCTS: 'rapireji_products',
+        STOCK_CONFIG: 'rapireji_stock_config'
+    };
+
+    let products = [];
+    let config = { enabled: false, threshold: 5 };
+    let selectedItemId = null;
+
+    // --- メニュー操作 ---
+    const menuBtn = document.getElementById('menu-btn');
+    const sideMenu = document.getElementById('side-menu');
+    menuBtn.onclick = () => { menuBtn.classList.toggle('open'); sideMenu.classList.toggle('hidden'); };
+
+    // --- 初期化 ---
+    document.addEventListener('DOMContentLoaded', () => {
+        loadData();
+        render();
+    });
+
+    function loadData() {
+        products = JSON.parse(localStorage.getItem(STORAGE_KEYS.PRODUCTS) || '[]');
+        const savedConfig = localStorage.getItem(STORAGE_KEYS.STOCK_CONFIG);
+        if (savedConfig) config = JSON.parse(savedConfig);
+    }
+
+    function saveData() {
+        localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products));
+        localStorage.setItem(STORAGE_KEYS.STOCK_CONFIG, JSON.stringify(config));
+    }
+
+    // --- 在庫システム切り替え ---
+    window.toggleStockSystem = () => {
+        config.enabled = !config.enabled;
+        saveData();
+        render();
+    };
+
+    window.saveThreshold = () => {
+        config.threshold = Number(document.getElementById('thresholdInput').value);
+        saveData();
+        render();
+    };
+
+    // --- モーダル操作 ---
+    window.openStockModal = (id) => {
+        const item = products.find(p => p.id === id);
+        if (!item) return;
+        selectedItemId = id;
+        document.getElementById('modalItemName').innerText = item.name;
+        document.getElementById('editStockValue').value = item.stock || 0;
+        
+        // 【修正】仕入先URLリンクの制御ロジック
+        const urlArea = document.getElementById('urlArea');
+        const purchaseLink = document.getElementById('purchaseLink');
+        const purchaseUrl = (item.purchaseUrl || "").trim();
+
+        if (purchaseUrl !== "") {
+            purchaseLink.href = purchaseUrl.startsWith('http') ? purchaseUrl : 'https://' + purchaseUrl;
+            urlArea.classList.remove('hidden');
+        } else {
+            urlArea.classList.add('hidden');
+        }
+        
+        document.getElementById('stockModal').classList.remove('hidden');
+    };
+
+    window.closeModal = () => {
+        document.getElementById('stockModal').classList.add('hidden');
+        selectedItemId = null;
+    };
+
+    window.updateStock = () => {
+        const newVal = Number(document.getElementById('editStockValue').value);
+        if (isNaN(newVal)) return alert("数値を入力してください");
+        
+        const index = products.findIndex(p => p.id === selectedItemId);
+        if (index !== -1) {
+            products[index].stock = newVal;
+            saveData();
+            closeModal();
+            render();
+        }
+    };
+
+    // --- 描画 ---
+    function render() {
+        const btn = document.getElementById('masterToggle');
+        btn.innerText = config.enabled ? "有効" : "無効";
+        btn.className = config.enabled ? "toggle-btn active" : "toggle-btn";
+        document.getElementById('alertConfigArea').className = config.enabled ? "alert-config" : "alert-config hidden";
+        document.getElementById('thresholdInput').value = config.threshold;
+
+        const container = document.getElementById('stockListContainer');
+        container.innerHTML = "";
+
+        if (!config.enabled) {
+            container.innerHTML = `<p style="text-align:center; padding:40px; font-weight:bold; opacity:0.5;">在庫管理機能は無効です。</p>`;
+            return;
+        }
+
+        const activeItems = products
+            .filter(p => p.isActive !== false)
+            .sort((a, b) => (Number(a.stock) || 0) - (Number(b.stock) || 0));
+
+        if (activeItems.length === 0) {
+            container.innerHTML = `<p style="text-align:center; padding:40px; font-weight:bold; opacity:0.5;">登録された商品がありません。</p>`;
+            return;
+        }
+
+        activeItems.forEach(item => {
+            const stockNum = Number(item.stock) || 0;
+            const isLow = stockNum < config.threshold;
+            const div = document.createElement('div');
+            div.className = `stock-item ${isLow ? 'low-stock' : ''}`;
+            div.innerHTML = `
+                <div class="item-info">
+                    <div class="item-name">${item.name}</div>
+                    <div class="item-count ${isLow ? 'low' : ''}">
+                        ${isLow ? '⚠️ 残り ' : ''}${stockNum} 個
+                    </div>
+                </div>
+                <div style="font-weight:900; font-size: 0.8rem; opacity: 0.5;">編集 ＞</div>
+            `;
+            div.onclick = () => window.openStockModal(item.id);
+            container.appendChild(div);
+        });
+    }
+</script>
+
+</body>
+</html>
