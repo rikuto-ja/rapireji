@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>レジ操作 | らぴレジ</title>
     <style>
         :root {
@@ -13,7 +13,20 @@
         body { background-color: var(--white); overflow: hidden; display: flex; flex-direction: column; height: 100vh; width: 100vw; }
         
         /* ヘッダー */
-        header { height: var(--header-h); border-bottom: 3px solid var(--black); display: flex; align-items: center; padding: 0 20px; background: var(--white); z-index: 1100; flex-shrink: 0; justify-content: space-between; }
+        header {
+            /* 元の高さ 60px に セーフエリア分をプラスする設定 */
+            height: calc(var(--header-h) + env(safe-area-inset-top)); 
+            border-bottom: 3px solid var(--black);
+            display: flex; 
+            align-items: center; 
+            /* 下記のように padding-top を調整 */
+            padding: env(safe-area-inset-top) 20px 0 20px; 
+            background: var(--white);
+            position: sticky; 
+            top: 0; 
+            z-index: 1100;
+            justify-content: space-between;
+        }
         .header-left { display: flex; align-items: center; }
         header h1 { font-size: 1.2rem; font-weight: 900; margin-left: 20px; white-space: nowrap; }
         .header-ad-space { flex: 1; margin-left: 20px; height: 45px; background: #fff; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 1px dashed #ccc; }
