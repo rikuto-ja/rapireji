@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>在庫管理 | らぴレジ</title>
     <style>
         :root {
@@ -18,10 +18,18 @@
             flex-direction: column; 
         }
         
-        header { 
-            height: var(--header-h); border-bottom: 3px solid var(--black); 
-            display: flex; align-items: center; padding: 0 20px; 
-            background: var(--white); position: sticky; top: 0; z-index: 1100;
+        header {
+            /* 元の高さ 60px に セーフエリア分をプラスする設定 */
+            height: calc(var(--header-h) + env(safe-area-inset-top)); 
+            border-bottom: 3px solid var(--black);
+            display: flex; 
+            align-items: center; 
+            /* 下記のように padding-top を調整 */
+            padding: env(safe-area-inset-top) 20px 0 20px; 
+            background: var(--white);
+            position: sticky; 
+            top: 0; 
+            z-index: 1100;
             justify-content: space-between;
         }
         .header-left { display: flex; align-items: center; }
@@ -297,6 +305,5 @@
         });
     }
 </script>
-
 </body>
 </html>
