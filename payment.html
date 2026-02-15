@@ -209,7 +209,6 @@
             if(item.name) {
                 const b = document.createElement('button');
                 b.className = 'preset-btn';
-                // 単位を判定して表示
                 const displayVal = item.isPercent ? `${item.value}%` : `¥${item.value}`;
                 b.innerText = `${item.name}\n${displayVal}`;
                 b.onclick = () => { 
@@ -267,7 +266,6 @@
     document.getElementById('keypadConfirmBtn').onclick = () => {
         const val = Number(keypadBuffer);
         if (keypadMode === 'discount') {
-            // パーセント計算か金額引きかを判定
             if (discountUnit === "%") {
                 discountVal = Math.floor(order.totalAmount * (val / 100));
             } else {
