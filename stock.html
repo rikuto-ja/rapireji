@@ -50,10 +50,21 @@
         .menu-trigger.open span:nth-child(2) { opacity: 0; }
         .menu-trigger.open span:nth-child(3) { transform: translateY(-9px) rotate(-45deg); }
 
-        .side-nav {
-            position: fixed; top: var(--header-h); left: 0; width: 250px; height: 100%;
-            background: var(--white); border-right: 3px solid var(--black);
-            z-index: 1050; transition: transform 0.3s; padding: 20px;
+        .side-nav { 
+            position: fixed; 
+            top: var(--header-h); 
+            left: 0; 
+            width: 250px; 
+            /* 修正：ヘッダーの高さ分を引いた100%にし、さらにセーフエリア分を下まで伸ばす */
+            height: calc(100% - var(--header-h)); 
+            padding-bottom: env(safe-area-inset-bottom); 
+            background: var(--white); 
+            border-right: 3px solid var(--black); 
+            z-index: 1050; 
+            transition: transform 0.3s; 
+            padding-left: 20px;
+            padding-right: 20px;
+            padding-top: 20px;
         }
         .side-nav.hidden { transform: translateX(-100%); }
         .menu-link { display: block; padding: 15px; color: var(--black); font-weight: 800; text-decoration: none; border-bottom: 1px solid var(--gray-light); }
