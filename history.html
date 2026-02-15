@@ -296,21 +296,29 @@
 
     function reissue(type) { 
         if (!selectedItem) return;
-        generatePreview(type);
-        window.print(); 
         
-        const history = JSON.parse(localStorage.getItem(STORAGE_KEYS.HISTORY) || '[]');
-        const idx = history.findIndex(h => h.id === selectedItem.id);
-        if (idx !== -1) {
-            if (type === 'receipt') history[idx].receiptIssued = true;
-            else history[idx].billIssued = true;
-            localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(history));
-            selectedItem = history[idx];
-            showDetail(selectedItem);
-            loadHistory();
-        }
+        // 1. まずプレビュー内容を生成して画面を書き換える（setTimeoutの外で実行！）
+        generatePreview(type);
+        
+        // 2. iPhone/Safari対策：0.1秒待ってから印刷ダイアログを起動
+        setTimeout(() => {
+            window.print(); 
+            
+            // 3. 印刷（ダイアログを閉じた後）にフラグを更新して画面をリフレッシュ
+            const history = JSON.parse(localStorage.getItem(STORAGE_KEYS.HISTORY) || '[]');
+            const idx = history.findIndex(h => h.id === selectedItem.id);
+            if (idx !== -1) {
+                if (type === 'receipt') history[idx].receiptIssued = true;
+                else history[idx].billIssued = true;
+                localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(history));
+                
+                selectedItem = history[idx];
+                showDetail(selectedItem); // 詳細画面の「済」マークなどを更新
+                loadHistory();           // 一覧画面の「済」マークなどを更新
+            }
+        }, 100); 
     }
-
+    
     document.getElementById('btn-reissue-receipt').onclick = () => reissue('receipt');
     document.getElementById('btn-reissue-bill').onclick = () => reissue('bill');
     document.getElementById('btn-close-modal').onclick = () => document.getElementById('detailModal').classList.add('hidden');
