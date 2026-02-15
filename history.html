@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>販売履歴 | らぴレジ</title>
+    <style>
+        :root {
+            --black: #000000; --white: #ffffff; --gray-bg: #f8f9fa;
+            --gray-light: #e9ecef; --accent: #00ff00; --header-h: 60px;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; }
+        
+        body { background-color: var(--white); color: var(--black); min-height: 100vh; display: flex; flex-direction: column; }
+        
+        header {
+            height: var(--header-h); border-bottom: 3px solid var(--black);
+            display: flex; align-items: center; padding: 0 20px;
+            background: var(--white); position: sticky; top: 0; z-index: 1100;
+            justify-content: space-between;
+        }
+
+        .header-left { display: flex; align-items: center; }
+        header h1 { font-size: 1.5rem; font-weight: 900; margin-left: 20px; white-space: nowrap; }
+
+        .header-ad-space {
+            flex: 1; margin-left: 20px; height: 50px; background: #fff;
+            display: flex; align-items: center; justify-content: center;
+            border: 1px dashed #ccc; overflow: hidden;
+        }
+        
+        .menu-trigger { width: 30px; height: 22px; cursor: pointer; position: relative; }
+        .menu-trigger span { display: block; width: 100%; height: 4px; background: var(--black); position: absolute; left: 0; transition: all 0.3s; }
+        .menu-trigger span:nth-child(1) { top: 0; }
+        .menu-trigger span:nth-child(2) { top: 9px; }
+        .menu-trigger span:nth-child(3) { top: 18px; }
+        .menu-trigger.open span:nth-child(1) { transform: translateY(9px) rotate(45deg); }
+        .menu-trigger.open span:nth-child(2) { opacity: 0; }
+        .menu-trigger.open span:nth-child(3) { transform: translateY(-9px) rotate(-45deg); }
+
+        .side-nav {
+            position: fixed; top: var(--header-h); left: 0; width: 250px; height: 100%;
+            background: var(--white); border-right: 3px solid var(--black);
+            z-index: 1050; transition: transform 0.3s; padding: 20px;
+        }
+        .side-nav.hidden { transform: translateX(-100%); }
+        .menu-link { display: block; padding: 15px; color: var(--black); font-weight: 800; text-decoration: none; border-bottom: 1px solid var(--gray-light); }
+
+        .main-content { padding: 20px; max-width: 900px; margin: 0 auto; width: 100%; }
+        .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 25px; }
+        .summary-card { background: var(--white); border: 4px solid var(--black); padding: 12px; box-shadow: 5px 5px 0 var(--black); }
+        .summary-label { font-size: 0.7rem; font-weight: 900; margin-bottom: 5px; }
+        .summary-value { font-size: 1.1rem; font-weight: 900; word-break: break-all; }
+
+        .filter-section { border: 4px solid var(--black); padding: 20px; margin-bottom: 30px; background: var(--gray-bg); box-shadow: 5px 5px 0 var(--black); }
+        .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+        .filter-group { width: 100%; }
+        label { display: block; font-weight: 900; margin-bottom: 5px; font-size: 0.85rem; }
+        input { width: 100%; padding: 10px; border: 3px solid var(--black); font-weight: 800; border-radius: 0; font-size: 0.85rem; -webkit-appearance: none; }
+        
+        .btn-row { margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap; }
+        button { background: var(--black); color: var(--white); padding: 12px 20px; border: 3px solid var(--black); font-weight: 900; cursor: pointer; border-radius: 0; }
+        button:active { transform: translate(2px, 2px); }
+        .btn-outline { background: var(--white); color: var(--black); }
+
+        .history-item { border: 3px solid var(--black); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; cursor: pointer; font-weight: 900; background: #fff; }
+        .history-item.voided { background: #eee; border-color: #999; color: #999; text-decoration: line-through; }
+        .status-badge { font-size: 0.65rem; padding: 2px 6px; border: 2px solid var(--black); margin-left: 8px; font-weight: 900; }
+
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.98); display: flex; align-items: center; justify-content: center; z-index: 2000; }
+        .modal-content { background: #fff; padding: 30px; border: 6px solid #000; width: 95%; max-width: 500px; max-height: 90vh; overflow-y: auto; box-shadow: 10px 10px 0px var(--black); }
+        .modal.hidden { display: none !important; }
+
+        .receipt-area { background: #fff; border: 1px dashed #000; padding: 20px; font-family: monospace; white-space: pre-wrap; font-size: 0.85rem; line-height: 1.3; margin: 20px 0; color: #000; }
+
+        @media screen and (max-width: 768px) {
+            header { padding: 0 10px; }
+            header h1 { font-size: 0.9rem; margin-left: 10px; flex-shrink: 0; }
+            .header-ad-space { display: flex !important; flex: 1; margin-left: 10px; height: 35px; min-width: 80px; border: 1px solid #ddd; font-size: 8px; }
+        }
+
+        @media print {
+            @page { size: 58mm auto; margin: 0; }
+            body * { visibility: hidden; }
+            #receipt-text, #receipt-text * { visibility: visible !important; display: block !important; }
+            #receipt-text { position: absolute; left: 0; top: 0; width: 54mm; padding: 2mm; font-size: 9pt; border: none !important; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-left">
+        <div class="menu-trigger" id="menu-btn"><span></span><span></span><span></span></div>
+        <h1>販売履歴</h1>
+    </div>
+    <div class="header-ad-space" id="ad-top">
+        <span style="color:#ccc; font-size: 8px; font-weight: 900;">AD</span>
+    </div>
+</header>
+
+<nav class="side-nav hidden" id="side-menu">
+    <a href="register.html" class="menu-link">レジ操作</a>
+    <a href="product.html" class="menu-link">商品管理</a>
+    <a href="stock.html" class="menu-link">在庫管理</a>
+    <a href="settings.html" class="menu-link">設定</a>
+</nav>
+
+<main class="main-content">
+    <div class="summary-grid">
+        <div class="summary-card"><div class="summary-label">小計累計</div><div class="summary-value" id="sum-subtotal">¥0</div></div>
+        <div class="summary-card"><div class="summary-label">割引累計</div><div class="summary-value" id="sum-discount">¥0</div></div>
+        <div class="summary-card"><div class="summary-label">最終合計</div><div class="summary-value" id="sum-total">¥0</div></div>
+    </div>
+
+    <section class="filter-section">
+        <div class="filter-grid">
+            <div class="filter-group"><label>開始日時</label><input type="datetime-local" id="filter-start"></div>
+            <div class="filter-group"><label>終了日時</label><input type="datetime-local" id="filter-end"></div>
+        </div>
+        <div class="btn-row">
+            <button id="btn-search">絞り込み表示</button>
+            <button class="btn-outline" id="btn-csv-export">取引明細CSV</button>
+            <button class="btn-outline" id="btn-csv-items">商品別CSV</button>
+            <button class="btn-outline" id="btn-csv-time">時間別分析CSV</button>
+        </div>
+    </section>
+
+    <div id="history-container"></div>
+</main>
+
+<div id="detailModal" class="modal hidden">
+    <div class="modal-content">
+        <div class="detail-status-bar" id="detail-status-header" style="display:flex; margin-bottom:15px;"></div>
+        <h2 style="font-weight: 900; margin-bottom: 10px; border-left: 10px solid #000; padding-left: 10px;">販売詳細</h2>
+        <div id="detail-info"></div>
+        <div id="receipt-text" class="receipt-area"></div>
+        <button style="width:100%; margin-bottom:10px;" id="btn-reissue-receipt">レシート再発行</button>
+        <button style="width:100%; margin-bottom:10px;" id="btn-reissue-bill">領収書再発行</button>
+        <button id="btn-void-action" class="btn-outline" style="width:100%; color:red; border-color:red;">この取引を取り消す</button>
+        <button id="btn-close-modal" class="btn-outline" style="width:100%; margin-top:20px; border:none; text-decoration: underline;">閉じる</button>
+    </div>
+</div>
+
+<script type="module">
+    const STORAGE_KEYS = {
+        HISTORY: 'rapireji_history',
+        PROFILE: 'rapireji_profile',
+        PRODUCTS: 'rapireji_products'
+    };
+
+    let historyData = [];
+    let selectedItem = null;
+    let shopInfo = { companyName: "店舗", address: "", tel: "", memo: "", receiptType: "商品代" };
+
+    document.addEventListener('DOMContentLoaded', () => {
+        loadShopInfo();
+        loadHistory();
+    });
+
+    function loadShopInfo() {
+        const stored = localStorage.getItem(STORAGE_KEYS.PROFILE);
+        if (stored) shopInfo = { ...shopInfo, ...JSON.parse(stored) };
+    }
+
+    function loadHistory() {
+        const rawData = localStorage.getItem(STORAGE_KEYS.HISTORY);
+        historyData = rawData ? JSON.parse(rawData) : [];
+
+        const startVal = document.getElementById('filter-start').value;
+        const endVal = document.getElementById('filter-end').value;
+        
+        let displayData = [...historyData].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+        if (startVal) {
+            const start = new Date(startVal).getTime();
+            displayData = displayData.filter(h => new Date(h.createdAt).getTime() >= start);
+        }
+        if (endVal) {
+            const end = new Date(endVal).getTime();
+            displayData = displayData.filter(h => new Date(h.createdAt).getTime() <= end);
+        }
+
+        renderHistory(displayData);
+    }
+
+    function renderHistory(data) {
+        const container = document.getElementById('history-container');
+        container.innerHTML = ""; 
+        let totalSub = 0, totalDisc = 0;
+
+        data.forEach(h => {
+            if (!h.isVoided) {
+                totalSub += h.subtotal || 0;
+                totalDisc += h.discount || 0;
+            }
+            const date = new Date(h.createdAt).toLocaleString();
+            const div = document.createElement('div');
+            div.className = `history-item ${h.isVoided ? 'voided' : ''}`;
+            div.innerHTML = `
+                <span>${date}</span>
+                <div>
+                    ${h.receiptIssued ? '<span class="status-badge">レ済</span>' : ''}
+                    ${h.billIssued ? '<span class="status-badge">領済</span>' : ''}
+                    <span style="margin-left:10px;">¥${h.totalAmount.toLocaleString()}</span>
+                </div>`;
+            div.onclick = () => showDetail(h);
+            container.appendChild(div);
+        });
+
+        document.getElementById('sum-subtotal').innerText = `¥${totalSub.toLocaleString()}`;
+        document.getElementById('sum-discount').innerText = `¥${totalDisc.toLocaleString()}`;
+        document.getElementById('sum-total').innerText = `¥${(totalSub - totalDisc).toLocaleString()}`;
+    }
+
+    function showDetail(data) {
+        selectedItem = data;
+        const header = document.getElementById('detail-status-header');
+        header.innerHTML = `
+            <div class="status-pill" style="border:2px solid #000; font-size:0.7rem; font-weight:900; margin-right:5px; padding:2px 6px; opacity:${data.receiptIssued ? 1 : 0.2}">レシート: ${data.receiptIssued ? '済' : '未'}</div>
+            <div class="status-pill" style="border:2px solid #000; font-size:0.7rem; font-weight:900; margin-right:5px; padding:2px 6px; opacity:${data.billIssued ? 1 : 0.2}">領収書: ${data.billIssued ? '済' : '未'}</div>
+            ${data.isVoided ? '<div class="status-pill" style="background:#000; color:#fff; font-size:0.7rem; padding:2px 6px;">取消済</div>' : ''}`;
+        
+        let itemsHtml = data.items.map(i => `
+            <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
+                <span>${i.name} x${i.qty}</span>
+                <span>¥${(i.price*i.qty).toLocaleString()}</span>
+            </div>`).join('');
+            
+        document.getElementById('detail-info').innerHTML = `
+            <div style="padding:15px 0; border-bottom:2px solid #000;">${itemsHtml}</div>
+            <div style="display:flex;justify-content:space-between; padding-top:10px;"><span>小計</span><span>¥${data.subtotal.toLocaleString()}</span></div>
+            <div style="display:flex;justify-content:space-between; color:#666;"><span>割引</span><span>-¥${data.discount.toLocaleString()}</span></div>
+            <div style="display:flex;justify-content:space-between; font-weight:900; font-size:1.5rem; border-top:1px solid #eee;"><span>最終合計</span><span>¥${data.totalAmount.toLocaleString()}</span></div>
+            <div style="font-size:0.8rem; margin-top:10px;">決済: ${data.paymentMethod}</div>`;
+        
+        document.getElementById('btn-void-action').style.display = data.isVoided ? 'none' : 'block';
+        generatePreview('receipt');
+        document.getElementById('detailModal').classList.remove('hidden');
+    }
+
+    function generatePreview(type) {
+        const data = selectedItem; if (!data) return;
+        const d = shopInfo;
+        const dateStr = new Date(data.createdAt).toLocaleString();
+        let t = "";
+        
+        if (type === 'receipt') {
+            t += `      [ レシート(再) ]\n`;
+            t += `店名: ${d.companyName}\n`;
+            if(d.address) t += `住所: ${d.address}\n`; 
+            if(d.tel) t += `TEL: ${d.tel}\n`;
+            t += `日時: ${dateStr}\n--------------------------\n`;
+            data.items.forEach(i => t += `${i.name.padEnd(12)} x${i.qty} ¥${(i.price*i.qty).toLocaleString().padStart(7)}\n`);
+            t += `--------------------------\n小計:          ¥${data.subtotal.toLocaleString().padStart(8)}\n割引:         -¥${data.discount.toLocaleString().padStart(8)}\n合計:          ¥${data.totalAmount.toLocaleString().padStart(8)}\n決済: ${data.paymentMethod}\n`;
+            if(data.paymentMethod === '現金') {
+                t += `預り:          ¥${(data.cashReceived || 0).toLocaleString().padStart(8)}\n釣銭:          ¥${(data.change || 0).toLocaleString().padStart(8)}\n`;
+            }
+        } else {
+            const label = d.receiptType || "商品代";
+            t += `        領 収 書 (再)\n`;
+            t += `${new Date(data.createdAt).toLocaleDateString()}\n`;
+            t += `                    様\n\n`;
+            t += `金額: ¥${data.totalAmount.toLocaleString()} -\n\n`;
+            t += `但 ${label}として正に領収いたしました\n--------------------------\n`;
+            t += `発行者: ${d.companyName}\n`;
+            if(d.address) t += `住所: ${d.address}\n`;
+            if(d.tel) t += `電話: ${d.tel}\n`;
+        }
+        t += `--------------------------\nありがとうございました\n`;
+        document.getElementById('receipt-text').innerText = t;
+    }
+
+    function reissue(type) { 
+        if (!selectedItem) return;
+        generatePreview(type); window.print(); 
+        
+        const history = JSON.parse(localStorage.getItem(STORAGE_KEYS.HISTORY) || '[]');
+        const idx = history.findIndex(h => h.id === selectedItem.id);
+        if (idx !== -1) {
+            if (type === 'receipt') history[idx].receiptIssued = true;
+            else history[idx].billIssued = true;
+            localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(history));
+            selectedItem = history[idx];
+            showDetail(selectedItem);
+            loadHistory();
+        }
+    }
+
+    document.getElementById('btn-reissue-receipt').onclick = () => reissue('receipt');
+    document.getElementById('btn-reissue-bill').onclick = () => reissue('bill');
+    document.getElementById('btn-close-modal').onclick = () => document.getElementById('detailModal').classList.add('hidden');
+    document.getElementById('btn-search').onclick = loadHistory;
+
+    document.getElementById('btn-void-action').onclick = () => {
+        if(!confirm("この取引を取り消してよろしいですか？\n(在庫数も復元されます)")) return;
+        
+        const history = JSON.parse(localStorage.getItem(STORAGE_KEYS.HISTORY) || '[]');
+        const idx = history.findIndex(h => h.id === selectedItem.id);
+        
+        if (idx !== -1) {
+            // 1. 在庫の復元
+            const products = JSON.parse(localStorage.getItem(STORAGE_KEYS.PRODUCTS) || '[]');
+            selectedItem.items.forEach(soldItem => {
+                const pIdx = products.findIndex(p => p.id === soldItem.id);
+                if (pIdx !== -1) {
+                    // 在庫を戻す
+                    products[pIdx].stock = (Number(products[pIdx].stock) || 0) + soldItem.qty;
+                }
+            });
+            localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products));
+
+            // 2. 取引を「取消済」にする
+            history[idx].isVoided = true;
+            localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(history));
+            
+            document.getElementById('detailModal').classList.add('hidden');
+            loadHistory();
+            alert("取引を取り消し、在庫を復元しました。");
+        }
+    };
+
+    document.getElementById('btn-csv-export').onclick = () => {
+        let csv = "\uFEFF日時,購入商品内訳,小計,割引,最終合計,支払方法,取消,レシート発行,領収書発行\n";
+        historyData.forEach(h => { 
+            const d = new Date(h.createdAt);
+            const dateStr = `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
+            const itemDetail = h.items.map(i => `${i.name}x${i.qty}`).join(' / ');
+            csv += `"${dateStr}","${itemDetail}",${h.subtotal},${h.discount},${h.totalAmount},"${h.paymentMethod}",${h.isVoided},${h.receiptIssued},${h.billIssued}\n`; 
+        });
+        downloadCSV(csv, "取引明細レポート.csv");
+    };
+
+    document.getElementById('btn-csv-items').onclick = () => {
+        const itemMap = {};
+        historyData.filter(h => !h.isVoided).forEach(h => {
+            h.items.forEach(i => {
+                if (!itemMap[i.name]) itemMap[i.name] = { qty: 0, amount: 0 };
+                itemMap[i.name].qty += i.qty; itemMap[i.name].amount += (i.price * i.qty);
+            });
+        });
+        let csv = "\uFEFF商品名,販売個数,売上合計\n";
+        Object.keys(itemMap).forEach(name => { csv += `"${name}",${itemMap[name].qty},${itemMap[name].amount}\n`; });
+        downloadCSV(csv, "商品別売上分析.csv");
+    };
+    
+    document.getElementById('btn-csv-time').onclick = () => {
+        const timeMap = {}; const itemSet = new Set();
+        historyData.filter(h => !h.isVoided).forEach(h => {
+            const hour = new Date(h.createdAt).getHours();
+            if (!timeMap[hour]) timeMap[hour] = {};
+            h.items.forEach(i => { timeMap[hour][i.name] = (timeMap[hour][i.name] || 0) + i.qty; itemSet.add(i.name); });
+        });
+        const sortedItems = Array.from(itemSet);
+        let csv = "\uFEFF時間帯," + sortedItems.map(n => `"${n}"`).join(",") + ",合計個数\n";
+        for (let h = 0; h < 24; h++) {
+            let row = [`${h}時`]; let sum = 0;
+            sortedItems.forEach(name => { const qty = timeMap[h]?.[name] || 0; row.push(qty); sum += qty; });
+            row.push(sum); csv += row.join(",") + "\n";
+        }
+        downloadCSV(csv, "時間別商品分析.csv");
+    };
+
+    function downloadCSV(csv, filename) {
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
+        link.download = filename; link.click();
+    }
+
+    const menuBtn = document.getElementById('menu-btn');
+    const sideMenu = document.getElementById('side-menu');
+    menuBtn.onclick = () => { menuBtn.classList.toggle('open'); sideMenu.classList.toggle('hidden'); };
+</script>
+</body>
+</html>
