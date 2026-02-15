@@ -297,14 +297,19 @@
     function reissue(type) { 
         if (!selectedItem) return;
         
-        // 1. まずプレビュー内容を生成して画面を書き換える（setTimeoutの外で実行！）
+        // 1. まずテキストを生成して画面上の #receipt-text を書き換える
         generatePreview(type);
         
-        // 2. iPhone/Safari対策：0.1秒待ってから印刷ダイアログを起動
+        // 【重要】iPhoneに強制的に「画面が書き換わった」と認識させるため、
+        // わずかにスクロールさせるなどの刺激を与えると、再描画が走りやすくなります。
+        window.scrollTo(window.scrollX, window.scrollY);
+
+        // 2. 300ミリ秒（0.3秒）待つ。iPhoneの描画性能に合わせて少し余裕を持たせます。
         setTimeout(() => {
+            // 3. 印刷ダイアログを表示
             window.print(); 
             
-            // 3. 印刷（ダイアログを閉じた後）にフラグを更新して画面をリフレッシュ
+            // 4. フラグ更新などは印刷指示の「後」に行う
             const history = JSON.parse(localStorage.getItem(STORAGE_KEYS.HISTORY) || '[]');
             const idx = history.findIndex(h => h.id === selectedItem.id);
             if (idx !== -1) {
@@ -313,12 +318,12 @@
                 localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(history));
                 
                 selectedItem = history[idx];
-                showDetail(selectedItem); // 詳細画面の「済」マークなどを更新
-                loadHistory();           // 一覧画面の「済」マークなどを更新
+                showDetail(selectedItem);
+                loadHistory();
             }
-        }, 100); 
+        }, 300); // 100から300に増やしました
     }
-    
+
     document.getElementById('btn-reissue-receipt').onclick = () => reissue('receipt');
     document.getElementById('btn-reissue-bill').onclick = () => reissue('bill');
     document.getElementById('btn-close-modal').onclick = () => document.getElementById('detailModal').classList.add('hidden');
