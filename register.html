@@ -14,12 +14,10 @@
         
         /* ヘッダー */
         header {
-            /* 元の高さ 60px に セーフエリア分をプラスする設定 */
             height: calc(var(--header-h) + env(safe-area-inset-top)); 
             border-bottom: 3px solid var(--black);
             display: flex; 
             align-items: center; 
-            /* 下記のように padding-top を調整 */
             padding: env(safe-area-inset-top) 20px 0 20px; 
             background: var(--white);
             position: sticky; 
@@ -92,6 +90,10 @@
             .main-layout { flex-direction: column; }
             .product-section { flex: none; height: 50vh; }
             .product-grid { grid-template-columns: repeat(4, 1fr); }
+
+            /* 商品カードの重なり修正：スマホ版のみアスペクト比を解除 */
+            .product-card { aspect-ratio: auto; min-height: 90px; }
+            .empty-slot { aspect-ratio: auto; height: 0; }
 
             .cart-section { flex: 1; border-left: none; border-top: 3px solid var(--black); }
             .drag-handle { cursor: row-resize; touch-action: none; padding: 5px 10px 10px 10px; }
@@ -168,10 +170,9 @@
     window.addEventListener('DOMContentLoaded', () => {
         initDragResize();
         loadData();
-        restoreCart(); // カート復元時に表示を更新するようにしました
+        restoreCart();
     });
 
-    // --- レイアウト調整（ドラッグ） ---
     function initDragResize() {
         const handle = document.getElementById('drag-handle');
         const productSection = document.querySelector('.product-section');
@@ -209,14 +210,11 @@
         window.addEventListener('touchend', stopDrag);
     }
 
-    // --- データ読み込み ---
     function loadData() {
-        // 在庫設定読み込み
         const config = JSON.parse(localStorage.getItem(STORAGE_KEYS.STOCK_CONFIG) || '{"enabled":false, "threshold":0}');
         isStockEnabled = config.enabled;
         alertThreshold = Number(config.threshold);
 
-        // カテゴリ
         const categories = JSON.parse(localStorage.getItem(STORAGE_KEYS.CATEGORIES) || '[]');
         const bar = document.getElementById('categoryTabs');
         bar.innerHTML = "";
@@ -231,7 +229,6 @@
             bar.appendChild(btn);
         });
 
-        // 商品
         allProducts = JSON.parse(localStorage.getItem(STORAGE_KEYS.PRODUCTS) || '[]');
         
         if (!currentCategory && firstCat) {
@@ -284,7 +281,6 @@
         }
     }
 
-    // --- カート機能 ---
     function handleProductClick(p) {
         const inCart = cart.find(c => c.id === p.id);
         const currentQty = inCart ? inCart.qty : 0;
@@ -317,7 +313,6 @@
             cart.push({ id: p.id, name: p.name, price: Number(p.price), qty: 1 }); 
         }
 
-        // 在庫警告アラート
         if (isStockEnabled) {
             const remaining = Number(p.stock) - nextQty;
             if (remaining < alertThreshold && remaining >= 0 && !alertedStatus[p.id]) {
@@ -382,7 +377,7 @@
             const orderData = JSON.parse(storedOrder);
             cart = orderData.items || [];
             updateCartUI();
-            renderProducts(); // カート内容を反映した状態で在庫表示を更新します
+            renderProducts();
         }
     }
 
