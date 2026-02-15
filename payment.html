@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>お支払い | らぴレジ</title>
+    <style>
+        :root {
+            --black: #000000; --white: #ffffff; --gray-bg: #f8f9fa;
+            --gray-light: #e9ecef; --danger: #ff0000; --header-h: 60px;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; }
+        
+        body { background-color: var(--gray-bg); min-height: 100vh; display: flex; flex-direction: column; overflow-x: hidden; }
+        
+        header { 
+            height: var(--header-h); border-bottom: 3px solid var(--black); 
+            display: flex; align-items: center; padding: 0 20px; 
+            background: var(--white); flex-shrink: 0;
+            justify-content: space-between;
+        }
+        .header-left { display: flex; align-items: center; }
+        .btn-back { background: var(--white); border: 2px solid var(--black); padding: 8px 15px; font-weight: 900; cursor: pointer; margin-right: 15px; }
+
+        /* 広告枠の追加 */
+        .header-ad-space {
+            flex: 1; margin-left: 20px; height: 50px; background: #fff;
+            display: flex; align-items: center; justify-content: center;
+            overflow: hidden; border: 1px dashed #ccc;
+        }
+
+        .container { flex: 1; display: flex; padding: 30px; gap: 30px; justify-content: center; overflow-y: auto; }
+
+        @media screen and (max-width: 768px) {
+            header { padding: 0 10px; }
+            header h1 { font-size: 0.9rem; margin-left: 10px; flex-shrink: 0; }
+            .header-ad-space {
+                display: flex !important; flex: 1; margin-left: 10px;
+                height: 35px; min-width: 80px; border: 1px solid #ddd;
+                background: #fff; font-size: 8px;
+            }
+            .container { flex-direction: column; align-items: center; padding: 15px; gap: 20px; }
+            .price-details { order: 1; width: 100%; }
+            .payment-grid { order: 2; width: 100%; }
+        }
+
+        .price-details {
+            width: 100%; max-width: 400px; 
+            background: var(--white); border: 4px solid var(--black);
+            padding: 25px; box-shadow: 10px 10px 0 var(--black); height: fit-content;
+        }
+        .price-line { display: flex; justify-content: space-between; margin-bottom: 15px; font-weight: 800; font-size: 1.1rem; }
+        .price-line.total { margin-top: 15px; padding-top: 15px; border-top: 4px solid var(--black); font-size: 1.8rem; font-weight: 900; }
+
+        .payment-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; width: 100%; max-width: 500px; }
+        .pay-btn {
+            background: var(--white); border: 4px solid var(--black); padding: 30px 15px;
+            font-size: 1.2rem; font-weight: 900; cursor: pointer; box-shadow: 6px 6px 0 var(--black);
+            display: flex; align-items: center; justify-content: center; text-align: center;
+            min-height: 100px;
+        }
+        .pay-btn:active { transform: translate(3px, 3px); box-shadow: none; }
+        .pay-btn.discount-trigger { color: var(--danger); border-color: var(--danger); }
+        .empty-slot { background: transparent; border: none; box-shadow: none; pointer-events: none; }
+
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 2000; padding: 10px; }
+        .modal-content { background: #fff; padding: 20px; border: 4px solid #000; width: 100%; max-width: 380px; box-shadow: 10px 10px 0 #000; max-height: 95vh; overflow-y: auto; }
+        .modal.hidden { display: none !important; }
+
+        .numpad-display { width: 100%; padding: 10px; font-size: 1.8rem; border: 3px solid #000; text-align: right; font-weight: 900; margin-bottom: 10px; background: #eee; }
+        .numpad-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+        .num-btn { padding: 12px; border: 2px solid #000; background: #fff; font-size: 1.3rem; font-weight: 900; cursor: pointer; }
+
+        .discount-presets { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-top: 10px; }
+        .preset-btn { background: #fff; border: 2px solid var(--danger); color: var(--danger); padding: 8px 5px; font-weight: 800; font-size: 0.8rem; cursor: pointer; }
+
+        .btn-black { width: 100%; background: #000; color: #fff; padding: 15px; border: none; font-weight: 900; cursor: pointer; font-size: 1.1rem; margin-top: 10px; }
+        .btn-outline { width: 100%; background: #fff; color: #000; padding: 15px; border: 2px solid #000; font-weight: 900; cursor: pointer; margin-top: 10px; }
+
+        .receipt-area {
+            background: #fff; border: 1px dashed #000; padding: 15px; font-family: monospace;
+            white-space: pre-wrap; font-size: 0.8rem; line-height: 1.2; margin-bottom: 15px; color: #000;
+        }
+
+        @media print {
+            @page { size: 58mm auto; margin: 0; }
+            body * { visibility: hidden; }
+            #receiptPreview, #receiptPreview * { visibility: visible !important; display: block !important; }
+            #receiptPreview { 
+                position: absolute; left: 0; top: 0; width: 54mm; 
+                padding: 2mm; font-size: 9pt; border: none !important; background: white !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-left">
+        <button id="backBtn" class="btn-back">← 戻る</button>
+        <h1 style="font-weight: 900;">お支払い</h1>
+    </div>
+    <div class="header-ad-space" id="ad-top">
+        <span style="color:#ccc; font-size: 8px; font-weight: 900;">AD</span>
+    </div>
+</header>
+
+<main class="container">
+    <div class="price-details">
+        <div class="price-line"><span>小計</span><span id="subtotal">¥0</span></div>
+        <div class="price-line" style="color: var(--danger);"><span>割引額</span><span id="discountAmount">-¥0</span></div>
+        <div class="price-line total"><span>最終合計</span><span id="finalTotal">¥0</span></div>
+    </div>
+
+    <div class="payment-grid" id="paymentGrid">
+        <button class="pay-btn discount-trigger" onclick="openKeypad('discount')">割引</button>
+    </div>
+</main>
+
+<div id="keypadModal" class="modal hidden">
+    <div class="modal-content">
+        <h3 id="keypadTitle" style="margin-bottom: 10px; font-weight: 900;">金額入力</h3>
+        <div id="keypadDisplay" class="numpad-display">0</div>
+        <div class="numpad-grid">
+            <button class="num-btn" onclick="pressNum('7')">7</button>
+            <button class="num-btn" onclick="pressNum('8')">8</button>
+            <button class="num-btn" onclick="pressNum('9')">9</button>
+            <button class="num-btn" onclick="pressNum('4')">4</button>
+            <button class="num-btn" onclick="pressNum('5')">5</button>
+            <button class="num-btn" onclick="pressNum('6')">6</button>
+            <button class="num-btn" onclick="pressNum('1')">1</button>
+            <button class="num-btn" onclick="pressNum('2')">2</button>
+            <button class="num-btn" onclick="pressNum('3')">3</button>
+            <button class="num-btn" onclick="pressNum('0')">0</button>
+            <button class="num-btn" onclick="pressNum('00')">00</button>
+            <button id="discountUnitBtn" class="num-btn" onclick="toggleDiscountUnit()" style="background: #eee; border-color: #000;">¥</button>
+        </div>
+        <div id="discountPresetArea" class="discount-presets"></div>
+        <button id="keypadConfirmBtn" class="btn-black">確定</button>
+        <button onclick="closeModal('keypadModal')" class="btn-outline">キャンセル</button>
+    </div>
+</div>
+
+<div id="receiptModal" class="modal hidden">
+    <div class="modal-content">
+        <h3 style="text-align: center; margin-bottom: 15px; font-weight: 900;">決済完了</h3>
+        <div id="receiptPreview" class="receipt-area"></div>
+        <div style="display: flex; flex-direction: column; gap: 5px;">
+            <button id="btnPrintReceipt" class="btn-black" style="background: #808080;">レシート印刷</button>
+            <button id="btnPrintBill" class="btn-black" style="background: #808080;">領収書印刷</button>
+            <button onclick="location.href='register.html'" class="btn-outline" style="border-width:3px; background:#eee;">次の会計へ</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // settings.htmlで保存したキーと一致させる
+    const STORAGE_KEYS = {
+        HISTORY: 'rapireji_history',
+        PROFILE: 'rapireji_profile',
+        PAYMENTS: 'rapireji_payments',
+        DISCOUNTS: 'rapireji_discounts',
+        PRODUCTS: 'rapireji_products',
+        STOCK_CONFIG: 'rapireji_stock_config'
+    };
+
+    // 初期値の読み込み
+    let shopInfo = JSON.parse(localStorage.getItem(STORAGE_KEYS.PROFILE)) || { companyName: "らぴレジ店舗", address: "", tel: "", memo: "", receiptType: "商品代" };
+    let order = JSON.parse(sessionStorage.getItem('currentOrder'));
+    let discountVal = 0, keypadBuffer = "0", keypadMode = "";
+    let discountUnit = "¥";
+    let lastPaymentInfo = {};
+
+    document.addEventListener('DOMContentLoaded', () => {
+        if (!order) { location.href = "register.html"; return; }
+        initSettings();
+        updateDisplay();
+    });
+
+    function initSettings() {
+        const paymentGrid = document.getElementById('paymentGrid');
+        
+        // 「割引」ボタン以外をリセット
+        paymentGrid.innerHTML = '<button class="pay-btn discount-trigger" onclick="openKeypad(\'discount\')">割引</button>';
+        
+        // settings.htmlで保存された決済方法を反映
+        const savedPayments = JSON.parse(localStorage.getItem(STORAGE_KEYS.PAYMENTS)) || ["現金", "交通系IC", "クレジットカード", "バーコード決済", "その他"];
+        
+        savedPayments.forEach(btnName => {
+            if(btnName && btnName.trim() !== "") {
+                const btn = document.createElement('button');
+                btn.className = 'pay-btn';
+                btn.innerText = btnName;
+                // 「現金」という文字列が含まれる場合はキーパッドを開く、それ以外は即時決済
+                btn.onclick = () => (btnName.includes('現金')) ? openKeypad('cash') : processPayment(btnName);
+                paymentGrid.appendChild(btn);
+            }
+        });
+
+        // settings.htmlで保存された割引プリセットを反映
+        const discArea = document.getElementById('discountPresetArea');
+        discArea.innerHTML = "";
+        const savedDiscounts = JSON.parse(localStorage.getItem(STORAGE_KEYS.DISCOUNTS)) || [];
+        savedDiscounts.forEach(item => {
+            if(item.name) {
+                const b = document.createElement('button');
+                b.className = 'preset-btn';
+                b.innerText = `${item.name}\n¥${item.value}`;
+                b.onclick = () => { 
+                    discountUnit = "¥";
+                    document.getElementById('discountUnitBtn').innerText = "¥";
+                    keypadBuffer = String(item.value); 
+                    updateKeypadDisplay(); 
+                };
+                discArea.appendChild(b);
+            }
+        });
+    }
+
+    function updateDisplay() {
+        const subtotal = order.totalAmount;
+        const finalTotal = Math.max(0, subtotal - discountVal);
+        document.getElementById('subtotal').innerText = `¥${subtotal.toLocaleString()}`;
+        document.getElementById('discountAmount').innerText = `-¥${discountVal.toLocaleString()}`;
+        document.getElementById('finalTotal').innerText = `¥${finalTotal.toLocaleString()}`;
+    }
+
+    window.openKeypad = (mode) => {
+        keypadMode = mode; keypadBuffer = "0";
+        discountUnit = "¥";
+        document.getElementById('discountUnitBtn').innerText = "¥";
+        document.getElementById('keypadTitle').innerText = mode === 'cash' ? "現金お預かり" : "割引額入力";
+        document.getElementById('discountUnitBtn').style.visibility = (mode === 'discount') ? 'visible' : 'hidden';
+        document.getElementById('discountPresetArea').style.display = (mode === 'discount') ? 'grid' : 'none';
+        updateKeypadDisplay(); openModal('keypadModal');
+    };
+    
+    window.toggleDiscountUnit = () => {
+        if (keypadMode !== 'discount') return;
+        discountUnit = (discountUnit === "¥") ? "%" : "¥";
+        document.getElementById('discountUnitBtn').innerText = discountUnit;
+        updateKeypadDisplay();
+    };
+
+    window.pressNum = (num) => { 
+        if (keypadBuffer === "0") {
+            if(num === '00') return;
+            keypadBuffer = num;
+        } else {
+            keypadBuffer += num; 
+        }
+        updateKeypadDisplay(); 
+    };
+
+    function updateKeypadDisplay() { 
+        const valStr = Number(keypadBuffer).toLocaleString();
+        document.getElementById('keypadDisplay').innerText = (keypadMode === 'discount' && discountUnit === "%") ? `${valStr}%` : `¥${valStr}`;
+    }
+
+    document.getElementById('keypadConfirmBtn').onclick = () => {
+        const val = Number(keypadBuffer);
+        if (keypadMode === 'discount') {
+            discountVal = (discountUnit === "%") ? Math.floor(order.totalAmount * (val / 100)) : val;
+            updateDisplay(); closeModal('keypadModal'); 
+        } else {
+            const finalTotal = order.totalAmount - discountVal;
+            if (val < finalTotal) return alert("金額不足");
+            processPayment('現金', val); closeModal('keypadModal');
+        }
+    };
+
+    window.processPayment = (method, cashReceived = 0) => {
+        const finalTotal = Math.max(0, order.totalAmount - discountVal);
+        
+        // --- 在庫管理ロジック開始 ---
+        let products = JSON.parse(localStorage.getItem(STORAGE_KEYS.PRODUCTS) || '[]');
+        const stockConfig = JSON.parse(localStorage.getItem(STORAGE_KEYS.STOCK_CONFIG) || '{"enabled":false}');
+
+        if (stockConfig.enabled) {
+            // 在庫チェック
+            for (const item of order.items) {
+                const product = products.find(p => p.id === item.id);
+                if (product) {
+                    const currentStock = Number(product.stock || 0);
+                    if (currentStock < item.qty) {
+                        alert(`「${item.name}」の在庫が不足しています（現在庫: ${currentStock}）`);
+                        return; // 決済を中断
+                    }
+                }
+            }
+
+            // 在庫を減算
+            products = products.map(p => {
+                const soldItem = order.items.find(item => item.id === p.id);
+                if (soldItem) {
+                    return { ...p, stock: Number(p.stock) - soldItem.qty };
+                }
+                return p;
+            });
+            localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products));
+        }
+        // --- 在庫管理ロジック終了 ---
+
+        const historyData = {
+            id: Date.now(),
+            items: order.items,
+            subtotal: order.totalAmount,
+            discount: discountVal,
+            totalAmount: finalTotal,
+            paymentMethod: method,
+            cashReceived: cashReceived,
+            change: (cashReceived > 0) ? (cashReceived - finalTotal) : 0,
+            createdAt: new Date().toISOString()
+        };
+
+        let history = JSON.parse(localStorage.getItem(STORAGE_KEYS.HISTORY) || '[]');
+        history.push(historyData);
+        localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(history));
+
+        lastPaymentInfo = { ...historyData, date: new Date() };
+        sessionStorage.removeItem('currentOrder');
+        generateContent('receipt'); 
+        openModal('receiptModal');
+    };
+
+    window.generateContent = (type) => {
+        const info = lastPaymentInfo; const d = shopInfo; let t = "";
+        const dateStr = info.date.toLocaleString();
+        
+        if (type === 'receipt') {
+            t += `      [ レシート ]\n店名: ${d.companyName}\n`;
+            if(d.address) t += `住所: ${d.address}\n`; 
+            if(d.tel) t += `TEL: ${d.tel}\n`;
+            t += `日時: ${dateStr}\n------------------------------\n`;
+            info.items.forEach(item => { 
+                t += `${item.name.padEnd(14)} x${item.qty} ¥${(item.price * item.qty).toLocaleString().padStart(7)}\n`; 
+            });
+            t += `------------------------------\n小計:              ¥${info.subtotal.toLocaleString().padStart(8)}\n`;
+            if(info.discount > 0) t += `割引:             -¥${info.discount.toLocaleString().padStart(8)}\n`;
+            t += `合計:              ¥${info.totalAmount.toLocaleString().padStart(8)}\n決済: ${info.paymentMethod}\n`;
+            if(info.cashReceived > 0) { 
+                t += `預り:              ¥${info.cashReceived.toLocaleString().padStart(8)}\n釣銭:              ¥${info.change.toLocaleString().padStart(8)}\n`; 
+            }
+        } else {
+            const label = d.receiptType || "商品代";
+            t += `        領 収 書\n${info.date.toLocaleDateString()}\n            様\n\n`;
+            t += `金額: ¥${info.totalAmount.toLocaleString()} -\n\n但 ${label}として正に領収いたしました\n--------------------------------\n`;
+            t += `発行者: ${d.companyName}\n`;
+        }
+        t += `------------------------------\nありがとうございました\n`;
+        document.getElementById('receiptPreview').innerText = t;
+    };
+
+    document.getElementById('backBtn').onclick = () => { location.href = 'register.html'; };
+    document.getElementById('btnPrintReceipt').onclick = () => { window.print(); };
+    document.getElementById('btnPrintBill').onclick = () => { generateContent('bill'); window.print(); };
+    window.openModal = (id) => document.getElementById(id).classList.remove('hidden');
+    window.closeModal = (id) => document.getElementById(id).classList.add('hidden');
+</script>
+</body>
+</html>
