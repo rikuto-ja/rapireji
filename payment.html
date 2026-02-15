@@ -179,7 +179,7 @@
     let order = JSON.parse(sessionStorage.getItem('currentOrder'));
     let discountVal = 0, keypadBuffer = "0", keypadMode = "";
     let discountUnit = "¥";
-    let lastHistoryId = null; // 現在の取引IDを保持
+    let lastHistoryId = null;
 
     document.addEventListener('DOMContentLoaded', () => {
         if (!order) { location.href = "register.html"; return; }
@@ -209,10 +209,13 @@
             if(item.name) {
                 const b = document.createElement('button');
                 b.className = 'preset-btn';
-                b.innerText = `${item.name}\n¥${item.value}`;
+                // 単位を判定して表示
+                const displayVal = item.isPercent ? `${item.value}%` : `¥${item.value}`;
+                b.innerText = `${item.name}\n${displayVal}`;
                 b.onclick = () => { 
-                    discountUnit = "¥";
-                    document.getElementById('discountUnitBtn').innerText = "¥";
+                    // プリセットに合わせて単位とバッファを更新
+                    discountUnit = item.isPercent ? "%" : "¥";
+                    document.getElementById('discountUnitBtn').innerText = discountUnit;
                     keypadBuffer = String(item.value); 
                     updateKeypadDisplay(); 
                 };
@@ -264,19 +267,26 @@
     document.getElementById('keypadConfirmBtn').onclick = () => {
         const val = Number(keypadBuffer);
         if (keypadMode === 'discount') {
-            discountVal = (discountUnit === "%") ? Math.floor(order.totalAmount * (val / 100)) : val;
-            updateDisplay(); closeModal('keypadModal'); 
+            // パーセント計算か金額引きかを判定
+            if (discountUnit === "%") {
+                discountVal = Math.floor(order.totalAmount * (val / 100));
+            } else {
+                discountVal = val;
+            }
+            updateDisplay(); 
+            closeModal('keypadModal'); 
         } else {
             const finalTotal = order.totalAmount - discountVal;
             if (val < finalTotal) return alert("金額不足");
-            processPayment('現金', val); closeModal('keypadModal');
+            processPayment('現金', val); 
+            closeModal('keypadModal');
         }
     };
 
     window.processPayment = (method, cashReceived = 0) => {
         const finalTotal = Math.max(0, order.totalAmount - discountVal);
         const now = new Date();
-        lastHistoryId = Date.now(); // IDを保存
+        lastHistoryId = Date.now();
         
         let products = JSON.parse(localStorage.getItem(STORAGE_KEYS.PRODUCTS) || '[]');
         const stockConfig = JSON.parse(localStorage.getItem(STORAGE_KEYS.STOCK_CONFIG) || '{"enabled":false}');
@@ -311,15 +321,14 @@
             change: (cashReceived > 0) ? (cashReceived - finalTotal) : 0,
             createdAt: now.toISOString(),
             isVoided: false,
-            receiptIssued: false, // 最初はfalse
-            billIssued: false    // 最初はfalse
+            receiptIssued: false,
+            billIssued: false
         };
 
         let history = JSON.parse(localStorage.getItem(STORAGE_KEYS.HISTORY) || '[]');
         history.push(historyEntry);
         localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(history));
 
-        // プレビュー用にデータを保持
         window.currentPaymentData = { ...historyEntry, date: now };
         
         sessionStorage.removeItem('currentOrder');
