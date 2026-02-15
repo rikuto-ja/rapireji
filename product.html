@@ -105,6 +105,9 @@
             header h1 { font-size: 0.9rem; margin-left: 10px; flex-shrink: 0; }
             .header-ad-space { display: flex !important; flex: 1; margin-left: 10px; height: 35px; min-width: 80px; border: 1px solid #ddd; background: #fff; font-size: 8px; }
         }
+        
+        /* ドラッグ中のスタイル */
+        .dragging { opacity: 0.5; border: 2px dashed #000; }
     </style>
 </head>
 <body>
@@ -200,13 +203,12 @@
     const STORAGE_KEYS = {
         PRODUCTS: 'rapireji_products',
         CATEGORIES: 'rapireji_categories',
-        STOCK_CONFIG: 'rapireji_stock_config' // stock.htmlのキーに合わせる
+        STOCK_CONFIG: 'rapireji_stock_config'
     };
 
     let allProducts = JSON.parse(localStorage.getItem(STORAGE_KEYS.PRODUCTS) || '[]');
     let categories = JSON.parse(localStorage.getItem(STORAGE_KEYS.CATEGORIES) || '[]');
     
-    // 在庫設定を読み込む
     const savedStockConfig = localStorage.getItem(STORAGE_KEYS.STOCK_CONFIG);
     let stockConfig = savedStockConfig ? JSON.parse(savedStockConfig) : { enabled: false };
     let isStockEnabled = stockConfig.enabled;
@@ -281,16 +283,14 @@
             const p = filtered.find(item => item.index === i);
             const div = document.createElement('div');
             
-            // 在庫切れ判定（在庫管理が有効な場合のみ）
             const isOutOfStock = isStockEnabled && p && p.stock !== undefined && Number(p.stock) <= 0;
             div.className = p ? (isOutOfStock ? "product-item out-of-stock" : "product-item") : "product-item empty-slot";
             
+            // ドラッグ＆ドロップ設定
+            div.draggable = !!p;
+            
             if (p) {
-                // 在庫バッジの表示制御
-                const stockBadge = isStockEnabled 
-                    ? `<span class="product-stock-badge">在庫: ${p.stock || 0}</span>` 
-                    : "";
-
+                const stockBadge = isStockEnabled ? `<span class="product-stock-badge">在庫: ${p.stock || 0}</span>` : "";
                 div.innerHTML = `
                     <img src="${p.imageUrl || ''}" class="product-image" onerror="this.style.visibility='hidden'">
                     <div class="product-info">
@@ -299,9 +299,43 @@
                         ${stockBadge}
                     </div>`;
                 div.onclick = () => openModal(p, i);
+
+                // ドラッグ開始
+                div.ondragstart = (e) => {
+                    e.dataTransfer.setData("text/plain", p.id);
+                    div.classList.add('dragging');
+                };
+                div.ondragend = () => div.classList.remove('dragging');
             } else {
                 div.innerHTML = "＋"; div.onclick = () => openModal(null, i);
             }
+
+            // ドロップ領域の設定
+            div.ondragover = (e) => e.preventDefault();
+            div.ondrop = (e) => {
+                e.preventDefault();
+                const draggedId = e.dataTransfer.getData("text/plain");
+                if (!draggedId) return;
+
+                // 移動先に既に商品があるかチェック
+                const isOccupied = allProducts.some(item => 
+                    item.category === currentCategory && item.index === i && item.id != draggedId && item.isActive !== false
+                );
+
+                if (isOccupied) {
+                    alert("移動先にはすでに商品があります。");
+                    return;
+                }
+
+                // データの更新
+                const productIdx = allProducts.findIndex(item => item.id == draggedId);
+                if (productIdx !== -1) {
+                    allProducts[productIdx].index = i;
+                    saveProducts();
+                    renderGrid();
+                }
+            };
+
             grid.appendChild(div);
         }
     }
@@ -313,7 +347,6 @@
         document.getElementById('p-price').value = p ? p.price : "";
         document.getElementById('p-category').value = p ? p.category : (currentCategory || DEFAULT_CAT);
         
-        // 在庫入力の表示制御
         const stockInputGroup = document.getElementById('stock-input-group');
         if (isStockEnabled) {
             stockInputGroup.classList.remove('hidden');
@@ -347,15 +380,33 @@
               
         if (!name || isNaN(price)) return alert("正しく入力してください");
 
+        let finalIndex = targetIndex;
+        const oldProduct = editingProductId ? allProducts.find(p => p.id === editingProductId) : null;
+
+        // カテゴリ変更または新規登録時の重複・満杯チェック
+        if (!oldProduct || oldProduct.category !== newCategory) {
+            const isOccupied = allProducts.some(p => p.category === newCategory && p.index === finalIndex && p.isActive !== false);
+            if (isOccupied) {
+                let foundEmpty = false;
+                for (let i = 0; i < 50; i++) {
+                    if (!allProducts.some(p => p.category === newCategory && p.index === i && p.isActive !== false)) {
+                        finalIndex = i;
+                        foundEmpty = true;
+                        break;
+                    }
+                }
+                if (!foundEmpty) return alert("遷移先のカテゴリが満杯です");
+            }
+        }
+
         const data = {
             id: editingProductId || Date.now(),
             name, price, category: newCategory,
-            // 在庫が有効なときのみ入力を反映、無効なときは既存（または0）を保持
-            stock: isStockEnabled ? Number(document.getElementById('p-stock').value) : (editingProductId ? (allProducts.find(p => p.id === editingProductId)?.stock || 0) : 0),
+            stock: isStockEnabled ? Number(document.getElementById('p-stock').value) : (editingProductId ? (oldProduct?.stock || 0) : 0),
             tag: document.getElementById('p-tag').value,
             imageUrl: document.getElementById('p-image-url').value,
             purchaseUrl: document.getElementById('p-purchase-url').value,
-            index: targetIndex,
+            index: finalIndex,
             isActive: true,
             updatedAt: new Date().toISOString()
         };
