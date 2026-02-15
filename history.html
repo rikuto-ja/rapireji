@@ -198,19 +198,20 @@
         let totalSub = 0, totalDisc = 0;
 
         data.forEach(h => {
-            if (!h.isVoided) {
+            const isVoided = h.isVoided || false;
+            if (!isVoided) {
                 totalSub += h.subtotal || 0;
                 totalDisc += h.discount || 0;
             }
             const date = new Date(h.createdAt).toLocaleString();
             const div = document.createElement('div');
-            div.className = `history-item ${h.isVoided ? 'voided' : ''}`;
+            div.className = `history-item ${isVoided ? 'voided' : ''}`;
             div.innerHTML = `
                 <span>${date}</span>
                 <div>
                     ${h.receiptIssued ? '<span class="status-badge">レ済</span>' : ''}
                     ${h.billIssued ? '<span class="status-badge">領済</span>' : ''}
-                    <span style="margin-left:10px;">¥${h.totalAmount.toLocaleString()}</span>
+                    <span style="margin-left:10px;">¥${(h.totalAmount || 0).toLocaleString()}</span>
                 </div>`;
             div.onclick = () => showDetail(h);
             container.appendChild(div);
@@ -237,9 +238,9 @@
             
         document.getElementById('detail-info').innerHTML = `
             <div style="padding:15px 0; border-bottom:2px solid #000;">${itemsHtml}</div>
-            <div style="display:flex;justify-content:space-between; padding-top:10px;"><span>小計</span><span>¥${data.subtotal.toLocaleString()}</span></div>
-            <div style="display:flex;justify-content:space-between; color:#666;"><span>割引</span><span>-¥${data.discount.toLocaleString()}</span></div>
-            <div style="display:flex;justify-content:space-between; font-weight:900; font-size:1.5rem; border-top:1px solid #eee;"><span>最終合計</span><span>¥${data.totalAmount.toLocaleString()}</span></div>
+            <div style="display:flex;justify-content:space-between; padding-top:10px;"><span>小計</span><span>¥${(data.subtotal || 0).toLocaleString()}</span></div>
+            <div style="display:flex;justify-content:space-between; color:#666;"><span>割引</span><span>-¥${(data.discount || 0).toLocaleString()}</span></div>
+            <div style="display:flex;justify-content:space-between; font-weight:900; font-size:1.5rem; border-top:1px solid #eee;"><span>最終合計</span><span>¥${(data.totalAmount || 0).toLocaleString()}</span></div>
             <div style="font-size:0.8rem; margin-top:10px;">決済: ${data.paymentMethod}</div>`;
         
         document.getElementById('btn-void-action').style.display = data.isVoided ? 'none' : 'block';
@@ -260,7 +261,7 @@
             if(d.tel) t += `TEL: ${d.tel}\n`;
             t += `日時: ${dateStr}\n--------------------------\n`;
             data.items.forEach(i => t += `${i.name.padEnd(12)} x${i.qty} ¥${(i.price*i.qty).toLocaleString().padStart(7)}\n`);
-            t += `--------------------------\n小計:          ¥${data.subtotal.toLocaleString().padStart(8)}\n割引:         -¥${data.discount.toLocaleString().padStart(8)}\n合計:          ¥${data.totalAmount.toLocaleString().padStart(8)}\n決済: ${data.paymentMethod}\n`;
+            t += `--------------------------\n小計:          ¥${(data.subtotal || 0).toLocaleString().padStart(8)}\n割引:         -¥${(data.discount || 0).toLocaleString().padStart(8)}\n合計:          ¥${(data.totalAmount || 0).toLocaleString().padStart(8)}\n決済: ${data.paymentMethod}\n`;
             if(data.paymentMethod === '現金') {
                 t += `預り:          ¥${(data.cashReceived || 0).toLocaleString().padStart(8)}\n釣銭:          ¥${(data.change || 0).toLocaleString().padStart(8)}\n`;
             }
@@ -269,7 +270,7 @@
             t += `        領 収 書 (再)\n`;
             t += `${new Date(data.createdAt).toLocaleDateString()}\n`;
             t += `                    様\n\n`;
-            t += `金額: ¥${data.totalAmount.toLocaleString()} -\n\n`;
+            t += `金額: ¥${(data.totalAmount || 0).toLocaleString()} -\n\n`;
             t += `但 ${label}として正に領収いたしました\n--------------------------\n`;
             t += `発行者: ${d.companyName}\n`;
             if(d.address) t += `住所: ${d.address}\n`;
@@ -307,18 +308,15 @@
         const idx = history.findIndex(h => h.id === selectedItem.id);
         
         if (idx !== -1) {
-            // 1. 在庫の復元
             const products = JSON.parse(localStorage.getItem(STORAGE_KEYS.PRODUCTS) || '[]');
             selectedItem.items.forEach(soldItem => {
                 const pIdx = products.findIndex(p => p.id === soldItem.id);
                 if (pIdx !== -1) {
-                    // 在庫を戻す
                     products[pIdx].stock = (Number(products[pIdx].stock) || 0) + soldItem.qty;
                 }
             });
             localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products));
 
-            // 2. 取引を「取消済」にする
             history[idx].isVoided = true;
             localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(history));
             
@@ -334,14 +332,20 @@
             const d = new Date(h.createdAt);
             const dateStr = `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
             const itemDetail = h.items.map(i => `${i.name}x${i.qty}`).join(' / ');
-            csv += `"${dateStr}","${itemDetail}",${h.subtotal},${h.discount},${h.totalAmount},"${h.paymentMethod}",${h.isVoided},${h.receiptIssued},${h.billIssued}\n`; 
+            
+            // true/falseを「済」/「未」に変換
+            const voidTxt = h.isVoided ? "済" : "未";
+            const receiptTxt = h.receiptIssued ? "済" : "未";
+            const billTxt = h.billIssued ? "済" : "未";
+            
+            csv += `"${dateStr}","${itemDetail}",${h.subtotal || 0},${h.discount || 0},${h.totalAmount || 0},"${h.paymentMethod}","${voidTxt}","${receiptTxt}","${billTxt}"\n`; 
         });
         downloadCSV(csv, "取引明細レポート.csv");
     };
 
     document.getElementById('btn-csv-items').onclick = () => {
         const itemMap = {};
-        historyData.filter(h => !h.isVoided).forEach(h => {
+        historyData.filter(h => !(h.isVoided || false)).forEach(h => {
             h.items.forEach(i => {
                 if (!itemMap[i.name]) itemMap[i.name] = { qty: 0, amount: 0 };
                 itemMap[i.name].qty += i.qty; itemMap[i.name].amount += (i.price * i.qty);
@@ -354,7 +358,7 @@
     
     document.getElementById('btn-csv-time').onclick = () => {
         const timeMap = {}; const itemSet = new Set();
-        historyData.filter(h => !h.isVoided).forEach(h => {
+        historyData.filter(h => !(h.isVoided || false)).forEach(h => {
             const hour = new Date(h.createdAt).getHours();
             if (!timeMap[hour]) timeMap[hour] = {};
             h.items.forEach(i => { timeMap[hour][i.name] = (timeMap[hour][i.name] || 0) + i.qty; itemSet.add(i.name); });
