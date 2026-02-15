@@ -14,12 +14,10 @@
         body { background-color: var(--gray-bg); min-height: 100vh; display: flex; flex-direction: column; overflow-x: hidden; }
         
         header {
-            /* 元の高さ 60px に セーフエリア分をプラスする設定 */
             height: calc(var(--header-h) + env(safe-area-inset-top)); 
             border-bottom: 3px solid var(--black);
             display: flex; 
             align-items: center; 
-            /* 下記のように padding-top を調整 */
             padding: env(safe-area-inset-top) 20px 0 20px; 
             background: var(--white);
             position: sticky; 
@@ -30,7 +28,6 @@
         .header-left { display: flex; align-items: center; }
         .btn-back { background: var(--white); border: 2px solid var(--black); padding: 8px 15px; font-weight: 900; cursor: pointer; margin-right: 15px; }
 
-        /* 広告枠の追加 */
         .header-ad-space {
             flex: 1; margin-left: 20px; height: 50px; background: #fff;
             display: flex; align-items: center; justify-content: center;
@@ -69,7 +66,6 @@
         }
         .pay-btn:active { transform: translate(3px, 3px); box-shadow: none; }
         .pay-btn.discount-trigger { color: var(--danger); border-color: var(--danger); }
-        .empty-slot { background: transparent; border: none; box-shadow: none; pointer-events: none; }
 
         .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 2000; padding: 10px; }
         .modal-content { background: #fff; padding: 20px; border: 4px solid #000; width: 100%; max-width: 380px; box-shadow: 10px 10px 0 #000; max-height: 95vh; overflow-y: auto; }
@@ -162,7 +158,6 @@
 </div>
 
 <script>
-    // settings.htmlで保存したキーと一致させる
     const STORAGE_KEYS = {
         HISTORY: 'rapireji_history',
         PROFILE: 'rapireji_profile',
@@ -172,8 +167,16 @@
         STOCK_CONFIG: 'rapireji_stock_config'
     };
 
-    // 初期値の読み込み
-    let shopInfo = JSON.parse(localStorage.getItem(STORAGE_KEYS.PROFILE)) || { companyName: "らぴレジ店舗", address: "", tel: "", memo: "", receiptType: "商品代" };
+    // 店舗情報読み込み（undefined対策の強化）
+    const savedProfile = JSON.parse(localStorage.getItem(STORAGE_KEYS.PROFILE)) || {};
+    let shopInfo = {
+        companyName: savedProfile.companyName || "らぴレジ店舗",
+        address: savedProfile.address || "",
+        tel: savedProfile.tel || "",
+        memo: savedProfile.memo || "",
+        receiptType: savedProfile.receiptType || "商品代"
+    };
+
     let order = JSON.parse(sessionStorage.getItem('currentOrder'));
     let discountVal = 0, keypadBuffer = "0", keypadMode = "";
     let discountUnit = "¥";
@@ -187,11 +190,7 @@
 
     function initSettings() {
         const paymentGrid = document.getElementById('paymentGrid');
-        
-        // 「割引」ボタン以外をリセット
         paymentGrid.innerHTML = '<button class="pay-btn discount-trigger" onclick="openKeypad(\'discount\')">割引</button>';
-        
-        // settings.htmlで保存された決済方法を反映
         const savedPayments = JSON.parse(localStorage.getItem(STORAGE_KEYS.PAYMENTS)) || ["現金", "交通系IC", "クレジットカード", "バーコード決済", "その他"];
         
         savedPayments.forEach(btnName => {
@@ -199,13 +198,11 @@
                 const btn = document.createElement('button');
                 btn.className = 'pay-btn';
                 btn.innerText = btnName;
-                // 「現金」という文字列が含まれる場合はキーパッドを開く、それ以外は即時決済
                 btn.onclick = () => (btnName.includes('現金')) ? openKeypad('cash') : processPayment(btnName);
                 paymentGrid.appendChild(btn);
             }
         });
 
-        // settings.htmlで保存された割引プリセットを反映
         const discArea = document.getElementById('discountPresetArea');
         discArea.innerHTML = "";
         const savedDiscounts = JSON.parse(localStorage.getItem(STORAGE_KEYS.DISCOUNTS)) || [];
@@ -280,34 +277,27 @@
     window.processPayment = (method, cashReceived = 0) => {
         const finalTotal = Math.max(0, order.totalAmount - discountVal);
         
-        // --- 在庫管理ロジック開始 ---
         let products = JSON.parse(localStorage.getItem(STORAGE_KEYS.PRODUCTS) || '[]');
         const stockConfig = JSON.parse(localStorage.getItem(STORAGE_KEYS.STOCK_CONFIG) || '{"enabled":false}');
 
         if (stockConfig.enabled) {
-            // 在庫チェック
             for (const item of order.items) {
                 const product = products.find(p => p.id === item.id);
                 if (product) {
                     const currentStock = Number(product.stock || 0);
                     if (currentStock < item.qty) {
                         alert(`「${item.name}」の在庫が不足しています（現在庫: ${currentStock}）`);
-                        return; // 決済を中断
+                        return;
                     }
                 }
             }
-
-            // 在庫を減算
             products = products.map(p => {
                 const soldItem = order.items.find(item => item.id === p.id);
-                if (soldItem) {
-                    return { ...p, stock: Number(p.stock) - soldItem.qty };
-                }
+                if (soldItem) return { ...p, stock: Number(p.stock) - soldItem.qty };
                 return p;
             });
             localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products));
         }
-        // --- 在庫管理ロジック終了 ---
 
         const historyData = {
             id: Date.now(),
@@ -318,7 +308,9 @@
             paymentMethod: method,
             cashReceived: cashReceived,
             change: (cashReceived > 0) ? (cashReceived - finalTotal) : 0,
-            createdAt: new Date().toISOString()
+            createdAt: new Date().toISOString(),
+            receiptIssued: true, // 履歴画面で「レ済」にするために追加
+            billIssued: false
         };
 
         let history = JSON.parse(localStorage.getItem(STORAGE_KEYS.HISTORY) || '[]');
@@ -336,7 +328,8 @@
         const dateStr = info.date.toLocaleString();
         
         if (type === 'receipt') {
-            t += `      [ レシート ]\n店名: ${d.companyName}\n`;
+            t += `      [ レシート ]\n`;
+            t += `店名: ${d.companyName || ""}\n`;
             if(d.address) t += `住所: ${d.address}\n`; 
             if(d.tel) t += `TEL: ${d.tel}\n`;
             t += `日時: ${dateStr}\n------------------------------\n`;
@@ -353,7 +346,7 @@
             const label = d.receiptType || "商品代";
             t += `        領 収 書\n${info.date.toLocaleDateString()}\n            様\n\n`;
             t += `金額: ¥${info.totalAmount.toLocaleString()} -\n\n但 ${label}として正に領収いたしました\n--------------------------------\n`;
-            t += `発行者: ${d.companyName}\n`;
+            t += `発行者: ${d.companyName || ""}\n`;
         }
         t += `------------------------------\nありがとうございました\n`;
         document.getElementById('receiptPreview').innerText = t;
