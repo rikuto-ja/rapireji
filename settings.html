@@ -172,19 +172,19 @@
     </div>
 
     <div class="settings-card">
-        <h3 style="font-weight: 900; margin-bottom: 20px; border-left: 8px solid #000; padding-left: 10px;">割引設定（最大3つ）</h3>
+        <h3 style="font-weight: 900; margin-bottom: 20px; border-left: 8px solid #000; padding-left: 10px;">割引設定（半角で入力）</h3>
         <div id="discountContainer">
             <div class="flex-row">
                 <input type="text" class="discount-name" placeholder="名称1">
-                <input type="number" class="discount-value" placeholder="金額">
+                <input type="text" class="discount-value" placeholder="金額（％も可）">
             </div>
             <div class="flex-row">
                 <input type="text" class="discount-name" placeholder="名称2">
-                <input type="number" class="discount-value" placeholder="金額">
+                <input type="text" class="discount-value" placeholder="金額（％も可）">
             </div>
             <div class="flex-row">
                 <input type="text" class="discount-name" placeholder="名称3">
-                <input type="number" class="discount-value" placeholder="金額">
+                <input type="text" class="discount-value" placeholder="金額（％も可）">
             </div>
         </div>
         <button id="saveDiscountBtn" class="save-btn">割引設定を保存する</button>
@@ -252,9 +252,17 @@
         const payments = JSON.parse(localStorage.getItem('rapireji_payments') || '["現金", "交通系IC", "クレジットカード", "バーコード決済", "その他"]');
         document.querySelectorAll('.payment-input').forEach((el, i) => el.value = payments[i] || "");
 
+        // 割引設定の読み込み（%表示の復元）
         const discounts = JSON.parse(localStorage.getItem('rapireji_discounts') || '[]');
-        document.querySelectorAll('.discount-name').forEach((el, i) => el.value = discounts[i]?.name || "");
-        document.querySelectorAll('.discount-value').forEach((el, i) => el.value = discounts[i]?.value || "");
+        const nameInputs = document.querySelectorAll('.discount-name');
+        const valueInputs = document.querySelectorAll('.discount-value');
+        nameInputs.forEach((el, i) => {
+            const item = discounts[i];
+            if (item) {
+                el.value = item.name || "";
+                valueInputs[i].value = item.isPercent ? `${item.value}%` : (item.value || "");
+            }
+        });
     }
 
     function initBackupSystem() {
@@ -349,9 +357,24 @@
 
     document.getElementById('saveDiscountBtn').onclick = () => {
         const items = [];
-        document.querySelectorAll('.discount-name').forEach((el, i) => {
-            const val = document.querySelectorAll('.discount-value')[i].value;
-            if (el.value) items.push({ name: el.value, value: Number(val) || 0 });
+        const nameInputs = document.querySelectorAll('.discount-name');
+        const valueInputs = document.querySelectorAll('.discount-value');
+
+        nameInputs.forEach((el, i) => {
+            const rawValue = valueInputs[i].value.trim(); 
+            
+            if (el.value && rawValue !== "") {
+                const isPercent = rawValue.includes('%');
+                const numValue = parseFloat(rawValue.replace('%', ''));
+
+                if (!isNaN(numValue)) {
+                    items.push({ 
+                        name: el.value, 
+                        value: numValue,
+                        isPercent: isPercent 
+                    });
+                }
+            }
         });
         localStorage.setItem('rapireji_discounts', JSON.stringify(items));
         alert("割引設定を保存しました");
