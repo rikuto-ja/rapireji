@@ -297,31 +297,39 @@
     function reissue(type) { 
         if (!selectedItem) return;
         
-        // 1. まずテキストを生成して画面上の #receipt-text を書き換える
+        // 1. 指定された形式（領収書orレシート）で画面を書き換える
         generatePreview(type);
         
-        // 【重要】iPhoneに強制的に「画面が書き換わった」と認識させるため、
-        // わずかにスクロールさせるなどの刺激を与えると、再描画が走りやすくなります。
-        window.scrollTo(window.scrollX, window.scrollY);
-
-        // 2. 300ミリ秒（0.3秒）待つ。iPhoneの描画性能に合わせて少し余裕を持たせます。
+        // 2. 0.3秒待ってから印刷を実行
         setTimeout(() => {
-            // 3. 印刷ダイアログを表示
             window.print(); 
             
-            // 4. フラグ更新などは印刷指示の「後」に行う
+            // 3. 【重要】印刷指示が「終わった後」にデータの更新を行う
             const history = JSON.parse(localStorage.getItem(STORAGE_KEYS.HISTORY) || '[]');
             const idx = history.findIndex(h => h.id === selectedItem.id);
+            
             if (idx !== -1) {
                 if (type === 'receipt') history[idx].receiptIssued = true;
                 else history[idx].billIssued = true;
+                
                 localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(history));
                 
+                // 内部データだけ更新し、表示の「レ済」「領済」を更新する
                 selectedItem = history[idx];
-                showDetail(selectedItem);
-                loadHistory();
+                
+                // ここで showDetail を呼ぶと、またレシートプレビューに戻ってしまうので
+                // 「済」マークの表示更新だけを個別に行うか、
+                // もしくは showDetail の後に再度プレビューを固定します。
+                
+                const header = document.getElementById('detail-status-header');
+                header.innerHTML = `
+                    <div class="status-pill" style="border:2px solid #000; font-size:0.7rem; font-weight:900; margin-right:5px; padding:2px 6px; opacity:${selectedItem.receiptIssued ? 1 : 0.2}">レシート: ${selectedItem.receiptIssued ? '済' : '未'}</div>
+                    <div class="status-pill" style="border:2px solid #000; font-size:0.7rem; font-weight:900; margin-right:5px; padding:2px 6px; opacity:${selectedItem.billIssued ? 1 : 0.2}">領収書: ${selectedItem.billIssued ? '済' : '未'}</div>
+                    ${selectedItem.isVoided ? '<div class="status-pill" style="background:#000; color:#fff; font-size:0.7rem; padding:2px 6px;">取消済</div>' : ''}`;
+                
+                loadHistory(); // 背面の一覧画面を更新
             }
-        }, 300); // 100から300に増やしました
+        }, 300); 
     }
 
     document.getElementById('btn-reissue-receipt').onclick = () => reissue('receipt');
