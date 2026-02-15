@@ -276,6 +276,8 @@
             if(data.paymentMethod === '現金') {
                 t += `預り:          ¥${(data.cashReceived || 0).toLocaleString().padStart(8)}\n釣銭:          ¥${(data.change || 0).toLocaleString().padStart(8)}\n`;
             }
+            t += `--------------------------\nありがとうございました\n`;
+            if(d.memo) t += `${d.memo}\n`; // レシートにのみメモを表示
         } else {
             const label = d.receiptType || "商品代";
             t += `        領 収 書 (再)\n`;
@@ -286,14 +288,16 @@
             t += `発行者: ${d.companyName}\n`;
             if(d.address) t += `住所: ${d.address}\n`;
             if(d.tel) t += `電話: ${d.tel}\n`;
+            t += `--------------------------\nありがとうございました\n`;
+            // 領収書にはメモを追加しない
         }
-        t += `--------------------------\nありがとうございました\n`;
         document.getElementById('receipt-text').innerText = t;
     }
 
     function reissue(type) { 
         if (!selectedItem) return;
-        generatePreview(type); window.print(); 
+        generatePreview(type);
+        window.print(); 
         
         const history = JSON.parse(localStorage.getItem(STORAGE_KEYS.HISTORY) || '[]');
         const idx = history.findIndex(h => h.id === selectedItem.id);
