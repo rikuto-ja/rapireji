@@ -14,12 +14,10 @@
         body { background-color: var(--white); overflow: hidden; display: flex; flex-direction: column; height: 100vh; }
         
         header {
-            /* 元の高さ 60px に セーフエリア分をプラスする設定 */
             height: calc(var(--header-h) + env(safe-area-inset-top)); 
             border-bottom: 3px solid var(--black);
             display: flex; 
             align-items: center; 
-            /* 下記のように padding-top を調整 */
             padding: env(safe-area-inset-top) 20px 0 20px; 
             background: var(--white);
             position: sticky; 
@@ -28,10 +26,10 @@
             justify-content: space-between;
         }
         .header-left { display: flex; align-items: center; }
-        header h1 { font-size: 1.5rem; font-weight: 900; margin-left: 20px; white-space: nowrap; }
+        header h1 { font-size: 1.2rem; font-weight: 900; margin-left: 20px; white-space: nowrap; }
         
         .header-ad-space {
-            flex: 1; margin-left: 20px; height: 50px; background: #fff;
+            flex: 1; margin-left: 20px; height: 45px; background: #fff;
             display: flex; align-items: center; justify-content: center;
             overflow: hidden; border: 1px dashed #ccc;
         }
@@ -50,7 +48,6 @@
             top: var(--header-h); 
             left: 0; 
             width: 250px; 
-            /* 修正：ヘッダーの高さ分を引いた100%にし、さらにセーフエリア分を下まで伸ばす */
             height: calc(100% - var(--header-h)); 
             padding-bottom: env(safe-area-inset-bottom); 
             background: var(--white); 
@@ -64,31 +61,38 @@
         .side-nav.hidden { transform: translateX(-100%); }
         .menu-link { display: block; padding: 15px; color: var(--black); font-weight: 800; text-decoration: none; border-bottom: 1px solid var(--gray-light); }
 
-        .container { flex: 1; overflow-y: auto; padding: 20px; background: var(--gray-bg); }
-        .category-bar { display: flex; gap: 10px; margin-bottom: 15px; overflow-x: auto; padding-bottom: 10px; }
+        .container { flex: 1; overflow-y: auto; padding: 10px; background: var(--gray-bg); }
+        .category-bar { display: flex; gap: 8px; margin-bottom: 10px; overflow-x: auto; padding-bottom: 10px; }
         .cat-tab {
-            padding: 10px 20px; background: var(--white); border: 2px solid var(--black);
-            font-weight: 800; cursor: pointer; white-space: nowrap; box-shadow: 2px 2px 0px var(--black);
+            padding: 8px 16px; background: var(--white); border: 2px solid var(--black);
+            font-weight: 800; font-size: 0.8rem; cursor: pointer; white-space: nowrap; box-shadow: 2px 2px 0px var(--black);
             border-radius: 0;
         }
-        .cat-tab.active { background: var(--black); color: var(--white); transform: translate(2px, 2px); box-shadow: none; }
+        .cat-tab.active { background: var(--black); color: var(--white); transform: translate(1px, 1px); box-shadow: none; }
 
-        .productGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; padding-bottom: 50px; }
-        @media (min-width: 768px) { .productGrid { grid-template-columns: repeat(5, 1fr); } }
+        /* 商品グリッドをレジ画面に合わせる */
+        .productGrid { 
+            display: grid; 
+            grid-template-columns: repeat(6, 1fr); 
+            gap: 8px; 
+            padding-bottom: 50px; 
+        }
 
         .product-item {
-            aspect-ratio: 1 / 0.85; background: var(--white); border: 2px solid var(--black);
+            min-height: 110px; background: var(--white); border: 2px solid var(--black);
             display: flex; flex-direction: column; cursor: pointer; position: relative;
-            transition: transform 0.1s; user-select: none;
+            box-shadow: 2px 2px 0px var(--black); overflow: hidden;
         }
+        .product-item:active { transform: translate(1px, 1px); box-shadow: none; }
         
-        .product-item.out-of-stock { opacity: 0.6; background-color: #eee; }
-        .product-item.out-of-stock::after { content: "在庫切"; position: absolute; top: 5px; right: 5px; background: red; color: white; font-size: 0.7rem; padding: 2px 5px; font-weight: 900; }
+        .product-item.out-of-stock { opacity: 0.5; background-color: #eee; }
+        .out-of-stock-label { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: red; color: white; padding: 2px 5px; font-size: 0.7rem; font-weight: 900; z-index: 10; pointer-events: none; }
 
-        .product-image { width: 100%; height: 55%; object-fit: cover; border-bottom: 1px solid var(--gray-light); }
-        .product-info { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 5px; }
-        .product-stock-badge { font-size: 0.7rem; color: #666; font-weight: bold; }
-        .empty-slot { border: 2px dashed #ccc; color: #ccc; justify-content: center; align-items: center; font-size: 2rem; display: flex; }
+        .product-image { width: 100%; height: 55px; object-fit: cover; border-bottom: 1px solid var(--black); }
+        .product-info { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 800; font-size: 0.7rem; padding: 4px 2px; text-align: center; line-height: 1.2; }
+        .product-stock-badge { font-size: 0.6rem; color: #666; margin-top: 1px; }
+        
+        .empty-slot { min-height: 110px; border: 1px solid transparent; color: #ccc; justify-content: center; align-items: center; font-size: 1.5rem; display: flex; cursor: pointer; }
 
         .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 9999; }
         .modal-content { 
@@ -111,13 +115,18 @@
         .btn-danger { background: var(--white); color: var(--danger); border: 2px solid var(--danger); padding: 15px; font-weight: 900; cursor: pointer; width: 100%; border-radius: 0; }
         .hidden { display: none !important; }
 
+        /* スマホレスポンシブ（レジ画面と統一） */
         @media screen and (max-width: 768px) {
             header { padding: 0 10px; }
-            header h1 { font-size: 0.9rem; margin-left: 10px; flex-shrink: 0; }
-            .header-ad-space { display: flex !important; flex: 1; margin-left: 10px; height: 35px; min-width: 80px; border: 1px solid #ddd; background: #fff; font-size: 8px; }
+            header h1 { font-size: 0.9rem; margin-left: 10px; }
+            .header-ad-space { margin-left: 10px; height: 35px; min-width: 80px; font-size: 8px; }
+            
+            .productGrid { grid-template-columns: repeat(4, 1fr); }
+            .product-item { min-height: 95px; }
+            .product-image { height: 40px; }
+            .empty-slot { min-height: 95px; }
         }
         
-        /* ドラッグ中のスタイル */
         .dragging { opacity: 0.5; border: 2px dashed #000; }
     </style>
 </head>
@@ -297,12 +306,12 @@
             const isOutOfStock = isStockEnabled && p && p.stock !== undefined && Number(p.stock) <= 0;
             div.className = p ? (isOutOfStock ? "product-item out-of-stock" : "product-item") : "product-item empty-slot";
             
-            // ドラッグ＆ドロップ設定
             div.draggable = !!p;
             
             if (p) {
-                const stockBadge = isStockEnabled ? `<span class="product-stock-badge">在庫: ${p.stock || 0}</span>` : "";
+                const stockBadge = isStockEnabled ? `<span class="product-stock-badge">残:${p.stock || 0}</span>` : "";
                 div.innerHTML = `
+                    ${isOutOfStock ? '<div class="out-of-stock-label">終了</div>' : ''}
                     <img src="${p.imageUrl || ''}" class="product-image" onerror="this.style.visibility='hidden'">
                     <div class="product-info">
                         <strong>${p.name}</strong>
@@ -311,7 +320,6 @@
                     </div>`;
                 div.onclick = () => openModal(p, i);
 
-                // ドラッグ開始
                 div.ondragstart = (e) => {
                     e.dataTransfer.setData("text/plain", p.id);
                     div.classList.add('dragging');
@@ -321,14 +329,12 @@
                 div.innerHTML = "＋"; div.onclick = () => openModal(null, i);
             }
 
-            // ドロップ領域の設定
             div.ondragover = (e) => e.preventDefault();
             div.ondrop = (e) => {
                 e.preventDefault();
                 const draggedId = e.dataTransfer.getData("text/plain");
                 if (!draggedId) return;
 
-                // 移動先に既に商品があるかチェック
                 const isOccupied = allProducts.some(item => 
                     item.category === currentCategory && item.index === i && item.id != draggedId && item.isActive !== false
                 );
@@ -338,7 +344,6 @@
                     return;
                 }
 
-                // データの更新
                 const productIdx = allProducts.findIndex(item => item.id == draggedId);
                 if (productIdx !== -1) {
                     allProducts[productIdx].index = i;
@@ -351,6 +356,7 @@
         }
     }
 
+    // --- 以下、管理用ロジック（変更なし） ---
     function openModal(p, index) {
         editingProductId = p ? p.id : null; targetIndex = index;
         document.getElementById('modalTitle').innerText = p ? "商品編集" : "新規登録";
@@ -394,7 +400,6 @@
         let finalIndex = targetIndex;
         const oldProduct = editingProductId ? allProducts.find(p => p.id === editingProductId) : null;
 
-        // カテゴリ変更または新規登録時の重複・満杯チェック
         if (!oldProduct || oldProduct.category !== newCategory) {
             const isOccupied = allProducts.some(p => p.category === newCategory && p.index === finalIndex && p.isActive !== false);
             if (isOccupied) {
