@@ -43,7 +43,6 @@
             top: var(--header-h); 
             left: 0; 
             width: 250px; 
-            /* 修正：ヘッダーの高さ分を引いた100%にし、さらにセーフエリア分を下まで伸ばす */
             height: calc(100% - var(--header-h)); 
             padding-bottom: env(safe-area-inset-bottom); 
             background: var(--white); 
@@ -64,19 +63,55 @@
         .cat-tab { padding: 8px 16px; background: var(--white); border: 2px solid var(--black); font-weight: 800; font-size: 0.8rem; cursor: pointer; white-space: nowrap; box-shadow: 2px 2px 0px var(--black); border-radius: 0; }
         .cat-tab.active { background: var(--black); color: var(--white); transform: translate(1px, 1px); box-shadow: none; }
         
-        .product-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; overflow-y: auto; align-content: start; flex: 1; }
+        .product-grid { 
+            display: grid; 
+            grid-template-columns: repeat(6, 1fr); 
+            grid-auto-rows: min-content; 
+            gap: 8px; 
+            overflow-y: auto; 
+            align-content: start; 
+            flex: 1; 
+        }
         
-        /* 修正：最低高さを確保し、中身が詰まっても伸びるように設定 */
-        .product-card { min-height: 110px; background: var(--white); border: 2px solid var(--black); display: flex; flex-direction: column; cursor: pointer; box-shadow: 2px 2px 0px var(--black); position: relative; overflow: hidden; }
+        .product-card { 
+            height: auto; 
+            min-height: 110px; 
+            background: var(--white); 
+            border: 2px solid var(--black); 
+            display: flex; 
+            flex-direction: column; 
+            cursor: pointer; 
+            box-shadow: 2px 2px 0px var(--black); 
+            position: relative; 
+            overflow: visible; 
+        }
         .product-card:active { transform: translate(1px, 1px); box-shadow: none; }
         .product-card.out-of-stock { opacity: 0.5; cursor: not-allowed; background: #eee; }
-        .out-of-stock-label { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: red; color: white; padding: 2px 5px; font-size: 0.7rem; font-weight: 900; z-index: 10; pointer-events: none; }
+        .out-of-stock-label { position: absolute; top: 20px; left: 50%; transform: translate(-50%, -50%); background: red; color: white; padding: 2px 5px; font-size: 0.7rem; font-weight: 900; z-index: 10; pointer-events: none; }
 
-        .empty-slot { min-height: 110px; border: 1px solid transparent; }
+        .empty-slot { height: 110px; border: 1px solid transparent; }
         
-        /* 修正：PC版の画像高さを少し抑え、文字スペースを確保 */
         .p-img { width: 100%; height: 55px; object-fit: cover; border-bottom: 1px solid var(--black); flex-shrink: 0; }
-        .p-info { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 800; font-size: 0.7rem; padding: 4px 2px; text-align: center; line-height: 1.2; overflow: visible; }
+        
+        .p-info { 
+            flex: 1; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: space-between; 
+            font-weight: 800; 
+            font-size: 0.7rem; 
+            padding: 6px 2px; 
+            text-align: center; 
+            line-height: 1.2; 
+        }
+        .p-info strong { 
+            display: block; 
+            word-break: break-all; 
+            margin-bottom: 4px;
+            width: 100%;
+        }
+        .p-price { display: block; margin-top: auto; padding-top: 2px; }
         .p-stock { font-size: 0.6rem; color: #666; margin-top: 1px; }
         .stock-alert { color: #ff0000 !important; font-weight: 900 !important; }
 
@@ -100,32 +135,28 @@
         .confirm-content { background: #fff; padding: 30px; border: 5px solid #000; width: 90%; max-width: 400px; text-align: center; box-shadow: 15px 15px 0 #000; }
         .hidden { display: none !important; }
 
-        /* --- スマホレスポンシブ --- */
         @media screen and (max-width: 768px) {
             header { padding: 0 10px; }
             header h1 { font-size: 0.9rem; margin-left: 10px; }
             .header-ad-space { margin-left: 10px; height: 35px; min-width: 80px; font-size: 8px; }
-
             .main-layout { flex-direction: column; }
             .product-section { flex: none; height: 50vh; }
             .product-grid { grid-template-columns: repeat(4, 1fr); }
-
-            /* 修正：スマホ版のカード高さを少し上げ、画像を小さくして文字の欠けを防止 */
-            .product-card { min-height: 95px; }
+            .product-card { min-height: 95px; height: auto; }
             .p-img { height: 40px; } 
-            .p-info { padding: 2px; }
-            .empty-slot { min-height: 0; height: 0; }
-
+            .p-info { padding: 4px 2px; }
+            .empty-slot { height: 0; min-height: 0; display: none; }
             .cart-section { flex: 1; border-left: none; border-top: 3px solid var(--black); }
             .drag-handle { cursor: row-resize; touch-action: none; padding: 5px 10px 10px 10px; }
             .handle-bar { display: block; }
-            
             .total-row { font-size: 1.1rem; }
             .checkout-btn { padding: 12px; font-size: 1rem; }
         }
     </style>
 </head>
 <body>
+
+<audio id="reg-sound" src="beep1.mp3" preload="auto"></audio>
 
 <header>
     <div class="header-left">
@@ -188,6 +219,12 @@
     let isStockEnabled = false, alertThreshold = 0;
     let alertedStatus = {};
 
+    function playRegisterSound() {
+        const sound = document.getElementById('reg-sound');
+        sound.currentTime = 0; 
+        sound.play().catch(e => console.log("Sound play blocked"));
+    }
+
     window.addEventListener('DOMContentLoaded', () => {
         initDragResize();
         loadData();
@@ -198,34 +235,28 @@
         const handle = document.getElementById('drag-handle');
         const productSection = document.querySelector('.product-section');
         let isDragging = false;
-
         const startDrag = (e) => {
             if (window.innerWidth > 768) return;
             isDragging = true;
             document.body.style.userSelect = 'none';
         };
-
         const doDrag = (e) => {
             if (!isDragging) return;
             const touchY = e.touches ? e.touches[0].clientY : e.clientY;
             const headerH = 60;
             let newHeight = touchY - headerH;
-
             if (newHeight < 50) newHeight = 50; 
             const minCartHeight = 150; 
             if (newHeight > window.innerHeight - headerH - minCartHeight) {
                 newHeight = window.innerHeight - headerH - minCartHeight;
             }
-
             productSection.style.height = newHeight + 'px';
             e.preventDefault();
         };
-
         const stopDrag = () => {
             isDragging = false;
             document.body.style.userSelect = 'auto';
         };
-
         handle.addEventListener('touchstart', startDrag);
         window.addEventListener('touchmove', doDrag, { passive: false });
         window.addEventListener('touchend', stopDrag);
@@ -235,11 +266,9 @@
         const config = JSON.parse(localStorage.getItem(STORAGE_KEYS.STOCK_CONFIG) || '{"enabled":false, "threshold":0}');
         isStockEnabled = config.enabled;
         alertThreshold = Number(config.threshold);
-
         const categories = JSON.parse(localStorage.getItem(STORAGE_KEYS.CATEGORIES) || '[]');
         const bar = document.getElementById('categoryTabs');
         bar.innerHTML = "";
-        
         let firstCat = "";
         categories.forEach((cat, idx) => {
             if(idx === 0) firstCat = cat.name;
@@ -249,9 +278,7 @@
             btn.onclick = () => switchCategory(cat.name);
             bar.appendChild(btn);
         });
-
         allProducts = JSON.parse(localStorage.getItem(STORAGE_KEYS.PRODUCTS) || '[]');
-        
         if (!currentCategory && firstCat) {
             switchCategory(firstCat);
         } else if (currentCategory) {
@@ -271,17 +298,14 @@
         const grid = document.getElementById('productGrid');
         grid.innerHTML = "";
         const filtered = allProducts.filter(p => p.category === currentCategory && p.isActive !== false);
-        
         for (let i = 0; i < 50; i++) {
             const p = filtered.find(item => item.index === i);
             if (p) {
                 const inCart = cart.find(c => c.id === p.id);
                 const cartQty = inCart ? inCart.qty : 0;
                 const displayStock = (Number(p.stock) || 0) - cartQty;
-                
                 const isOutOfStock = isStockEnabled && (displayStock <= 0);
                 const isAlert = isStockEnabled && (displayStock < alertThreshold) && (displayStock > 0);
-
                 const card = document.createElement('div');
                 card.className = "product-card" + (isOutOfStock ? " out-of-stock" : "");
                 card.innerHTML = `
@@ -289,10 +313,15 @@
                     <img src="${p.imageUrl || ''}" class="p-img" onerror="this.style.visibility='hidden'">
                     <div class="p-info">
                         <strong>${p.name}</strong>
-                        <span>¥${Number(p.price).toLocaleString()}</span>
+                        <span class="p-price">¥${Number(p.price).toLocaleString()}</span>
                         ${isStockEnabled ? `<span class="p-stock ${isAlert ? 'stock-alert' : ''}">残:${displayStock}</span>` : ""}
                     </div>`;
-                card.onclick = () => !isOutOfStock && handleProductClick(p);
+                card.onclick = () => {
+                    if(!isOutOfStock) {
+                        playRegisterSound();
+                        handleProductClick(p);
+                    }
+                };
                 grid.appendChild(card);
             } else {
                 const empty = document.createElement('div');
@@ -305,9 +334,7 @@
     function handleProductClick(p) {
         const inCart = cart.find(c => c.id === p.id);
         const currentQty = inCart ? inCart.qty : 0;
-
         if (isStockEnabled && (Number(p.stock) - currentQty) <= 0) return;
-
         if (p.tag) {
             pendingItem = p;
             document.getElementById('tagTitle').innerText = p.name;
@@ -322,26 +349,31 @@
     document.getElementById('tag-cancel').onclick = closeTagModal;
     function closeTagModal() { document.getElementById('tagConfirmModal').classList.add('hidden'); pendingItem = null; }
 
+    // 在庫警告チェック共通関数
+    function checkStockAlert(product, currentQty) {
+        if (!isStockEnabled) return;
+        const remaining = Number(product.stock) - currentQty;
+        if (remaining < alertThreshold && remaining >= 0 && !alertedStatus[product.id]) {
+            setTimeout(() => {
+                window.alert(`【在庫警告】\n「${product.name}」の残数が設定値（${alertThreshold}個）未満になりました。\n（残り ${remaining} 個）`);
+            }, 100);
+            alertedStatus[product.id] = true;
+        }
+    }
+
     function addToCart(p) {
         const existing = cart.find(item => item.id === p.id);
         let nextQty = existing ? existing.qty + 1 : 1;
-        
-        if (isStockEnabled && nextQty > Number(p.stock)) return alert("在庫上限です");
-
+        if (isStockEnabled && nextQty > Number(p.stock)) {
+            alert("在庫上限です");
+            return;
+        }
         if (existing) { 
             existing.qty = nextQty; 
         } else { 
             cart.push({ id: p.id, name: p.name, price: Number(p.price), qty: 1 }); 
         }
-
-        if (isStockEnabled) {
-            const remaining = Number(p.stock) - nextQty;
-            if (remaining < alertThreshold && remaining >= 0 && !alertedStatus[p.id]) {
-                window.alert(`【在庫警告】\n「${p.name}」の残数が設定値（${alertThreshold}個）未満になりました。\n（残り ${remaining} 個）`);
-                alertedStatus[p.id] = true;
-            }
-        }
-
+        checkStockAlert(p, nextQty);
         updateCartUI(); 
         renderProducts();
     }
@@ -369,16 +401,21 @@
     }
 
     window.changeQty = (index, diff) => {
+        playRegisterSound();
         const item = cart[index];
         const pInfo = allProducts.find(p => p.id === item.id);
+        if (!pInfo) return;
         const newQty = item.qty + diff;
-
-        if (isStockEnabled && diff > 0 && pInfo && newQty > Number(pInfo.stock)) return alert("在庫上限");
-
+        if (isStockEnabled && diff > 0 && newQty > Number(pInfo.stock)) {
+            alert("在庫上限です");
+            return;
+        }
         item.qty = newQty;
         if (item.qty <= 0) {
             delete alertedStatus[item.id];
             cart.splice(index, 1);
+        } else if (diff > 0) {
+            checkStockAlert(pInfo, item.qty);
         }
         updateCartUI();
         renderProducts();
@@ -404,7 +441,10 @@
 
     document.getElementById('checkoutBtn').onclick = () => { 
         if (cart.length === 0) return alert("カートが空です"); 
-        location.href = 'payment.html'; 
+        playRegisterSound();
+        setTimeout(() => {
+            location.href = 'payment.html'; 
+        }, 150);
     };
     
     const menuBtn = document.getElementById('menu-btn');
