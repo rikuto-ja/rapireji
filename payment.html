@@ -99,6 +99,9 @@
 </head>
 <body>
 
+<audio id="snd-beep1" src="beep1.mp3" preload="auto"></audio>
+<audio id="snd-beep2" src="beep2.mp3" preload="auto"></audio>
+
 <header>
     <div class="header-left">
         <button id="backBtn" class="btn-back">← 戻る</button>
@@ -181,6 +184,12 @@
     let discountUnit = "¥";
     let lastHistoryId = null;
 
+    // 効果音再生用
+    function playSnd(id) {
+        const audio = document.getElementById(id);
+        if (audio) { audio.currentTime = 0; audio.play().catch(e => {}); }
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
         if (!order) { location.href = "register.html"; return; }
         initSettings();
@@ -197,7 +206,15 @@
                 const btn = document.createElement('button');
                 btn.className = 'pay-btn';
                 btn.innerText = btnName;
-                btn.onclick = () => (btnName.includes('現金')) ? openKeypad('cash') : processPayment(btnName);
+                btn.onclick = () => {
+                    if (btnName.includes('現金')) {
+                        playSnd('snd-beep1'); // 現金ボタン（入力へ）
+                        openKeypad('cash');
+                    } else {
+                        playSnd('snd-beep2'); // 現金以外の即時決済完了
+                        processPayment(btnName);
+                    }
+                };
                 paymentGrid.appendChild(btn);
             }
         });
@@ -212,7 +229,7 @@
                 const displayVal = item.isPercent ? `${item.value}%` : `¥${item.value}`;
                 b.innerText = `${item.name}\n${displayVal}`;
                 b.onclick = () => { 
-                    // プリセットに合わせて単位とバッファを更新
+                    playSnd('snd-beep1');
                     discountUnit = item.isPercent ? "%" : "¥";
                     document.getElementById('discountUnitBtn').innerText = discountUnit;
                     keypadBuffer = String(item.value); 
@@ -232,6 +249,7 @@
     }
 
     window.openKeypad = (mode) => {
+        if(mode === 'discount') playSnd('snd-beep1');
         keypadMode = mode; keypadBuffer = "0";
         discountUnit = "¥";
         document.getElementById('discountUnitBtn').innerText = "¥";
@@ -243,12 +261,14 @@
     
     window.toggleDiscountUnit = () => {
         if (keypadMode !== 'discount') return;
+        playSnd('snd-beep1');
         discountUnit = (discountUnit === "¥") ? "%" : "¥";
         document.getElementById('discountUnitBtn').innerText = discountUnit;
         updateKeypadDisplay();
     };
 
     window.pressNum = (num) => { 
+        playSnd('snd-beep1');
         if (keypadBuffer === "0") {
             if(num === '00') return;
             keypadBuffer = num;
@@ -266,6 +286,7 @@
     document.getElementById('keypadConfirmBtn').onclick = () => {
         const val = Number(keypadBuffer);
         if (keypadMode === 'discount') {
+            playSnd('snd-beep1'); // 割引確定はbeep1
             if (discountUnit === "%") {
                 discountVal = Math.floor(order.totalAmount * (val / 100));
             } else {
@@ -276,6 +297,7 @@
         } else {
             const finalTotal = order.totalAmount - discountVal;
             if (val < finalTotal) return alert("金額不足");
+            playSnd('snd-beep2'); // 現金決済の完了はbeep2
             processPayment('現金', val); 
             closeModal('keypadModal');
         }
@@ -358,7 +380,7 @@
                 t += `${item.name.padEnd(14)} x${item.qty} ¥${(item.price * item.qty).toLocaleString().padStart(7)}\n`; 
             });
             t += `------------------------------\n小計:              ¥${info.subtotal.toLocaleString().padStart(8)}\n`;
-            if(info.discount > 0) t += `割引:             -¥${info.discount.toLocaleString().padStart(8)}\n`;
+            if(info.discount > 0) t += `割引:              -¥${info.discount.toLocaleString().padStart(8)}\n`;
             t += `合計:              ¥${info.totalAmount.toLocaleString().padStart(8)}\n決済: ${info.paymentMethod}\n`;
             if(info.cashReceived > 0) { 
                 t += `預り:              ¥${info.cashReceived.toLocaleString().padStart(8)}\n釣銭:              ¥${info.change.toLocaleString().padStart(8)}\n`; 
