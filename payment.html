@@ -85,8 +85,18 @@
         .btn-outline { width: 100%; background: #fff; color: #000; padding: 15px; border: 2px solid #000; font-weight: 900; cursor: pointer; margin-top: 10px; }
 
         .receipt-area {
-            background: #fff; border: 1px dashed #000; padding: 15px; font-family: monospace;
-            white-space: pre-wrap; font-size: 0.8rem; line-height: 1.2; margin-bottom: 15px; color: #000;
+            background: #fff;
+            border: 1px dashed #000;
+            padding: 15px;
+            /* iPhoneでの等幅フォントを強制 */
+            font-family: "Courier New", Courier, monospace; 
+            white-space: pre-wrap;
+            font-size: 0.85rem;
+            line-height: 1.4;
+            margin-bottom: 15px;
+            color: #000;
+            /* 文字がはみ出さないように調整 */
+            word-break: break-all;
         }
 
         @media print {
@@ -260,16 +270,13 @@
         const details = order.taxDetails || {};
         const rates = Object.keys(details).map(Number);
         
-        // 全て0%でないかチェック
-        const hasTax = rates.some(r => r > 0);
-
-        if (hasTax) {
+        // --- 修正箇所: 0%でも表示するように条件を緩和 ---
+        if (rates.length > 0) { 
             taxArea.classList.remove('hidden');
             let html = "";
             rates.sort((a,b) => b-a).forEach(rate => {
                 const sub = details[rate];
                 const tax = Math.floor(sub * (rate / 100));
-                const incl = sub + tax;
                 html += `
                     <div class="tax-line">
                         <span>${rate}%対象 (税抜 ¥${sub.toLocaleString()})</span>
@@ -414,11 +421,12 @@
     window.generateContent = (type) => {
         const info = window.currentPaymentData; 
         const d = shopInfo; 
-        let t = "";
-        const dateStr = info.date.toLocaleString();
-        const line = "------------------------------\n";
+        const receiptPreview = document.getElementById('receiptPreview');
         
-        // ヘルパー: 日本語を含む文字列の幅計算（簡易版）
+        // 1行の基準文字数をiPhone Safariに合わせて28文字に調整
+        const MAX_WIDTH = 28;
+        const line = "-".repeat(MAX_WIDTH) + "\n";
+        
         const getLen = (str) => {
             let len = 0;
             for (let i = 0; i < str.length; i++) {
@@ -426,6 +434,16 @@
             }
             return len;
         };
+
+        const padRight = (label, value) => {
+            const labelLen = getLen(label);
+            const valueLen = getLen(value);
+            const spaces = Math.max(1, MAX_WIDTH - (labelLen + valueLen));
+            return label + " ".repeat(spaces) + value + "\n";
+        };
+
+        let t = "";
+        const dateStr = info.date.toLocaleString();
 
         if (type === 'receipt') {
             t += `      [ レシート ]\n`;
@@ -436,48 +454,34 @@
             
             info.items.forEach(item => { 
                 const name = item.name;
-                const qtyStr = `x${item.qty}`;
                 const priceStr = `¥${(item.price * item.qty).toLocaleString()}`;
+                const qtyStr = `x${item.qty}`;
                 
-                // 商品名が長い場合の処理
                 if (getLen(name) > 14) {
-                    t += `${name}\n${qtyStr.padStart(16)} ${priceStr.padStart(13)}\n`;
+                    t += `${name}\n${" ".repeat(14)}${qtyStr.padStart(4)} ${priceStr.padStart(9)}\n`;
                 } else {
                     const spaces = " ".repeat(14 - getLen(name));
-                    t += `${name}${spaces} ${qtyStr.padStart(3)} ${priceStr.padStart(11)}\n`;
+                    t += `${name}${spaces} ${qtyStr.padStart(3)} ${priceStr.padStart(9)}\n`;
                 }
             });
             
             t += line;
-            
-            // 税率内訳の整形（修正版）
             const details = info.taxDetails || {};
-            const rates = Object.keys(details).map(Number).sort((a,b) => b-a);
-            rates.forEach(rate => {
+            Object.keys(details).map(Number).sort((a,b) => b-a).forEach(rate => {
                 const sub = details[rate];
                 const tax = Math.floor(sub * (rate / 100));
-                
-                // 「10%対象(¥1,000)」のラベル作成
-                const label = `${rate}%対象(¥${sub.toLocaleString()})`;
-                // 「内税¥100」の作成
-                const taxStr = `内税¥${tax.toLocaleString()}`;
-                
-                // 全体30文字（標準的な58mm幅）の中で右詰め計算
-                const spacesCount = Math.max(1, 30 - (getLen(label) + getLen(taxStr)));
-                const spaces = " ".repeat(spacesCount);
-                
-                t += `${label}${spaces}${taxStr}\n`;
+                t += padRight(`${rate}%対象(税抜¥${sub.toLocaleString()})`, `内税¥${tax.toLocaleString()}`);
             });
             
             t += line;
-            t += `小計(税込)      ${info.subtotal.toLocaleString().padStart(14)}\n`;
-            if(info.discount > 0) t += `割引            -${info.discount.toLocaleString().padStart(13)}\n`;
-            t += `合計            ${info.totalAmount.toLocaleString().padStart(14)}\n`;
+            t += padRight("小計(税込)", `¥${info.subtotal.toLocaleString()}`);
+            if(info.discount > 0) t += padRight("割引", `-¥${info.discount.toLocaleString()}`);
+            t += padRight("合計", `¥${info.totalAmount.toLocaleString()}`);
             t += `決済方法: ${info.paymentMethod}\n`;
             
             if(info.cashReceived > 0) { 
-                t += `預り            ${info.cashReceived.toLocaleString().padStart(14)}\n`;
-                t += `釣銭            ${info.change.toLocaleString().padStart(14)}\n`; 
+                t += padRight("預り", `¥${info.cashReceived.toLocaleString()}`);
+                t += padRight("釣銭", `¥${info.change.toLocaleString()}`);
             }
         } else {
             // 領収書
@@ -486,28 +490,32 @@
 
             t += `        領 収 書\n\n${info.date.toLocaleDateString()}  No.${info.id}\n\n`;
             t += `                様\n\n`;
-            t += `  金額  ¥${info.totalAmount.toLocaleString()} -\n\n`;
+            t += `   金額  ¥${info.totalAmount.toLocaleString()} -\n\n`;
             t += `但 ${d.receiptType} として\n正に領収いたしました\n\n`;
-            
-            // 領収書の内訳
             t += ` [内訳]\n`;
-            t += `  税抜金額： ¥${netTotal.toLocaleString().padStart(10)}\n`;
-            t += `  消費税等： ¥${totalTax.toLocaleString().padStart(10)}\n`;
+            t += padRight("  税抜金額：", `¥${netTotal.toLocaleString()}`);
+            t += padRight("  消費税等：", `¥${totalTax.toLocaleString()}`);
             
-            // 収入印紙枠 (税抜5万以上かつ現金)
+            // 収入印紙枠の崩れ対策（文字ではなく枠線で描画）
             if (netTotal >= 50000 && info.paymentMethod.includes('現金')) {
-                t += `\n  +----------+\n  | 収入印紙 |\n  |  貼付枠  |\n  +----------+\n`;
+                t += `\n`;
+                // 文字列の中に目印を置いて、後でHTML置換します
+                t += `[[STAMP_HERE]]\n`;
             }
             
-            t += `\n${line}`;
-            t += `発行者: ${d.companyName}\n`;
+            t += `\n${line}発行者: ${d.companyName}\n`;
             if(d.address) t += `${d.address}\n`;
             if(d.tel) t += `TEL: ${d.tel}\n`;
         }
         
         t += line + `ありがとうございました\n`;
         if(d.memo) t += `${d.memo}\n`;
-        document.getElementById('receiptPreview').innerText = t;
+
+        // 最後にHTMLとして流し込み、印紙枠だけ特別なスタイルを当てる
+        let html = t.replace('[[STAMP_HERE]]', 
+            `<div style="border: 1px solid #000; width: 60px; height: 70px; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 10px; margin: 10px 0 10px 20px;">収入印紙<br>貼付枠</div>`
+        );
+        receiptPreview.innerHTML = html;
     };
 
     document.getElementById('backBtn').onclick = () => { location.href = 'register.html'; };
