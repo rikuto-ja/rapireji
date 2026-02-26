@@ -12,7 +12,6 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; touch-action: manipulation; }
         body { background-color: var(--white); overflow: hidden; display: flex; flex-direction: column; height: 100vh; width: 100vw; }
         
-        /* ヘッダー */
         header {
             height: calc(var(--header-h) + env(safe-area-inset-top)); 
             border-bottom: 3px solid var(--black);
@@ -29,7 +28,6 @@
         header h1 { font-size: 1.2rem; font-weight: 900; margin-left: 20px; white-space: nowrap; }
         .header-ad-space { flex: 1; margin-left: 20px; height: 45px; background: #fff; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 1px dashed #ccc; }
 
-        /* サイドメニュー */
         .menu-trigger { width: 30px; height: 22px; cursor: pointer; position: relative; }
         .menu-trigger span { display: block; width: 100%; height: 4px; background: var(--black); position: absolute; left: 0; transition: all 0.3s; }
         .menu-trigger span:nth-child(1) { top: 0; }
@@ -56,7 +54,6 @@
         .side-nav.hidden { transform: translateX(-100%); }
         .menu-link { display: block; padding: 15px; color: var(--black); font-weight: 800; text-decoration: none; border-bottom: 1px solid var(--gray-light); }
 
-        /* メインレイアウト */
         .main-layout { display: flex; flex: 1; overflow: hidden; width: 100%; }
         .product-section { flex: 7.5; display: flex; flex-direction: column; background: var(--gray-bg); padding: 10px; overflow: hidden; }
         .category-bar { display: flex; gap: 8px; margin-bottom: 10px; overflow-x: auto; padding-bottom: 10px; flex-shrink: 0; }
@@ -115,7 +112,6 @@
         .p-stock { font-size: 0.6rem; color: #666; margin-top: 1px; }
         .stock-alert { color: #ff0000 !important; font-weight: 900 !important; }
 
-        /* 注文リスト */
         .cart-section { flex: 2.5; border-left: 3px solid var(--black); display: flex; flex-direction: column; background: var(--white); overflow: hidden; }
         .drag-handle { padding: 10px; border-bottom: 2px solid var(--black); font-weight: 900; background: #eee; font-size: 0.8rem; display: flex; flex-direction: column; align-items: center; }
         .handle-bar { display: none; width: 40px; height: 4px; background: #ccc; border-radius: 2px; margin-bottom: 5px; }
@@ -130,9 +126,8 @@
         .total-row { display: flex; justify-content: space-between; font-size: 1.3rem; font-weight: 900; margin-bottom: 10px; }
         .checkout-btn { width: 100%; background: var(--black); color: var(--white); border: none; padding: 15px; font-size: 1.1rem; font-weight: 900; cursor: pointer; border-radius: 0; }
 
-        /* モーダル */
         .confirm-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 30000; }
-        .confirm-content { background: #fff; padding: 30px; border: 5px solid #000; width: 90%; max-width: 400px; text-align: center; box-shadow: 15px 15px 0 #000; }
+        .confirm-content { background: #fff; padding: 30px; width: 90%; max-width: 400px; text-align: center; box-shadow: 0 #000; }
         .hidden { display: none !important; }
 
         @media screen and (max-width: 768px) {
@@ -145,7 +140,7 @@
             .product-card { min-height: 95px; height: auto; }
             .p-img { height: 40px; } 
             .p-info { padding: 4px 2px; }
-            .empty-slot { height: 95px; border:1px solid #eee; display: block; }
+            .empty-slot { height: 95px; border:1px solid transparent; display: block; }
             .cart-section { flex: 1; border-left: none; border-top: 3px solid var(--black); }
             .drag-handle { cursor: row-resize; touch-action: none; padding: 5px 10px 10px 10px; }
             .handle-bar { display: block; }
@@ -178,7 +173,7 @@
 <div id="tagConfirmModal" class="confirm-modal hidden">
     <div class="confirm-content">
         <h2 id="tagTitle" style="margin-bottom: 10px; font-weight: 900;"></h2>
-        <p id="tagDesc" style="margin-bottom: 25px; font-weight: 800; color: #ff0000; font-size: 1.1rem;"></p>
+        <p id="tagDesc" style="margin-bottom: 25px; font-weight: 800; color: #ff0000; font-size: 1.3rem;"></p>
         <div style="display: flex; gap: 10px;">
             <button id="tag-ok" class="checkout-btn" style="flex:1; padding:12px;">確認</button>
             <button id="tag-cancel" style="flex:1; background:#fff; border:2px solid #000; font-weight:900; cursor:pointer;">戻る</button>
@@ -298,6 +293,7 @@
         const grid = document.getElementById('productGrid');
         grid.innerHTML = "";
         const filtered = allProducts.filter(p => p.category === currentCategory && p.isActive !== false);
+        
         for (let i = 0; i < 50; i++) {
             const p = filtered.find(item => item.index === i);
             if (p) {
@@ -305,7 +301,11 @@
                 const cartQty = inCart ? inCart.qty : 0;
                 const displayStock = (Number(p.stock) || 0) - cartQty;
                 const isOutOfStock = isStockEnabled && (displayStock <= 0);
-                const isAlert = isStockEnabled && (displayStock < alertThreshold) && (displayStock > 0);
+                
+                // 商品ごとの税込価格を計算（表示用）
+                const taxRate = Number(p.taxRate || 0);
+                const priceInclTax = Math.floor(Number(p.price) * (1 + taxRate / 100));
+
                 const card = document.createElement('div');
                 card.className = "product-card" + (isOutOfStock ? " out-of-stock" : "");
                 card.innerHTML = `
@@ -313,20 +313,13 @@
                     <img src="${p.imageUrl || ''}" class="p-img" onerror="this.style.visibility='hidden'">
                     <div class="p-info">
                         <strong>${p.name}</strong>
-                        <span class="p-price">¥${Number(p.price).toLocaleString()}</span>
-                        ${isStockEnabled ? `<span class="p-stock ${isAlert ? 'stock-alert' : ''}">残:${displayStock}</span>` : ""}
+                        <span class="p-price">¥${priceInclTax.toLocaleString()} <small style="font-size:0.5rem;">(税込)</small></span>
+                        ${isStockEnabled ? `<span class="p-stock">残:${displayStock}</span>` : ""}
                     </div>`;
-                card.onclick = () => {
-                    if(!isOutOfStock) {
-                        playRegisterSound();
-                        handleProductClick(p);
-                    }
-                };
+                card.onclick = () => { if(!isOutOfStock) { playRegisterSound(); handleProductClick(p); } };
                 grid.appendChild(card);
             } else {
-                const empty = document.createElement('div');
-                empty.className = "empty-slot";
-                grid.appendChild(empty);
+                grid.appendChild(Object.assign(document.createElement('div'), {className: "empty-slot"}));
             }
         }
     }
@@ -381,13 +374,33 @@
     function updateCartUI() {
         const list = document.getElementById('cartList'), totalDisp = document.getElementById('totalAmount');
         list.innerHTML = "";
-        let total = 0;
+        
+        // 税率ごとの税抜合計額を保持するオブジェクト
+        const subtotalByRate = {}; 
+        let simpleVisualTotal = 0; 
+
         cart.forEach((item, index) => {
-            total += (item.price * item.qty);
+            const pInfo = allProducts.find(p => p.id === item.id);
+            // 税率を取得（設定がない場合は0とする）
+            const rate = pInfo ? Number(pInfo.taxRate || 0) : 0;
+            const priceInclTax = Math.floor(item.price * (1 + rate / 100));
+            const rowTotal = priceInclTax * item.qty;
+            
+            simpleVisualTotal += rowTotal;
+
+            // 税率ごとのグループに税抜合計を加算
+            if (!subtotalByRate[rate]) {
+                subtotalByRate[rate] = 0;
+            }
+            subtotalByRate[rate] += (item.price * item.qty);
+
             const div = document.createElement('div');
             div.className = "cart-item";
             div.innerHTML = `
-                <div class="cart-item-top"><span>${item.name}</span><span>¥${(item.price * item.qty).toLocaleString()}</span></div>
+                <div class="cart-item-top">
+                    <span>${item.name} <small>(${rate}%)</small></span>
+                    <span>¥${rowTotal.toLocaleString()}</span>
+                </div>
                 <div class="cart-item-controls">
                     <button class="qty-btn" onclick="changeQty(${index}, -1)">-</button>
                     <span style="margin:0 10px;">× ${item.qty}</span>
@@ -396,8 +409,40 @@
                 </div>`;
             list.appendChild(div);
         });
-        totalDisp.innerText = `¥${total.toLocaleString()}`;
-        sessionStorage.setItem('currentOrder', JSON.stringify({ items: cart, totalAmount: total }));
+
+        // 最終計算
+        let finalTaxTotal = 0;
+        let finalSubtotal = 0;
+
+        console.group("--- 決済計算詳細 (汎用税率対応) ---");
+        
+        Object.keys(subtotalByRate).forEach(rate => {
+            const r = Number(rate);
+            const subtotal = subtotalByRate[r];
+            const tax = Math.floor(subtotal * (r / 100)); // 税率ごとの税金（切り捨て）
+            
+            finalSubtotal += subtotal;
+            finalTaxTotal += tax;
+            
+            console.log(`税率 ${r}% 対象(税抜): ${subtotal}円 => 税額: ${tax}円`);
+        });
+
+        const finalTotal = finalSubtotal + finalTaxTotal;
+
+        console.log(`表示用単純合計(参考): ${simpleVisualTotal}円`);
+        console.log(`総合計(税抜計 ${finalSubtotal}円 + 税計 ${finalTaxTotal}円): ${finalTotal}円`);
+        console.groupEnd();
+
+        totalDisp.innerText = `¥${finalTotal.toLocaleString()}`;
+        
+        // セッションストレージに保存
+        sessionStorage.setItem('currentOrder', JSON.stringify({ 
+            items: cart, 
+            totalAmount: finalTotal,
+            taxDetails: subtotalByRate // 全税率の内訳を保持
+        }));
+        
+        list.scrollTop = list.scrollHeight;
     }
 
     window.changeQty = (index, diff) => {
