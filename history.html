@@ -113,8 +113,8 @@
 
         @media print {
             @page { size: 58mm auto; margin: 0; }
-            body * { visibility: hidden; }
-            #receipt-text, #receipt-text * { visibility: visible !important; display: block !important; }
+            body * { visibility: hidden; } /* 全体を隠す */
+            #receipt-text, #receipt-text * { visibility: visible !important; display: block !important; } /* プレビューエリアだけ出す */
             #receipt-text { position: absolute; left: 0; top: 0; width: 54mm; padding: 2mm; font-size: 9pt; border: none !important; }
         }
     </style>
@@ -417,33 +417,42 @@
     function reissue(type, guestName = "") { 
         if (!selectedItem) return;
 
-        // 1. まずプレビューエリアを「領収書」または「レシート」に書き換える
+        // 1. まず画面上のプレビュー（#receipt-text）を書き換える
         generatePreview(type, guestName);
     
-        // 2. ブラウザが描画を完了するのを少し待ってから印刷ダイアログを表示
+        // 2. ブラウザが中身を完全に書き換えるまで少し待つ（白紙防止）
+        // 300ms〜500ms程度の間隔を空けてから、印刷を実行する
         setTimeout(() => {
             window.print(); 
-        
-            // 3. 印刷後、ローカルストレージの発行済みフラグを更新
+
+            // 3. 印刷が終わった後に、データの保存処理だけを行う
             const history = JSON.parse(localStorage.getItem(STORAGE_KEYS.HISTORY) || '[]');
             const idx = history.findIndex(h => h.id === selectedItem.id);
+        
             if (idx !== -1) {
+                // ステータスを「済」に更新
                 if (type === 'receipt') history[idx].receiptIssued = true;
                 else history[idx].billIssued = true;
             
                 localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(history));
             
-                // 4. 内部データを更新（ここで showDetail を呼ぶとレシート表示に戻ってしまうため、
-                // ステータスバッジの更新のみをここで行うか、そのままの状態を維持する）
+                // 内部データを最新にする
                 selectedItem = history[idx];
+            
+                // 4. 左側の履歴一覧を更新
                 loadHistory(); 
             
-                // 重要：ここで showDetail(selectedItem) を呼ぶと、
-                // showDetail 内の generatePreview('receipt') が走り、レシートに戻ってしまいます。
-                // 領収書の状態を維持したい場合は、ここでの showDetail 呼び出しを制限します。
-                updateStatusBadges(selectedItem); 
+                // 5. 【重要】ここで showDetail() を呼ぶとレシートにリセットされてしまうため、
+                // ステータスバッジ（済/未）の見た目だけを書き換える
+                const header = document.getElementById('detail-status-header');
+                if (header) {
+                    header.innerHTML = `
+                        <div class="status-pill" style="border:2px solid #000; font-size:0.7rem; font-weight:900; margin-right:5px; padding:2px 6px; opacity:${selectedItem.receiptIssued ? 1 : 0.2}">レシート: ${selectedItem.receiptIssued ? '済' : '未'}</div>
+                        <div class="status-pill" style="border:2px solid #000; font-size:0.7rem; font-weight:900; margin-right:5px; padding:2px 6px; opacity:${selectedItem.billIssued ? 1 : 0.2}">領収書: ${selectedItem.billIssued ? '済' : '未'}</div>
+                        ${selectedItem.isVoided ? '<div class="status-pill" style="background:#000; color:#fff; font-size:0.7rem; padding:2px 6px;">取消済</div>' : ''}`;
+                }
             }
-        }, 500); 
+        }, 500); // 0.5秒待つことで白紙化を防ぎます
     }
 
     document.getElementById('btn-reissue-receipt').onclick = () => reissue('receipt');
