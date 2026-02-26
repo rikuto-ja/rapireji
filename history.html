@@ -99,7 +99,9 @@
             line-height: 1.4;
             margin-bottom: 15px;
             color: #000;
-            word-break: break-all;
+            /* ↓ 修正：数字の途中改行を防ぎつつ、英単語も適切に扱う設定 */
+            word-break: keep-all; 
+            overflow-wrap: anywhere;
             font-variant-numeric: tabular-nums;
             letter-spacing: 0;
             font-feature-settings: "palt" 0;
@@ -129,7 +131,8 @@
                 top: 0;
                 width: 54mm; /* レシート幅に固定 */
                 padding: 4mm; /* 端の文字欠け防止 */
-                border: none !important; /* 印刷時は外枠の点線を消す（レシートっぽくするため） */
+                border: none !important;
+                background: white !important;
                 font-size: 9pt; /* 読みやすいサイズ */
             }
         }
@@ -330,7 +333,7 @@
             return len;
         };
 
-        const MAX_WIDTH = 28; // 少し広げて余裕を持たせる
+        const MAX_WIDTH = 24; // 少し広げて余裕を持たせる
         const line = "-".repeat(MAX_WIDTH) + "\n";
     
         // 右寄せ用関数（項目名と金額を両端に配置）
