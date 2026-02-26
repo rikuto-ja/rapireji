@@ -485,25 +485,69 @@
             alert("取引を取り消し、在庫を復元しました。");
         }
     };
-
-    // --- CSV改善版（CSVロジックのみ修正、他は一切変更なし） ---
+    
+    // --- CSV改善版（動的税率対応） ---
     document.getElementById('btn-csv-export').onclick = () => {
-        // ヘッダーに税率別の項目を追加
-        let csv = "\uFEFF日時,購入内訳,小計,割引,税抜合計,消費税額,8%対象(税抜),10%対象(税抜),最終合計,支払方法,取引状態,レシート発行,領収書発行\n";
-        filteredData.forEach(h => { 
+        // 1. 存在する税率をすべて抽出する（重複なし・降順）
+        const activeRates = new Set();
+        filteredData.forEach(h => {
+            if (h.taxDetails) {
+                Object.keys(h.taxDetails).forEach(rate => activeRates.add(Number(rate)));
+            }
+        });
+        const sortedRates = Array.from(activeRates).sort((a, b) => b - a);
+
+        // 2. ヘッダーの作成
+        let header = ["日時", "購入内訳", "小計", "割引", "税抜合計", "消費税額"];
+        // 存在する税率分だけ列を追加
+        sortedRates.forEach(rate => {
+            header.push(`${rate}%対象(税抜)`);
+        });
+        header.push("最終合計", "支払方法", "取引状態", "レシート発行", "領収書発行");
+
+        let csv = "\uFEFF" + header.map(h => `"${h}"`).join(",") + "\n";
+
+        // 3. データ行の作成
+        filteredData.forEach(h => {
             const d = new Date(h.createdAt);
-            const dateStr = `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
+            const dateStr = `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
             const itemDetail = h.items.map(i => `${i.name}x${i.qty}`).join(' / ');
+            
             const details = h.taxDetails || {};
-            const net8 = details[8] || 0;
-            const net10 = details[10] || 0;
-            const netTotal = net8 + net10;
+            const netTotal = Object.values(details).reduce((sum, val) => sum + val, 0);
             const taxAmount = (h.totalAmount || 0) - netTotal;
+            
             const voidTxt = h.isVoided ? "取消済" : "有効";
             const receiptTxt = h.receiptIssued ? "済" : "未";
             const billTxt = h.billIssued ? "済" : "未";
-            csv += `"${dateStr}","${itemDetail}",${h.subtotal || 0},${h.discount || 0},${netTotal},${taxAmount},${net8},${net10},${h.totalAmount || 0},"${h.paymentMethod}","${voidTxt}","${receiptTxt}","${billTxt}"\n`; 
+
+            // 基本情報
+            let row = [
+                `"${dateStr}"`,
+                `"${itemDetail}"`,
+                h.subtotal || 0,
+                h.discount || 0,
+                netTotal,
+                taxAmount
+            ];
+
+            // 動的な税率別の金額を追加
+            sortedRates.forEach(rate => {
+                row.push(details[rate] || 0); // 存在しない税率は0
+            });
+
+            // 残りの情報
+            row.push(
+                h.totalAmount || 0,
+                `"${h.paymentMethod}"`,
+                `"${voidTxt}"`,
+                `"${receiptTxt}"`,
+                `"${billTxt}"`
+            );
+
+            csv += row.join(",") + "\n";
         });
+
         downloadCSV(csv, "取引明細レポート.csv");
     };
 
