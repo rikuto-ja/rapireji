@@ -14,12 +14,10 @@
         body { background-color: var(--white); color: var(--black); min-height: 100vh; display: flex; flex-direction: column; }
         
         header {
-            /* 元の高さ 60px に セーフエリア分をプラスする設定 */
             height: calc(var(--header-h) + env(safe-area-inset-top)); 
             border-bottom: 3px solid var(--black);
             display: flex; 
             align-items: center; 
-            /* 下記のように padding-top を調整 */
             padding: env(safe-area-inset-top) 20px 0 20px; 
             background: var(--white);
             position: sticky; 
@@ -51,7 +49,6 @@
             top: var(--header-h); 
             left: 0; 
             width: 250px; 
-            /* 修正：ヘッダーの高さ分を引いた100%にし、さらにセーフエリア分を下まで伸ばす */
             height: calc(100% - var(--header-h)); 
             padding-bottom: env(safe-area-inset-bottom); 
             background: var(--white); 
@@ -90,7 +87,22 @@
         .modal-content { background: #fff; padding: 30px; border: 6px solid #000; width: 95%; max-width: 500px; max-height: 90vh; overflow-y: auto; box-shadow: 10px 10px 0px var(--black); }
         .modal.hidden { display: none !important; }
 
-        .receipt-area { background: #fff; border: 1px dashed #000; padding: 20px; font-family: monospace; white-space: pre-wrap; font-size: 0.85rem; line-height: 1.3; margin: 20px 0; color: #000; }
+        /* history.html の .receipt-area をこれに書き換え */
+        .receipt-area {
+            background: #fff;
+            border: 1px dashed #000;
+            padding: 15px;
+            font-family: "Courier New", Courier, monospace; 
+            white-space: pre-wrap;
+            font-size: 0.85rem;
+            line-height: 1.4;
+            margin-bottom: 15px;
+            color: #000;
+            word-break: break-all;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: 0;
+            font-feature-settings: "palt" 0;
+        }
 
         @media screen and (max-width: 768px) {
             header { padding: 0 10px; }
@@ -169,12 +181,14 @@
     };
 
     let historyData = [];
+    let filteredData = [];
     let selectedItem = null;
-    let shopInfo = { companyName: "店舗", address: "", tel: "", memo: "", receiptType: "商品代" };
+    let shopInfo = { companyName: "", address: "", tel: "", memo: "", receiptType: "商品代" };
 
     document.addEventListener('DOMContentLoaded', () => {
         loadShopInfo();
         loadHistory();
+        initLongPress();
     });
 
     function loadShopInfo() {
@@ -183,36 +197,38 @@
     }
 
     function loadHistory() {
-        const rawData = localStorage.getItem(STORAGE_KEYS.HISTORY);
-        historyData = rawData ? JSON.parse(rawData) : [];
+    const rawData = localStorage.getItem(STORAGE_KEYS.HISTORY);
+    historyData = rawData ? JSON.parse(rawData) : [];
 
-        const startVal = document.getElementById('filter-start').value;
-        const endVal = document.getElementById('filter-end').value;
-        
-        let displayData = [...historyData].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    const startVal = document.getElementById('filter-start').value;
+    const endVal = document.getElementById('filter-end').value;
+    
+    let displayData = [...historyData].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-        if (startVal) {
-            const start = new Date(startVal).getTime();
-            displayData = displayData.filter(h => new Date(h.createdAt).getTime() >= start);
-        }
-        if (endVal) {
-            const end = new Date(endVal).getTime();
-            displayData = displayData.filter(h => new Date(h.createdAt).getTime() <= end);
-        }
-
-        renderHistory(displayData);
+    if (startVal) {
+        const start = new Date(startVal).getTime();
+        displayData = displayData.filter(h => new Date(h.createdAt).getTime() >= start);
     }
+    if (endVal) {
+        const end = new Date(endVal).getTime();
+        displayData = displayData.filter(h => new Date(h.createdAt).getTime() <= end);
+    }
+
+    filteredData = displayData; // ★ここを追加：絞り込み結果を保持
+    renderHistory(displayData);
+}
 
     function renderHistory(data) {
         const container = document.getElementById('history-container');
         container.innerHTML = ""; 
-        let totalSub = 0, totalDisc = 0;
+        let totalSub = 0, totalDisc = 0, totalFinal = 0;
 
         data.forEach(h => {
             const isVoided = h.isVoided || false;
             if (!isVoided) {
                 totalSub += h.subtotal || 0;
                 totalDisc += h.discount || 0;
+                totalFinal += h.totalAmount || 0;
             }
             const date = new Date(h.createdAt).toLocaleString();
             const div = document.createElement('div');
@@ -230,7 +246,7 @@
 
         document.getElementById('sum-subtotal').innerText = `¥${totalSub.toLocaleString()}`;
         document.getElementById('sum-discount').innerText = `¥${totalDisc.toLocaleString()}`;
-        document.getElementById('sum-total').innerText = `¥${(totalSub - totalDisc).toLocaleString()}`;
+        document.getElementById('sum-total').innerText = `¥${totalFinal.toLocaleString()}`;
     }
 
     function showDetail(data) {
@@ -259,90 +275,163 @@
         document.getElementById('detailModal').classList.remove('hidden');
     }
 
-    function generatePreview(type) {
+    const MAX_WIDTH = 26;
+    const getLen = (str) => {
+        let len = 0; if(!str) return 0;
+        for (let i = 0; i < str.length; i++) (str.charCodeAt(i) <= 255) ? len += 1 : len += 2;
+        return len;
+    };
+    const padRight = (label, value) => {
+        const labelLen = getLen(label); const valueLen = getLen(value);
+        const spacesCount = Math.max(1, MAX_WIDTH - (labelLen + valueLen));
+        return label + " ".repeat(spacesCount) + value + "\n";
+    };
+    const alignRight = (text) => {
+        const len = getLen(text);
+        return " ".repeat(Math.max(0, MAX_WIDTH - len)) + text + "\n";
+    };
+
+    function generatePreview(type, guestName = "") {
         const data = selectedItem; if (!data) return;
         const d = shopInfo;
-        const dateStr = new Date(data.createdAt).toLocaleString();
-        let t = "";
+        // 店名が空の場合は「らぴレジ店舗」を代入
+        const displayStoreName = d.companyName || "らぴレジ店舗";
+        const regNo = (d && d.registrationNumber) ? d.registrationNumber : null;
+        const receiptPreview = document.getElementById('receipt-text');
+        const MAX_WIDTH = 26;
+        const line = "-".repeat(MAX_WIDTH) + "\n";
         
+        const getLen = (str) => {
+            let len = 0; if(!str) return 0;
+            for (let i = 0; i < str.length; i++) (str.charCodeAt(i) <= 255) ? len += 1 : len += 2;
+            return len;
+        };
+
+        const padRight = (label, value) => {
+            const labelLen = getLen(label); const valueLen = getLen(value);
+            const spacesCount = Math.max(1, MAX_WIDTH - (labelLen + valueLen));
+            return label + " ".repeat(spacesCount) + value + "\n";
+        };
+
+        const alignRight = (text) => {
+            const len = getLen(text);
+            return " ".repeat(Math.max(0, MAX_WIDTH - len)) + text + "\n";
+        };
+
+        let t = "";
+        const dateStr = new Date(data.createdAt).toLocaleString();
+        const netTotal = Object.values(data.taxDetails || {}).reduce((a, b) => a + b, 0);
+
         if (type === 'receipt') {
-            t += `      [ レシート(再) ]\n`;
-            t += `店名: ${d.companyName}\n`;
+            t += `        レシート \n\n`; 
+            t += `店名: ${displayStoreName}\n`; // 修正：変数を使用
             if(d.address) t += `住所: ${d.address}\n`; 
             if(d.tel) t += `TEL: ${d.tel}\n`;
-            t += `日時: ${dateStr}\n--------------------------\n`;
-            data.items.forEach(i => t += `${i.name.padEnd(12)} x${i.qty} ¥${(i.price*i.qty).toLocaleString().padStart(7)}\n`);
-            t += `--------------------------\n小計:          ¥${(data.subtotal || 0).toLocaleString().padStart(8)}\n割引:         -¥${(data.discount || 0).toLocaleString().padStart(8)}\n合計:          ¥${(data.totalAmount || 0).toLocaleString().padStart(8)}\n決済: ${data.paymentMethod}\n`;
-            if(data.paymentMethod === '現金') {
-                t += `預り:          ¥${(data.cashReceived || 0).toLocaleString().padStart(8)}\n釣銭:          ¥${(data.change || 0).toLocaleString().padStart(8)}\n`;
+            if(regNo) t += `登録番号: ${regNo}\n`;
+            t += `日時: ${dateStr}\n${line}`;
+            
+            data.items.forEach(item => { 
+                const priceStr = `¥${(item.price * item.qty).toLocaleString()}`;
+                const qtyStr = `x${item.qty}`;
+                if (getLen(item.name) > 12) t += `${item.name}\n${" ".repeat(12)}${qtyStr.padStart(4)} ${priceStr.padStart(8)}\n`;
+                else t += `${item.name}${" ".repeat(12 - getLen(item.name))} ${qtyStr.padStart(3)} ${priceStr.padStart(9)}\n`;
+            });
+            
+            t += line;
+            const details = data.taxDetails || {};
+            Object.keys(details).map(Number).sort((a,b) => b-a).forEach(rate => {
+                const sub = details[rate];
+                const taxLabel = `${rate}%対象(税抜¥${sub.toLocaleString()})`;
+                const taxValue = `内税¥${Math.floor(sub*(rate/100)).toLocaleString()}`;
+                t += `${taxLabel}\n`;
+                t += alignRight(taxValue);
+            });
+            t += line;
+            t += padRight("小計", `¥${data.subtotal.toLocaleString()}`);
+            if(data.discount > 0) t += padRight("割引       ", `-¥${data.discount.toLocaleString()}`);
+            t += padRight("合計       ", `¥${data.totalAmount.toLocaleString()}`);
+            t += `決済方法: ${data.paymentMethod}\n`;
+            if(data.cashReceived > 0) { 
+                t += padRight("預り       ", `¥${data.cashReceived.toLocaleString()}`);
+                t += padRight("釣銭       ", `¥${data.change.toLocaleString()}`);
             }
-            t += `--------------------------\nありがとうございました\n`;
-            if(d.memo) t += `${d.memo}\n`; // レシートにのみメモを表示
+            if (netTotal >= 50000 && data.paymentMethod.includes('現金')) t += `\n[[STAMP_HERE]]\n`;
+            t += line + `ありがとうございました\n`;
+            if(d.memo) t += `${d.memo}\n`;
         } else {
-            const label = d.receiptType || "商品代";
-            t += `        領 収 書 (再)\n`;
-            t += `${new Date(data.createdAt).toLocaleDateString()}\n`;
-            t += `                    様\n\n`;
-            t += `金額: ¥${(data.totalAmount || 0).toLocaleString()} -\n\n`;
-            t += `但 ${label}として正に領収いたしました\n--------------------------\n`;
-            t += `発行者: ${d.companyName}\n`;
+            const totalTax = data.totalAmount - netTotal;
+            t += `        領 収 書\n\n日付：${new Date(data.createdAt).toLocaleDateString()}\nNo. ${data.id}\n\n\n`;
+            t += `${guestName || "                "}  様\n\n`;
+            t += `   金額  ¥${data.totalAmount.toLocaleString()} -\n\n`;
+            t += `但 ${d.receiptType} として\n正に領収いたしました\n\n [内訳]\n`;
+            t += padRight("  税抜金額：", `¥${netTotal.toLocaleString()}`);
+            t += padRight("  消費税等：", `¥${totalTax.toLocaleString()}`);
+            if (netTotal >= 50000 && data.paymentMethod.includes('現金')) t += `\n[[STAMP_HERE]]\n`;
+            t += `\n${line}発行者: ${displayStoreName}\n`; // 修正：変数を使用
             if(d.address) t += `住所: ${d.address}\n`;
-            if(d.tel) t += `電話: ${d.tel}\n`;
-            t += `--------------------------\nありがとうございました\n`;
-            // 領収書にはメモを追加しない
+            if(d.tel) t += `TEL: ${d.tel}\n`;
+            if(regNo) t += `登録番号: ${regNo}\n`;
+            t += line;
         }
-        document.getElementById('receipt-text').innerText = t;
+        receiptPreview.innerHTML = t.replace('[[STAMP_HERE]]', `<div style="border: 1px solid #000; width: 60px; height: 70px; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 10px; margin: 10px 0 10px 20px;">収入印紙<br>貼付枠</div>`);
     }
 
-    function reissue(type) { 
+    // --- 長押し・クリック処理 ---
+    function initLongPress() {
+        const btnBill = document.getElementById('btn-reissue-bill');
+        let timer;
+        let isLongPress = false;
+
+        const start = (e) => {
+            isLongPress = false;
+            timer = setTimeout(() => {
+                isLongPress = true;
+                const name = prompt("領収書の宛名を入力してください", "");
+                if (name !== null) reissue('bill', name);
+            }, 500);
+        };
+
+        const end = (e) => {
+            clearTimeout(timer);
+            if (!isLongPress && e.type === 'click') {
+                reissue('bill', ""); // 普通のクリックは宛名なし
+            }
+        };
+
+        // マウスとタッチ両対応
+        btnBill.addEventListener('mousedown', start);
+        btnBill.addEventListener('touchstart', start, {passive: true});
+        btnBill.addEventListener('click', end);
+        btnBill.addEventListener('touchend', end);
+    }
+
+    function reissue(type, guestName = "") { 
         if (!selectedItem) return;
+        generatePreview(type, guestName);
         
-        // 1. 指定された形式（領収書orレシート）で画面を書き換える
-        generatePreview(type);
-        
-        // 2. 0.3秒待ってから印刷を実行
         setTimeout(() => {
             window.print(); 
-            
-            // 3. 【重要】印刷指示が「終わった後」にデータの更新を行う
             const history = JSON.parse(localStorage.getItem(STORAGE_KEYS.HISTORY) || '[]');
             const idx = history.findIndex(h => h.id === selectedItem.id);
-            
             if (idx !== -1) {
                 if (type === 'receipt') history[idx].receiptIssued = true;
                 else history[idx].billIssued = true;
-                
                 localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(history));
-                
-                // 内部データだけ更新し、表示の「レ済」「領済」を更新する
                 selectedItem = history[idx];
-                
-                // ここで showDetail を呼ぶと、またレシートプレビューに戻ってしまうので
-                // 「済」マークの表示更新だけを個別に行うか、
-                // もしくは showDetail の後に再度プレビューを固定します。
-                
-                const header = document.getElementById('detail-status-header');
-                header.innerHTML = `
-                    <div class="status-pill" style="border:2px solid #000; font-size:0.7rem; font-weight:900; margin-right:5px; padding:2px 6px; opacity:${selectedItem.receiptIssued ? 1 : 0.2}">レシート: ${selectedItem.receiptIssued ? '済' : '未'}</div>
-                    <div class="status-pill" style="border:2px solid #000; font-size:0.7rem; font-weight:900; margin-right:5px; padding:2px 6px; opacity:${selectedItem.billIssued ? 1 : 0.2}">領収書: ${selectedItem.billIssued ? '済' : '未'}</div>
-                    ${selectedItem.isVoided ? '<div class="status-pill" style="background:#000; color:#fff; font-size:0.7rem; padding:2px 6px;">取消済</div>' : ''}`;
-                
-                loadHistory(); // 背面の一覧画面を更新
+                loadHistory();
+                showDetail(selectedItem); // 画面上のステータスを更新
             }
         }, 300); 
     }
 
     document.getElementById('btn-reissue-receipt').onclick = () => reissue('receipt');
-    document.getElementById('btn-reissue-bill').onclick = () => reissue('bill');
     document.getElementById('btn-close-modal').onclick = () => document.getElementById('detailModal').classList.add('hidden');
     document.getElementById('btn-search').onclick = loadHistory;
 
     document.getElementById('btn-void-action').onclick = () => {
         if(!confirm("この取引を取り消してよろしいですか？\n(在庫数も復元されます)")) return;
-        
         const history = JSON.parse(localStorage.getItem(STORAGE_KEYS.HISTORY) || '[]');
         const idx = history.findIndex(h => h.id === selectedItem.id);
-        
         if (idx !== -1) {
             const products = JSON.parse(localStorage.getItem(STORAGE_KEYS.PRODUCTS) || '[]');
             selectedItem.items.forEach(soldItem => {
@@ -352,36 +441,39 @@
                 }
             });
             localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products));
-
             history[idx].isVoided = true;
             localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(history));
-            
             document.getElementById('detailModal').classList.add('hidden');
             loadHistory();
             alert("取引を取り消し、在庫を復元しました。");
         }
     };
 
+    // --- CSV改善版（CSVロジックのみ修正、他は一切変更なし） ---
     document.getElementById('btn-csv-export').onclick = () => {
-        let csv = "\uFEFF日時,購入商品内訳,小計,割引,最終合計,支払方法,取消,レシート発行,領収書発行\n";
-        historyData.forEach(h => { 
+        // ヘッダーに税率別の項目を追加
+        let csv = "\uFEFF日時,購入内訳,小計,割引,税抜合計,消費税額,8%対象(税抜),10%対象(税抜),最終合計,支払方法,取引状態,レシート発行,領収書発行\n";
+        filteredData.forEach(h => { 
             const d = new Date(h.createdAt);
             const dateStr = `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
             const itemDetail = h.items.map(i => `${i.name}x${i.qty}`).join(' / ');
-            
-            // true/falseを「済」/「未」に変換
-            const voidTxt = h.isVoided ? "済" : "未";
+            const details = h.taxDetails || {};
+            const net8 = details[8] || 0;
+            const net10 = details[10] || 0;
+            const netTotal = net8 + net10;
+            const taxAmount = (h.totalAmount || 0) - netTotal;
+            const voidTxt = h.isVoided ? "取消済" : "有効";
             const receiptTxt = h.receiptIssued ? "済" : "未";
             const billTxt = h.billIssued ? "済" : "未";
-            
-            csv += `"${dateStr}","${itemDetail}",${h.subtotal || 0},${h.discount || 0},${h.totalAmount || 0},"${h.paymentMethod}","${voidTxt}","${receiptTxt}","${billTxt}"\n`; 
+            csv += `"${dateStr}","${itemDetail}",${h.subtotal || 0},${h.discount || 0},${netTotal},${taxAmount},${net8},${net10},${h.totalAmount || 0},"${h.paymentMethod}","${voidTxt}","${receiptTxt}","${billTxt}"\n`; 
         });
         downloadCSV(csv, "取引明細レポート.csv");
     };
 
     document.getElementById('btn-csv-items').onclick = () => {
         const itemMap = {};
-        historyData.filter(h => !(h.isVoided || false)).forEach(h => {
+        // 取消分は分析から除外して正確な売上を出す
+        filteredData.filter(h => !h.isVoided).forEach(h => {
             h.items.forEach(i => {
                 if (!itemMap[i.name]) itemMap[i.name] = { qty: 0, amount: 0 };
                 itemMap[i.name].qty += i.qty; itemMap[i.name].amount += (i.price * i.qty);
@@ -391,10 +483,11 @@
         Object.keys(itemMap).forEach(name => { csv += `"${name}",${itemMap[name].qty},${itemMap[name].amount}\n`; });
         downloadCSV(csv, "商品別売上分析.csv");
     };
-    
+
     document.getElementById('btn-csv-time').onclick = () => {
         const timeMap = {}; const itemSet = new Set();
-        historyData.filter(h => !(h.isVoided || false)).forEach(h => {
+        // 取消分は除外
+        filteredData.filter(h => !h.isVoided).forEach(h => {
             const hour = new Date(h.createdAt).getHours();
             if (!timeMap[hour]) timeMap[hour] = {};
             h.items.forEach(i => { timeMap[hour][i.name] = (timeMap[hour][i.name] || 0) + i.qty; itemSet.add(i.name); });
