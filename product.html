@@ -103,6 +103,7 @@
 
         .form-row { display: flex; gap: 15px; margin-bottom: 15px; flex-wrap: wrap; }
         .form-group { flex: 1; min-width: 200px; }
+        .form-group.full { flex: 1 1 100%; }
         label { display: block; font-weight: 900; font-size: 0.8rem; margin-bottom: 5px; }
         
         input, select { 
@@ -128,6 +129,11 @@
         }
         
         .dragging { opacity: 0.5; border: 2px dashed #000; }
+
+        #categoryList input {
+            padding: 5px;
+            font-size: 0.9rem;
+        }
     </style>
 </head>
 <body>
@@ -161,13 +167,19 @@
     <div class="modal-content">
         <h2 id="modalTitle" style="margin-bottom: 15px; font-weight: 900;">商品詳細設定</h2>
         <div class="form-row">
-            <div class="form-group">
+            <div class="form-group full">
                 <label>商品名</label>
                 <input type="text" id="p-name">
             </div>
+        </div>
+        <div class="form-row">
             <div class="form-group">
-                <label>価格 (円)</label>
+                <label>価格 (税抜き)</label>
                 <input type="number" id="p-price">
+            </div>
+            <div class="form-group">
+                <label>税率 (%)</label>
+                <input type="number" id="p-tax-rate" placeholder="0" min="0">
             </div>
         </div>
         <div class="form-row">
@@ -253,11 +265,60 @@
         }
     }
 
+    // カテゴリを上に移動
+    window.moveCatUp = (id) => {
+        const idx = categories.findIndex((c, i) => (c.id || i) == id);
+        if (idx > 0) {
+            [categories[idx], categories[idx - 1]] = [categories[idx - 1], categories[idx]];
+            saveCategories();
+            loadData();
+        }
+    };
+
+    // カテゴリを下に移動
+    window.moveCatDown = (id) => {
+        const idx = categories.findIndex((c, i) => (c.id || i) == id);
+        if (idx < categories.length - 1) {
+            [categories[idx], categories[idx + 1]] = [categories[idx + 1], categories[idx]];
+            saveCategories();
+            loadData();
+        }
+    };
+
+    // カテゴリのドラッグ開始
+    window.handleCatDragStart = (e, id) => {
+        e.dataTransfer.setData("text/plain", id);
+        e.currentTarget.style.opacity = '0.5';
+    };
+
+    // カテゴリのドラッグ終了
+    window.handleCatDragEnd = (e) => {
+        e.currentTarget.style.opacity = '1';
+    };
+
+    // カテゴリのドロップ処理
+    window.handleCatDrop = (e, targetId) => {
+        e.preventDefault();
+        const draggedId = e.dataTransfer.getData("text/plain");
+        if (draggedId === targetId) return;
+
+        const draggedIdx = categories.findIndex((c, i) => (c.id || i) == draggedId);
+        const targetIdx = categories.findIndex((c, i) => (c.id || i) == targetId);
+
+        if (draggedIdx !== -1 && targetIdx !== -1) {
+            // 要素を入れ替え
+            const [removed] = categories.splice(draggedIdx, 1);
+            categories.splice(targetIdx, 0, removed);
+            
+            saveCategories();
+            loadData();
+        }
+    };
+
     function loadData() {
         const bar = document.getElementById('categoryTabs'), 
               select = document.getElementById('p-category'), 
               list = document.getElementById('categoryList');
-        
         bar.innerHTML = ""; select.innerHTML = ""; list.innerHTML = "";
         
         categories.forEach((cat, idx) => {
@@ -274,17 +335,37 @@
             select.appendChild(opt);
 
             const li = document.createElement('div');
-            li.style = "display:flex; gap:10px; padding:8px; border-bottom:1px solid #eee; align-items:center;";
+            // 背景色とカーソルを指定して「動かせる感」を出します
+            li.style = "display:flex; gap:10px; padding:8px; border-bottom:1px solid #eee; align-items:center; cursor:move; background:#fff;";
+            li.draggable = true;
+
+            // ドラッグイベントの紐付け
+            li.ondragstart = (e) => handleCatDragStart(e, id);
+            li.ondragend = (e) => handleCatDragEnd(e);
+            li.ondragover = (e) => e.preventDefault();
+            li.ondrop = (e) => handleCatDrop(e, id);
+
             li.innerHTML = `
-                <input type="text" value="${name}" id="cat-edit-${id}" style="flex:1;">
-                <button class="btn-black" onclick="updateCat('${id}')" style="width:auto; padding:5px 10px;">更新</button>
-                ${name !== DEFAULT_CAT ? `<button onclick="delCat('${id}')" style="color:red; cursor:pointer; background:none; border:none;">削除</button>` : '<span></span>'}
+                <div style="display:flex; flex-direction:column; gap:2px; cursor:default;">
+                    <button onclick="moveCatUp('${id}')" style="font-size:10px; cursor:pointer; background:var(--black); color:var(--white); border:none; padding:2px; width:22px; height:18px; font-weight:bold;">▲</button>
+                    <button onclick="moveCatDown('${id}')" style="font-size:10px; cursor:pointer; background:var(--black); color:var(--white); border:none; padding:2px; width:22px; height:18px; font-weight:bold;">▼</button>
+                </div>
+                <input type="text" value="${name}" id="cat-edit-${id}" 
+                       style="flex:1;" 
+                       draggable="false" 
+                       onpointerdown="event.stopPropagation();" 
+                       onmousedown="event.stopPropagation();">
+                <button class="btn-black" onclick="updateCat('${id}')" style="width:auto; padding:5px 10px; font-size:0.7rem;">更新</button>
+                ${name !== DEFAULT_CAT ? `<button onclick="delCat('${id}')" style="color:red; cursor:pointer; background:none; border:none; font-size:0.7rem;">削除</button>` : '<span></span>'}
             `;
             list.appendChild(li);
         });
 
-        if (!currentCategory || !categories.some(c => c.name === currentCategory)) {
-            switchCategory(categories[0].name);
+        // loadData関数の最後の方、switchCategoryを呼んでいる部分を以下に差し替え
+        if (currentCategory && categories.some(c => c.name === currentCategory)) {
+            switchCategory(currentCategory); // 現在のカテゴリを維持して色を付ける
+        } else {
+            switchCategory(categories[0].name); // なければ最初のカテゴリへ
         }
         renderGrid();
     }
@@ -309,15 +390,21 @@
             div.draggable = !!p;
             
             if (p) {
+                // 税込価格を計算（税抜価格 * (1 + 税率/100)）
+                const taxRate = p.taxRate ?? 0;
+                const priceInclTax = Math.floor(Number(p.price) * (1 + taxRate / 100));
                 const stockBadge = isStockEnabled ? `<span class="product-stock-badge">残:${p.stock || 0}</span>` : "";
+
+                // まるごとHTMLを構築する
                 div.innerHTML = `
                     ${isOutOfStock ? '<div class="out-of-stock-label">終了</div>' : ''}
                     <img src="${p.imageUrl || ''}" class="product-image" onerror="this.style.visibility='hidden'">
                     <div class="product-info">
                         <strong>${p.name}</strong>
-                        <span>¥${Number(p.price).toLocaleString()}</span>
+                        <span>¥${priceInclTax.toLocaleString()}</span>
                         ${stockBadge}
                     </div>`;
+
                 div.onclick = () => openModal(p, i);
 
                 div.ondragstart = (e) => {
@@ -362,6 +449,7 @@
         document.getElementById('modalTitle').innerText = p ? "商品編集" : "新規登録";
         document.getElementById('p-name').value = p ? p.name : "";
         document.getElementById('p-price').value = p ? p.price : "";
+        document.getElementById('p-tax-rate').value = p ? (p.taxRate ?? 0) : 0; 
         document.getElementById('p-category').value = p ? p.category : (currentCategory || DEFAULT_CAT);
         
         const stockInputGroup = document.getElementById('stock-input-group');
@@ -393,6 +481,7 @@
     document.getElementById('save-product-btn').onclick = () => {
         const name = document.getElementById('p-name').value;
         const price = Number(document.getElementById('p-price').value);
+        const taxRate = Number(document.getElementById('p-tax-rate').value || 0);
         let newCategory = document.getElementById('p-category').value || DEFAULT_CAT;
               
         if (!name || isNaN(price)) return alert("正しく入力してください");
@@ -417,7 +506,7 @@
 
         const data = {
             id: editingProductId || Date.now(),
-            name, price, category: newCategory,
+            name, price, taxRate, category: newCategory,
             stock: isStockEnabled ? Number(document.getElementById('p-stock').value) : (editingProductId ? (oldProduct?.stock || 0) : 0),
             tag: document.getElementById('p-tag').value,
             imageUrl: document.getElementById('p-image-url').value,
@@ -466,7 +555,7 @@
     window.delCat = (id) => {
         const cat = categories.find((c, i) => (c.id || i) == id);
         if (cat.name === DEFAULT_CAT) return alert("未分類カテゴリは削除できません");
-        if (confirm("カテゴリを削除しますか？")) {
+        if (confirm("カテゴリを削除しますか？(このカテゴリ内の商品も削除されます）)")) {
             const catIdx = categories.findIndex((c, i) => (c.id || i) == id);
             categories.splice(catIdx, 1);
             saveCategories(); 
@@ -486,8 +575,12 @@
     function saveProducts() { localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(allProducts)); }
     function saveCategories() { localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(categories)); }
 
-    document.getElementById('close-product-modal-btn').onclick = () => document.getElementById('productModal').classList.add('hidden');
-    document.getElementById('close-cat-modal-btn').onclick = () => document.getElementById('categoryModal').classList.add('hidden');
+    document.getElementById('close-product-modal-btn').onclick = () => document.getElementById('productModal').classList.add('hidden');   
+    // スクリプトの一番下の方にあるイベントリスナーを修正
+    document.getElementById('close-cat-modal-btn').onclick = () => {
+        document.getElementById('categoryModal').classList.add('hidden');
+        loadData(); // 閉じるときに再読み込みしてハイライトを確実に適用
+    };
     document.getElementById('open-cat-modal-btn').onclick = () => document.getElementById('categoryModal').classList.remove('hidden');
 
     const menuBtn = document.getElementById('menu-btn');
