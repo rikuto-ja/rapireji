@@ -112,28 +112,46 @@
         }
 
         @media print {
-            /* 紙のサイズ設定：高さを auto にして、余白を 0 に固定 */
-            @page { size: 58mm auto; margin: 0; }
-    
-            /* 画面上の全ての要素を隠す */
-            body * { visibility: hidden; }
-    
-            /* プレビューエリア (#receipt-text) だけを表示 */
-            /* ID名は history.html に合わせて #receipt-text にしています */
-            #receipt-text, #receipt-text * { 
-                visibility: visible !important; 
+            /* 1. 用紙設定 */
+            @page { size: auto; margin: 0; }
+
+            /* 2. 【重要】モーダルの親要素（地面）を完全に「存在しない」ことにする */
+            /* これをしないと、Safariは下の履歴リストの分の高さを計算してしまいます */
+            body { 
                 display: block !important; 
+                overflow: visible !important;
+                position: static !important;
+            }
+
+            /* 3. モーダルの背景や枠、閉じるボタンなどは印刷から除外 */
+            .modal { 
+                position: absolute !important; 
+                left: 0 !important; 
+                top: 0 !important; 
+                background: transparent !important;
+                display: block !important;
             }
     
+            .modal-content { 
+                box-shadow: none !important; 
+                border: none !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+
+            /* 4. プレビュー以外を全部消す（payment.htmlの手法） */
+            body > *:not(.modal) { display: none !important; }
+            .modal-content > *:not(#receipt-text) { display: none !important; }
+
+            /* 5. レシート本体の設定 */
             #receipt-text { 
-                position: absolute; 
-                left: 0; 
-                top: 0; 
-                width: 54mm; /* payment.html と同じ 54mm */
-                padding: 2mm; 
-                font-size: 9pt; 
-                border: none !important; 
-                background: white !important;
+                visibility: visible !important; 
+                display: block !important; 
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 54mm;
+                padding: 2mm;
             }
         }
     </style>
