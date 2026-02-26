@@ -50,6 +50,7 @@
         .menu-trigger.open span:nth-child(1) { transform: translateY(9px) rotate(45deg); }
         .menu-trigger.open span:nth-child(2) { opacity: 0; }
         .menu-trigger.open span:nth-child(3) { transform: translateY(-9px) rotate(-45deg); }
+        .menu-link.active { background-color: #666666; color: var(--white); border-bottom: none; }
 
         .side-nav { 
             position: fixed; 
@@ -141,6 +142,7 @@
     <a href="product.html" class="menu-link">商品管理</a>
     <a href="stock.html" class="menu-link">在庫管理</a>
     <a href="history.html" class="menu-link">販売履歴</a>
+    <a href="settings.html" class="menu-link">設定</a>
 </nav>
 
 <main class="container">
@@ -393,6 +395,20 @@
     const menuBtn = document.getElementById('menu-btn');
     const sideMenu = document.getElementById('side-menu');
     menuBtn.onclick = () => { menuBtn.classList.toggle('open'); sideMenu.classList.toggle('hidden'); };
+
+    // --- 現在のページをメニューで強調表示する処理 ---
+    document.addEventListener('DOMContentLoaded', () => {
+        const currentPath = window.location.pathname.split("/").pop();
+        const menuLinks = document.querySelectorAll('.menu-link');
+
+        menuLinks.forEach(link => {
+            const linkPath = link.getAttribute('href');
+            // 現在のファイル名と href が一致したら 'active' クラスをつける
+            if (currentPath === linkPath) {
+                link.classList.add('active');
+            }
+        });
+    });
 </script>
 </body>
 </html>
