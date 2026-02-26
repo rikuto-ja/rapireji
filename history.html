@@ -112,10 +112,29 @@
         }
 
         @media print {
+            /* 紙のサイズ設定：高さを auto にして、余白を 0 に固定 */
             @page { size: 58mm auto; margin: 0; }
-            body * { visibility: hidden; } /* 全体を隠す */
-            #receipt-text, #receipt-text * { visibility: visible !important; display: block !important; } /* プレビューエリアだけ出す */
-            #receipt-text { position: absolute; left: 0; top: 0; width: 54mm; padding: 2mm; font-size: 9pt; border: none !important; }
+    
+            /* 画面上の全ての要素を隠す */
+            body * { visibility: hidden; }
+    
+            /* プレビューエリア (#receipt-text) だけを表示 */
+            /* ID名は history.html に合わせて #receipt-text にしています */
+            #receipt-text, #receipt-text * { 
+                visibility: visible !important; 
+                display: block !important; 
+            }
+    
+            #receipt-text { 
+                position: absolute; 
+                left: 0; 
+                top: 0; 
+                width: 54mm; /* payment.html と同じ 54mm */
+                padding: 2mm; 
+                font-size: 9pt; 
+                border: none !important; 
+                background: white !important;
+            }
         }
     </style>
 </head>
@@ -417,42 +436,27 @@
     function reissue(type, guestName = "") { 
         if (!selectedItem) return;
 
-        // 1. まず画面上のプレビュー（#receipt-text）を書き換える
+        // 1. プレビュー内容を生成（payment.htmlの generateContent と同じ役割）
         generatePreview(type, guestName);
     
-        // 2. ブラウザが中身を完全に書き換えるまで少し待つ（白紙防止）
-        // 300ms〜500ms程度の間隔を空けてから、印刷を実行する
-        setTimeout(() => {
-            window.print(); 
+        // 2. 即座に印刷（payment.html と同じ挙動）
+        window.print(); 
 
-            // 3. 印刷が終わった後に、データの保存処理だけを行う
-            const history = JSON.parse(localStorage.getItem(STORAGE_KEYS.HISTORY) || '[]');
-            const idx = history.findIndex(h => h.id === selectedItem.id);
+        // 3. 印刷後にデータのフラグを更新
+        const history = JSON.parse(localStorage.getItem(STORAGE_KEYS.HISTORY) || '[]');
+        const idx = history.findIndex(h => h.id === selectedItem.id);
+    
+        if (idx !== -1) {
+            if (type === 'receipt') history[idx].receiptIssued = true;
+            else history[idx].billIssued = true;
         
-            if (idx !== -1) {
-                // ステータスを「済」に更新
-                if (type === 'receipt') history[idx].receiptIssued = true;
-                else history[idx].billIssued = true;
-            
-                localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(history));
-            
-                // 内部データを最新にする
-                selectedItem = history[idx];
-            
-                // 4. 左側の履歴一覧を更新
-                loadHistory(); 
-            
-                // 5. 【重要】ここで showDetail() を呼ぶとレシートにリセットされてしまうため、
-                // ステータスバッジ（済/未）の見た目だけを書き換える
-                const header = document.getElementById('detail-status-header');
-                if (header) {
-                    header.innerHTML = `
-                        <div class="status-pill" style="border:2px solid #000; font-size:0.7rem; font-weight:900; margin-right:5px; padding:2px 6px; opacity:${selectedItem.receiptIssued ? 1 : 0.2}">レシート: ${selectedItem.receiptIssued ? '済' : '未'}</div>
-                        <div class="status-pill" style="border:2px solid #000; font-size:0.7rem; font-weight:900; margin-right:5px; padding:2px 6px; opacity:${selectedItem.billIssued ? 1 : 0.2}">領収書: ${selectedItem.billIssued ? '済' : '未'}</div>
-                        ${selectedItem.isVoided ? '<div class="status-pill" style="background:#000; color:#fff; font-size:0.7rem; padding:2px 6px;">取消済</div>' : ''}`;
-                }
-            }
-        }, 500); // 0.5秒待つことで白紙化を防ぎます
+            localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(history));
+            selectedItem = history[idx];
+        
+            // 画面の「済/未」バッジだけを更新
+            updateStatusDisplay();
+            loadHistory(); 
+        }
     }
 
     document.getElementById('btn-reissue-receipt').onclick = () => reissue('receipt');
