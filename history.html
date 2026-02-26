@@ -392,7 +392,7 @@
             t += `        領 収 書\n\n日付：${new Date(data.createdAt).toLocaleDateString()}\nNo. ${data.id}\n\n`;
             t += `${guestName || "                "}  様\n\n`;
             t += `   金額  ¥${data.totalAmount.toLocaleString()} -\n\n`;
-            t += `但 ${d.receiptType} として\n正に領収いたしました\n\n [内訳]\n`;
+            t += `但 ${d.receiptType || "商品代"} として\n正に領収いたしました\n\n [内訳]\n`;
             t += padBetween("  税抜金額：", `¥${netTotal.toLocaleString()}`);
             t += padBetween("  消費税等：", `¥${totalTax.toLocaleString()}`);
             if (netTotal >= 50000 && data.paymentMethod.includes('現金')) t += `\n[[STAMP_HERE]]\n`;
