@@ -354,8 +354,8 @@
 
         if (type === 'receipt') {
             t += `       レシート \n\n`; 
-            t += `店名:${displayStoreName}\n`;
-            if(d.address) t += `住所:${d.address}\n`; 
+            t += `店名: ${displayStoreName}\n`;
+            if(d.address) t += `住所: ${d.address}\n`; 
             if(d.tel) t += `TEL: ${d.tel}\n`;
             if(regNo) t += `登録番号: ${regNo}\n`;
             t += `日時: ${dateStr}\n${line}`;
