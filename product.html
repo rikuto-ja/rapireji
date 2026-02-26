@@ -70,6 +70,10 @@
             border-radius: 0;
         }
         .cat-tab.active { background: var(--black); color: var(--white); transform: translate(1px, 1px); box-shadow: none; }
+        .cat-tab.dragging {
+            opacity: 0.5;
+            border: 2px dashed var(--black);
+        }
 
         /* 商品グリッドをレジ画面に合わせる */
         .productGrid { 
@@ -329,7 +333,47 @@
             
             const btn = document.createElement('button');
             btn.className = "cat-tab"; btn.textContent = name;
+            btn.draggable = true; 
+            btn.dataset.id = id;
             btn.onclick = () => switchCategory(name);
+
+            // ドラッグ開始
+            btn.ondragstart = (e) => {
+                e.dataTransfer.setData("text/plain", id);
+                btn.classList.add('dragging');
+            };
+    
+            // ドラッグ終了
+            btn.ondragend = () => {
+                btn.classList.remove('dragging');
+            };
+
+            // ドロップを許可
+            btn.ondragover = (e) => {
+                e.preventDefault(); // これがないとdropイベントが動かない
+            };
+
+            // ドロップした時
+            btn.ondrop = (e) => {
+                e.preventDefault();
+                const draggedId = e.dataTransfer.getData("text/plain");
+                const targetId = id;
+        
+                if (draggedId == targetId) return;
+
+                // カテゴリ配列の並び替えロジック
+                const draggedIdx = categories.findIndex((c, i) => (c.id || i) == draggedId);
+                const targetIdx = categories.findIndex((c, i) => (c.id || i) == targetId);
+
+                if (draggedIdx !== -1 && targetIdx !== -1) {
+                    const [removed] = categories.splice(draggedIdx, 1);
+                    categories.splice(targetIdx, 0, removed);
+            
+                    saveCategories();
+                    loadData(); // 再描画
+                }
+            };
+
             bar.appendChild(btn);
 
             const opt = document.createElement('option'); 
