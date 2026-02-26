@@ -56,7 +56,9 @@
             border-right: 3px solid var(--black); 
             z-index: 1050; 
             transition: transform 0.3s; 
-            padding: 20px;
+            padding-left: 20px;
+            padding-right: 20px;
+            padding-top: 20px;
         }
         .side-nav.hidden { transform: translateX(-100%); }
         .menu-link { display: block; padding: 15px; color: var(--black); font-weight: 800; text-decoration: none; border-bottom: 1px solid var(--gray-light); }
@@ -86,6 +88,7 @@
         .modal-content { background: #fff; padding: 30px; border: 6px solid #000; width: 95%; max-width: 500px; max-height: 90vh; overflow-y: auto; box-shadow: 10px 10px 0px var(--black); }
         .modal.hidden { display: none !important; }
 
+        /* history.html の .receipt-area をこれに書き換え */
         .receipt-area {
             background: #fff;
             border: 1px dashed #000;
@@ -99,32 +102,20 @@
             word-break: break-all;
             font-variant-numeric: tabular-nums;
             letter-spacing: 0;
+            font-feature-settings: "palt" 0;
         }
 
         @media screen and (max-width: 768px) {
-            header h1 { font-size: 0.9rem; margin-left: 10px; }
-            .header-ad-space { height: 35px; }
+            header { padding: 0 10px; }
+            header h1 { font-size: 0.9rem; margin-left: 10px; flex-shrink: 0; }
+            .header-ad-space { display: flex !important; flex: 1; margin-left: 10px; height: 35px; min-width: 80px; border: 1px solid #ddd; font-size: 8px; }
         }
 
-        /* 印刷設定の改善 */
         @media print {
             @page { size: 58mm auto; margin: 0; }
-            html, body { background: #fff; margin: 0; padding: 0; width: 58mm; }
-            body * { display: none !important; }
-            #receipt-text, #receipt-text * { 
-                display: block !important; 
-                visibility: visible !important; 
-            }
-            #receipt-text { 
-                position: absolute; 
-                top: 0; 
-                left: 0; 
-                width: 54mm; 
-                padding: 0; /* 隙間をなくす */
-                border: none !important; 
-                margin: 0 !important;
-                font-size: 9pt;
-            }
+            body * { visibility: hidden; }
+            #receipt-text, #receipt-text * { visibility: visible !important; display: block !important; }
+            #receipt-text { position: absolute; left: 0; top: 0; width: 54mm; padding: 2mm; font-size: 9pt; border: none !important; }
         }
     </style>
 </head>
@@ -135,7 +126,7 @@
         <div class="menu-trigger" id="menu-btn"><span></span><span></span><span></span></div>
         <h1>販売履歴</h1>
     </div>
-    <div class="header-ad-space">
+    <div class="header-ad-space" id="ad-top">
         <span style="color:#ccc; font-size: 8px; font-weight: 900;">AD</span>
     </div>
 </header>
@@ -173,7 +164,7 @@
 
 <div id="detailModal" class="modal hidden">
     <div class="modal-content">
-        <div id="detail-status-header" style="display:flex; margin-bottom:15px;"></div>
+        <div class="detail-status-bar" id="detail-status-header" style="display:flex; margin-bottom:15px;"></div>
         <h2 style="font-weight: 900; margin-bottom: 10px; border-left: 10px solid #000; padding-left: 10px;">販売詳細</h2>
         <div id="detail-info"></div>
         <div id="receipt-text" class="receipt-area"></div>
@@ -210,10 +201,12 @@
     function loadHistory() {
         const rawData = localStorage.getItem(STORAGE_KEYS.HISTORY);
         historyData = rawData ? JSON.parse(rawData) : [];
+
         const startVal = document.getElementById('filter-start').value;
         const endVal = document.getElementById('filter-end').value;
-        
-        let displayData = [...historyData].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    
+            let displayData = [...historyData].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
         if (startVal) {
             const start = new Date(startVal).getTime();
             displayData = displayData.filter(h => new Date(h.createdAt).getTime() >= start);
@@ -222,7 +215,8 @@
             const end = new Date(endVal).getTime();
             displayData = displayData.filter(h => new Date(h.createdAt).getTime() <= end);
         }
-        filteredData = displayData;
+
+        filteredData = displayData; // ★ここを追加：絞り込み結果を保持
         renderHistory(displayData);
     }
 
@@ -257,14 +251,19 @@
         document.getElementById('sum-total').innerText = `¥${totalFinal.toLocaleString()}`;
     }
 
+    function updateStatusBadges(data) {
+        const header = document.getElementById('detail-status-header');
+        if (!header) return;
+        header.innerHTML = `
+            <div class="status-pill" style="border:2px solid #000; font-size:0.7rem; font-weight:900; margin-right:5px; padding:2px 6px; opacity:${data.receiptIssued ? 1 : 0.2}">レシート: ${data.receiptIssued ? '済' : '未'}</div>
+            <div class="status-pill" style="border:2px solid #000; font-size:0.7rem; font-weight:900; margin-right:5px; padding:2px 6px; opacity:${data.billIssued ? 1 : 0.2}">領収書: ${data.billIssued ? '済' : '未'}</div>
+            ${data.isVoided ? '<div class="status-pill" style="background:#000; color:#fff; font-size:0.7rem; padding:2px 6px;">取消済</div>' : ''}`;
+    }
+
     function showDetail(data) {
         selectedItem = data;
-        const header = document.getElementById('detail-status-header');
-        header.innerHTML = `
-            <div style="border:2px solid #000; font-size:0.7rem; font-weight:900; margin-right:5px; padding:2px 6px; opacity:${data.receiptIssued ? 1 : 0.2}">レシート: ${data.receiptIssued ? '済' : '未'}</div>
-            <div style="border:2px solid #000; font-size:0.7rem; font-weight:900; margin-right:5px; padding:2px 6px; opacity:${data.billIssued ? 1 : 0.2}">領収書: ${data.billIssued ? '済' : '未'}</div>
-            ${data.isVoided ? '<div style="background:#000; color:#fff; font-size:0.7rem; padding:2px 6px;">取消済</div>' : ''}`;
-        
+        updateStatusBadges(data); // 追加した関数を呼び出す
+    
         let itemsHtml = data.items.map(i => `
             <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
                 <span>${i.name} x${i.qty}</span>
@@ -277,9 +276,11 @@
             <div style="display:flex;justify-content:space-between; color:#666;"><span>割引</span><span>-¥${(data.discount || 0).toLocaleString()}</span></div>
             <div style="display:flex;justify-content:space-between; font-weight:900; font-size:1.5rem; border-top:1px solid #eee;"><span>最終合計</span><span>¥${(data.totalAmount || 0).toLocaleString()}</span></div>
             <div style="font-size:0.8rem; margin-top:10px;">決済: ${data.paymentMethod}</div>`;
-        
+    
         document.getElementById('btn-void-action').style.display = data.isVoided ? 'none' : 'block';
-        generatePreview('receipt'); // 初期表示はレシート
+    
+        // モーダルを開いたときは常にレシートをプレビューする
+        generatePreview('receipt');
         document.getElementById('detailModal').classList.remove('hidden');
     }
 
@@ -302,18 +303,37 @@
     function generatePreview(type, guestName = "") {
         const data = selectedItem; if (!data) return;
         const d = shopInfo;
+        // 店名が空の場合は「らぴレジ店舗」を代入
         const displayStoreName = d.companyName || "らぴレジ店舗";
-        const regNo = d.registrationNumber || null;
+        const regNo = (d && d.registrationNumber) ? d.registrationNumber : null;
         const receiptPreview = document.getElementById('receipt-text');
+        const MAX_WIDTH = 26;
         const line = "-".repeat(MAX_WIDTH) + "\n";
         
+        const getLen = (str) => {
+            let len = 0; if(!str) return 0;
+            for (let i = 0; i < str.length; i++) (str.charCodeAt(i) <= 255) ? len += 1 : len += 2;
+            return len;
+        };
+
+        const padRight = (label, value) => {
+            const labelLen = getLen(label); const valueLen = getLen(value);
+            const spacesCount = Math.max(1, MAX_WIDTH - (labelLen + valueLen));
+            return label + " ".repeat(spacesCount) + value + "\n";
+        };
+
+        const alignRight = (text) => {
+            const len = getLen(text);
+            return " ".repeat(Math.max(0, MAX_WIDTH - len)) + text + "\n";
+        };
+
         let t = "";
         const dateStr = new Date(data.createdAt).toLocaleString();
         const netTotal = Object.values(data.taxDetails || {}).reduce((a, b) => a + b, 0);
 
         if (type === 'receipt') {
             t += `        レシート \n\n`; 
-            t += `店名: ${displayStoreName}\n`;
+            t += `店名: ${displayStoreName}\n`; // 修正：変数を使用
             if(d.address) t += `住所: ${d.address}\n`; 
             if(d.tel) t += `TEL: ${d.tel}\n`;
             if(regNo) t += `登録番号: ${regNo}\n`;
@@ -337,12 +357,12 @@
             });
             t += line;
             t += padRight("小計", `¥${data.subtotal.toLocaleString()}`);
-            if(data.discount > 0) t += padRight("割引", `-¥${data.discount.toLocaleString()}`);
-            t += padRight("合計", `¥${data.totalAmount.toLocaleString()}`);
+            if(data.discount > 0) t += padRight("割引       ", `-¥${data.discount.toLocaleString()}`);
+            t += padRight("合計       ", `¥${data.totalAmount.toLocaleString()}`);
             t += `決済方法: ${data.paymentMethod}\n`;
             if(data.cashReceived > 0) { 
-                t += padRight("預り", `¥${data.cashReceived.toLocaleString()}`);
-                t += padRight("釣銭", `¥${data.change.toLocaleString()}`);
+                t += padRight("預り       ", `¥${data.cashReceived.toLocaleString()}`);
+                t += padRight("釣銭       ", `¥${data.change.toLocaleString()}`);
             }
             if (netTotal >= 50000 && data.paymentMethod.includes('現金')) t += `\n[[STAMP_HERE]]\n`;
             t += line + `ありがとうございました\n`;
@@ -356,7 +376,7 @@
             t += padRight("  税抜金額：", `¥${netTotal.toLocaleString()}`);
             t += padRight("  消費税等：", `¥${totalTax.toLocaleString()}`);
             if (netTotal >= 50000 && data.paymentMethod.includes('現金')) t += `\n[[STAMP_HERE]]\n`;
-            t += `\n${line}発行者: ${displayStoreName}\n`;
+            t += `\n${line}発行者: ${displayStoreName}\n`; // 修正：変数を使用
             if(d.address) t += `住所: ${d.address}\n`;
             if(d.tel) t += `TEL: ${d.tel}\n`;
             if(regNo) t += `登録番号: ${regNo}\n`;
@@ -365,6 +385,7 @@
         receiptPreview.innerHTML = t.replace('[[STAMP_HERE]]', `<div style="border: 1px solid #000; width: 60px; height: 70px; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 10px; margin: 10px 0 10px 20px;">収入印紙<br>貼付枠</div>`);
     }
 
+    // --- 長押し・クリック処理 ---
     function initLongPress() {
         const btnBill = document.getElementById('btn-reissue-bill');
         let timer;
@@ -382,10 +403,11 @@
         const end = (e) => {
             clearTimeout(timer);
             if (!isLongPress && e.type === 'click') {
-                reissue('bill', ""); 
+                reissue('bill', ""); // 普通のクリックは宛名なし
             }
         };
 
+        // マウスとタッチ両対応
         btnBill.addEventListener('mousedown', start);
         btnBill.addEventListener('touchstart', start, {passive: true});
         btnBill.addEventListener('click', end);
@@ -394,23 +416,34 @@
 
     function reissue(type, guestName = "") { 
         if (!selectedItem) return;
-        // 1. まずプレビューを目的のもの（レシートor領収書）に書き換える
+
+        // 1. まずプレビューエリアを「領収書」または「レシート」に書き換える
         generatePreview(type, guestName);
-        
-        // 2. 書き換えがDOMに反映されるのを待って印刷
+    
+        // 2. ブラウザが描画を完了するのを少し待ってから印刷ダイアログを表示
         setTimeout(() => {
             window.print(); 
+        
+            // 3. 印刷後、ローカルストレージの発行済みフラグを更新
             const history = JSON.parse(localStorage.getItem(STORAGE_KEYS.HISTORY) || '[]');
             const idx = history.findIndex(h => h.id === selectedItem.id);
             if (idx !== -1) {
                 if (type === 'receipt') history[idx].receiptIssued = true;
                 else history[idx].billIssued = true;
+            
                 localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(history));
+            
+                // 4. 内部データを更新（ここで showDetail を呼ぶとレシート表示に戻ってしまうため、
+                // ステータスバッジの更新のみをここで行うか、そのままの状態を維持する）
                 selectedItem = history[idx];
-                loadHistory();
-                showDetail(selectedItem);
+                loadHistory(); 
+            
+                // 重要：ここで showDetail(selectedItem) を呼ぶと、
+                // showDetail 内の generatePreview('receipt') が走り、レシートに戻ってしまいます。
+                // 領収書の状態を維持したい場合は、ここでの showDetail 呼び出しを制限します。
+                updateStatusBadges(selectedItem); 
             }
-        }, 100); 
+        }, 500); 
     }
 
     document.getElementById('btn-reissue-receipt').onclick = () => reissue('receipt');
@@ -438,44 +471,30 @@
         }
     };
 
-    // --- CSV改善（動的税率対応） ---
+    // --- CSV改善版（CSVロジックのみ修正、他は一切変更なし） ---
     document.getElementById('btn-csv-export').onclick = () => {
-        // 全データから存在する税率をすべて抽出
-        const taxRates = new Set();
-        filteredData.forEach(h => {
-            if (h.taxDetails) Object.keys(h.taxDetails).forEach(r => taxRates.add(r));
-        });
-        const sortedRates = Array.from(taxRates).map(Number).sort((a, b) => a - b);
-
-        // ヘッダー作成
-        let csv = "\uFEFF日時,購入内訳,小計,割引,税抜合計,消費税額,";
-        csv += sortedRates.map(r => `${r}%対象(税抜)`).join(",") + ",";
-        csv += "最終合計,支払方法,取引状態,レシート発行,領収書発行\n";
-
+        // ヘッダーに税率別の項目を追加
+        let csv = "\uFEFF日時,購入内訳,小計,割引,税抜合計,消費税額,8%対象(税抜),10%対象(税抜),最終合計,支払方法,取引状態,レシート発行,領収書発行\n";
         filteredData.forEach(h => { 
             const d = new Date(h.createdAt);
             const dateStr = `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
             const itemDetail = h.items.map(i => `${i.name}x${i.qty}`).join(' / ');
             const details = h.taxDetails || {};
-            
-            // 税率ごとの数値を動的に取得
-            const rateValues = sortedRates.map(r => details[r] || 0);
-            const netTotal = rateValues.reduce((a, b) => a + b, 0);
+            const net8 = details[8] || 0;
+            const net10 = details[10] || 0;
+            const netTotal = net8 + net10;
             const taxAmount = (h.totalAmount || 0) - netTotal;
-            
             const voidTxt = h.isVoided ? "取消済" : "有効";
             const receiptTxt = h.receiptIssued ? "済" : "未";
             const billTxt = h.billIssued ? "済" : "未";
-
-            csv += `"${dateStr}","${itemDetail}",${h.subtotal || 0},${h.discount || 0},${netTotal},${taxAmount},`;
-            csv += rateValues.join(",") + ",";
-            csv += `${h.totalAmount || 0},"${h.paymentMethod}","${voidTxt}","${receiptTxt}","${billTxt}"\n`; 
+            csv += `"${dateStr}","${itemDetail}",${h.subtotal || 0},${h.discount || 0},${netTotal},${taxAmount},${net8},${net10},${h.totalAmount || 0},"${h.paymentMethod}","${voidTxt}","${receiptTxt}","${billTxt}"\n`; 
         });
         downloadCSV(csv, "取引明細レポート.csv");
     };
 
     document.getElementById('btn-csv-items').onclick = () => {
         const itemMap = {};
+        // 取消分は分析から除外して正確な売上を出す
         filteredData.filter(h => !h.isVoided).forEach(h => {
             h.items.forEach(i => {
                 if (!itemMap[i.name]) itemMap[i.name] = { qty: 0, amount: 0 };
@@ -489,6 +508,7 @@
 
     document.getElementById('btn-csv-time').onclick = () => {
         const timeMap = {}; const itemSet = new Set();
+        // 取消分は除外
         filteredData.filter(h => !h.isVoided).forEach(h => {
             const hour = new Date(h.createdAt).getHours();
             if (!timeMap[hour]) timeMap[hour] = {};
@@ -516,8 +536,14 @@
 
     document.addEventListener('DOMContentLoaded', () => {
         const currentPath = window.location.pathname.split("/").pop();
-        document.querySelectorAll('.menu-link').forEach(link => {
-            if (currentPath === link.getAttribute('href')) link.classList.add('active');
+        const menuLinks = document.querySelectorAll('.menu-link');
+
+        menuLinks.forEach(link => {
+            const linkPath = link.getAttribute('href');
+            // 現在のファイル名と href が一致したら 'active' クラスをつける
+            if (currentPath === linkPath) {
+                link.classList.add('active');
+            }
         });
     });
 </script>
