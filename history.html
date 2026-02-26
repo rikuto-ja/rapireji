@@ -112,46 +112,25 @@
         }
 
         @media print {
-            /* 1. 用紙設定 */
             @page { size: auto; margin: 0; }
-
-            /* 2. 【重要】モーダルの親要素（地面）を完全に「存在しない」ことにする */
-            /* これをしないと、Safariは下の履歴リストの分の高さを計算してしまいます */
-            body { 
-                display: block !important; 
-                overflow: visible !important;
-                position: static !important;
-            }
-
-            /* 3. モーダルの背景や枠、閉じるボタンなどは印刷から除外 */
-            .modal { 
-                position: absolute !important; 
-                left: 0 !important; 
-                top: 0 !important; 
-                background: transparent !important;
-                display: block !important;
-            }
+            body { display: block !important; overflow: visible !important; position: static !important; }
+            .modal { position: absolute !important; left: 0 !important; top: 0 !important; background: transparent !important; display: block !important; }
+            .modal-content { box-shadow: none !important; border: none !important; margin: 0 !important; padding: 0 !important; width: 100% !important; max-width: none !important; }
     
-            .modal-content { 
-                box-shadow: none !important; 
-                border: none !important;
-                margin: 0 !important;
-                padding: 0 !important;
-            }
-
-            /* 4. プレビュー以外を全部消す（payment.htmlの手法） */
+            /* プレビュー以外を隠す */
             body > *:not(.modal) { display: none !important; }
             .modal-content > *:not(#receipt-text) { display: none !important; }
 
-            /* 5. レシート本体の設定 */
             #receipt-text { 
                 visibility: visible !important; 
                 display: block !important; 
                 position: absolute;
                 left: 0;
                 top: 0;
-                width: 54mm;
-                padding: 2mm;
+                width: 54mm; /* レシート幅に固定 */
+                padding: 4mm; /* 端の文字欠け防止 */
+                border: none !important; /* 印刷時は外枠の点線を消す（レシートっぽくするため） */
+                font-size: 9pt; /* 読みやすいサイズ */
             }
         }
     </style>
@@ -340,28 +319,30 @@
     function generatePreview(type, guestName = "") {
         const data = selectedItem; if (!data) return;
         const d = shopInfo;
-        // 店名が空の場合は「らぴレジ店舗」を代入
         const displayStoreName = d.companyName || "らぴレジ店舗";
         const regNo = (d && d.registrationNumber) ? d.registrationNumber : null;
         const receiptPreview = document.getElementById('receipt-text');
-        const MAX_WIDTH = 26;
-        const line = "-".repeat(MAX_WIDTH) + "\n";
-        
+    
+        // 文字数カウント関数（全角2、半角1）
         const getLen = (str) => {
             let len = 0; if(!str) return 0;
             for (let i = 0; i < str.length; i++) (str.charCodeAt(i) <= 255) ? len += 1 : len += 2;
             return len;
         };
 
-        const padRight = (label, value) => {
-            const labelLen = getLen(label); const valueLen = getLen(value);
-            const spacesCount = Math.max(1, MAX_WIDTH - (labelLen + valueLen));
-            return label + " ".repeat(spacesCount) + value + "\n";
-        };
-
-        const alignRight = (text) => {
-            const len = getLen(text);
-            return " ".repeat(Math.max(0, MAX_WIDTH - len)) + text + "\n";
+        const MAX_WIDTH = 28; // 少し広げて余裕を持たせる
+        const line = "-".repeat(MAX_WIDTH) + "\n";
+    
+        // 右寄せ用関数（項目名と金額を両端に配置）
+        const padBetween = (left, right) => {
+            const leftLen = getLen(left);
+            const rightLen = getLen(right);
+            // 項目名が長すぎる場合はカットせず、金額を次の行へ。短ければ同じ行。
+            if (leftLen + rightLen >= MAX_WIDTH) {
+                return left + "\n" + " ".repeat(Math.max(0, MAX_WIDTH - rightLen)) + right + "\n";
+            } else {
+                return left + " ".repeat(MAX_WIDTH - (leftLen + rightLen)) + right + "\n";
+            }
         };
 
         let t = "";
@@ -369,56 +350,56 @@
         const netTotal = Object.values(data.taxDetails || {}).reduce((a, b) => a + b, 0);
 
         if (type === 'receipt') {
-            t += `        レシート \n\n`; 
-            t += `店名: ${displayStoreName}\n`; // 修正：変数を使用
-            if(d.address) t += `住所: ${d.address}\n`; 
+            t += `       レシート \n\n`; 
+            t += `${displayStoreName}\n`;
+            if(d.address) t += `${d.address}\n`; 
             if(d.tel) t += `TEL: ${d.tel}\n`;
             if(regNo) t += `登録番号: ${regNo}\n`;
             t += `日時: ${dateStr}\n${line}`;
-            
+        
             data.items.forEach(item => { 
                 const priceStr = `¥${(item.price * item.qty).toLocaleString()}`;
-                const qtyStr = `x${item.qty}`;
-                if (getLen(item.name) > 12) t += `${item.name}\n${" ".repeat(12)}${qtyStr.padStart(4)} ${priceStr.padStart(8)}\n`;
-                else t += `${item.name}${" ".repeat(12 - getLen(item.name))} ${qtyStr.padStart(3)} ${priceStr.padStart(9)}\n`;
+                const nameAndQty = `${item.name} x${item.qty}`;
+                t += padBetween(nameAndQty, priceStr);
             });
-            
+        
             t += line;
             const details = data.taxDetails || {};
             Object.keys(details).map(Number).sort((a,b) => b-a).forEach(rate => {
                 const sub = details[rate];
-                const taxLabel = `${rate}%対象(税抜¥${sub.toLocaleString()})`;
+                const taxLabel = `${rate}%対象 (税抜¥${sub.toLocaleString()})`;
                 const taxValue = `内税¥${Math.floor(sub*(rate/100)).toLocaleString()}`;
-                t += `${taxLabel}\n`;
-                t += alignRight(taxValue);
+                t += taxLabel + "\n" + " ".repeat(Math.max(0, MAX_WIDTH - getLen(taxValue))) + taxValue + "\n";
             });
             t += line;
-            t += padRight("小計", `¥${data.subtotal.toLocaleString()}`);
-            if(data.discount > 0) t += padRight("割引       ", `-¥${data.discount.toLocaleString()}`);
-            t += padRight("合計       ", `¥${data.totalAmount.toLocaleString()}`);
+            t += padBetween("小計", `¥${(data.subtotal || 0).toLocaleString()}`);
+            if(data.discount > 0) t += padBetween("割引", `-¥${(data.discount || 0).toLocaleString()}`);
+            t += padBetween("合計", `¥${(data.totalAmount || 0).toLocaleString()}`);
             t += `決済方法: ${data.paymentMethod}\n`;
             if(data.cashReceived > 0) { 
-                t += padRight("預り       ", `¥${data.cashReceived.toLocaleString()}`);
-                t += padRight("釣銭       ", `¥${data.change.toLocaleString()}`);
+                t += padBetween("預り", `¥${(data.cashReceived || 0).toLocaleString()}`);
+                t += padBetween("釣銭", `¥${(data.change || 0).toLocaleString()}`);
             }
             if (netTotal >= 50000 && data.paymentMethod.includes('現金')) t += `\n[[STAMP_HERE]]\n`;
             t += line + `ありがとうございました\n`;
             if(d.memo) t += `${d.memo}\n`;
         } else {
+            // 領収書のロジック（省略せずに以前のものをベースに padBetween を適用）
             const totalTax = data.totalAmount - netTotal;
-            t += `        領 収 書\n\n日付：${new Date(data.createdAt).toLocaleDateString()}\nNo. ${data.id}\n\n\n`;
+            t += `        領 収 書\n\n日付：${new Date(data.createdAt).toLocaleDateString()}\nNo. ${data.id}\n\n`;
             t += `${guestName || "                "}  様\n\n`;
             t += `   金額  ¥${data.totalAmount.toLocaleString()} -\n\n`;
             t += `但 ${d.receiptType} として\n正に領収いたしました\n\n [内訳]\n`;
-            t += padRight("  税抜金額：", `¥${netTotal.toLocaleString()}`);
-            t += padRight("  消費税等：", `¥${totalTax.toLocaleString()}`);
+            t += padBetween("  税抜金額：", `¥${netTotal.toLocaleString()}`);
+            t += padBetween("  消費税等：", `¥${totalTax.toLocaleString()}`);
             if (netTotal >= 50000 && data.paymentMethod.includes('現金')) t += `\n[[STAMP_HERE]]\n`;
-            t += `\n${line}発行者: ${displayStoreName}\n`; // 修正：変数を使用
-            if(d.address) t += `住所: ${d.address}\n`;
+            t += `\n${line}発行者: ${displayStoreName}\n`;
+            if(d.address) t += `${d.address}\n`;
             if(d.tel) t += `TEL: ${d.tel}\n`;
             if(regNo) t += `登録番号: ${regNo}\n`;
             t += line;
         }
+    
         receiptPreview.innerHTML = t.replace('[[STAMP_HERE]]', `<div style="border: 1px solid #000; width: 60px; height: 70px; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 10px; margin: 10px 0 10px 20px;">収入印紙<br>貼付枠</div>`);
     }
 
