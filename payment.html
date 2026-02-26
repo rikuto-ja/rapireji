@@ -234,6 +234,7 @@
 
     document.addEventListener('DOMContentLoaded', () => {
         if (!order) { location.href = "register.html"; return; }
+        document.getElementById('backBtn').onclick = () => location.href = 'register.html';
         initSettings();
         updateDisplay();
     });
