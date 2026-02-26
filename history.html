@@ -397,7 +397,7 @@
             t += padBetween("  消費税等：", `¥${totalTax.toLocaleString()}`);
             if (netTotal >= 50000 && data.paymentMethod.includes('現金')) t += `\n[[STAMP_HERE]]\n`;
             t += `\n${line}発行者: ${displayStoreName}\n`;
-            if(d.address) t += `${d.address}\n`;
+            if(d.address) t += `住所: ${d.address}\n`;
             if(d.tel) t += `TEL: ${d.tel}\n`;
             if(regNo) t += `登録番号: ${regNo}\n`;
             t += line;
