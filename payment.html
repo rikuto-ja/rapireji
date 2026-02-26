@@ -423,8 +423,8 @@
         const d = shopInfo; 
         const receiptPreview = document.getElementById('receiptPreview');
         
-        // 1行の基準文字数をiPhone Safariに合わせて28文字に調整
-        const MAX_WIDTH = 28;
+        // さらに安全な文字数（26文字）に設定
+        const MAX_WIDTH = 26;
         const line = "-".repeat(MAX_WIDTH) + "\n";
         
         const getLen = (str) => {
@@ -435,15 +435,18 @@
             return len;
         };
 
+        // 右寄せ計算をさらにマージンを空けて調整
         const padRight = (label, value) => {
             const labelLen = getLen(label);
             const valueLen = getLen(value);
-            const spaces = Math.max(1, MAX_WIDTH - (labelLen + valueLen));
-            return label + " ".repeat(spaces) + value + "\n";
+            // 合計がMAX_WIDTHを超える場合は最小1スペース、そうでなければ右端に寄せる
+            const spacesCount = Math.max(1, MAX_WIDTH - (labelLen + valueLen));
+            return label + " ".repeat(spacesCount) + value + "\n";
         };
 
         let t = "";
         const dateStr = info.date.toLocaleString();
+        const netTotal = Object.values(info.taxDetails || {}).reduce((a, b) => a + b, 0);
 
         if (type === 'receipt') {
             t += `      [ レシート ]\n`;
@@ -457,10 +460,10 @@
                 const priceStr = `¥${(item.price * item.qty).toLocaleString()}`;
                 const qtyStr = `x${item.qty}`;
                 
-                if (getLen(name) > 14) {
-                    t += `${name}\n${" ".repeat(14)}${qtyStr.padStart(4)} ${priceStr.padStart(9)}\n`;
+                if (getLen(name) > 12) {
+                    t += `${name}\n${" ".repeat(12)}${qtyStr.padStart(4)} ${priceStr.padStart(8)}\n`;
                 } else {
-                    const spaces = " ".repeat(14 - getLen(name));
+                    const spaces = " ".repeat(12 - getLen(name));
                     t += `${name}${spaces} ${qtyStr.padStart(3)} ${priceStr.padStart(9)}\n`;
                 }
             });
@@ -483,9 +486,14 @@
                 t += padRight("預り", `¥${info.cashReceived.toLocaleString()}`);
                 t += padRight("釣銭", `¥${info.change.toLocaleString()}`);
             }
+
+            // レシートにも収入印紙（5万以上の現金決済時）
+            if (netTotal >= 50000 && info.paymentMethod.includes('現金')) {
+                t += `\n[[STAMP_HERE]]\n`;
+            }
+
         } else {
             // 領収書
-            const netTotal = Object.values(info.taxDetails || {}).reduce((a, b) => a + b, 0);
             const totalTax = info.totalAmount - netTotal;
 
             t += `        領 収 書\n\n${info.date.toLocaleDateString()}  No.${info.id}\n\n`;
@@ -496,22 +504,21 @@
             t += padRight("  税抜金額：", `¥${netTotal.toLocaleString()}`);
             t += padRight("  消費税等：", `¥${totalTax.toLocaleString()}`);
             
-            // 収入印紙枠の崩れ対策（文字ではなく枠線で描画）
             if (netTotal >= 50000 && info.paymentMethod.includes('現金')) {
-                t += `\n`;
-                // 文字列の中に目印を置いて、後でHTML置換します
-                t += `[[STAMP_HERE]]\n`;
+                t += `\n[[STAMP_HERE]]\n`;
             }
             
             t += `\n${line}発行者: ${d.companyName}\n`;
             if(d.address) t += `${d.address}\n`;
             if(d.tel) t += `TEL: ${d.tel}\n`;
+            // インボイス用登録番号（もしあれば）
+            t += `登録番号: T-----------------\n`; 
         }
         
         t += line + `ありがとうございました\n`;
-        if(d.memo) t += `${d.memo}\n`;
+        // 領収書の時はメモ(d.memo)を表示しないように条件分岐
+        if(type === 'receipt' && d.memo) t += `${d.memo}\n`;
 
-        // 最後にHTMLとして流し込み、印紙枠だけ特別なスタイルを当てる
         let html = t.replace('[[STAMP_HERE]]', 
             `<div style="border: 1px solid #000; width: 60px; height: 70px; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 10px; margin: 10px 0 10px 20px;">収入印紙<br>貼付枠</div>`
         );
