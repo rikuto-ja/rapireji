@@ -385,20 +385,20 @@
             t += line;
             // --- 修正版：税率別の表示ロジック ---
             // --- 修正版：税率別の表示ロジック（内消費税を右揃えに） ---
-const details = data.taxDetails || {};
-Object.keys(details).map(Number).sort((a,b) => b-a).forEach(rate => {
-    const sub = details[rate];
-    const taxAmount = Math.floor(sub * (rate / 100));
+            const details = data.taxDetails || {};
+            Object.keys(details).map(Number).sort((a,b) => b-a).forEach(rate => {
+                const sub = details[rate];
+                const taxAmount = Math.floor(sub * (rate / 100));
     
-    // 1行目: %対象行
-    const taxLabel = `${rate}%対象 (税抜¥${sub.toLocaleString()})`;
-    t += taxLabel + "\n";
+                // 1行目: %対象行
+                const taxLabel = `${rate}%対象 (税抜¥${sub.toLocaleString()})`;
+                t += taxLabel + "\n";
     
-    // 2行目: 内消費税を右揃えにする
-    // "内消費税"というラベルと金額の間に空白を設けて右端に寄せる
-    const taxValueStr = `¥${taxAmount.toLocaleString()}`;
-    t += padBetween("  内消費税", taxValueStr); 
-});
+                // 2行目: 内消費税を右揃えにする
+                // "内消費税"というラベルと金額の間に空白を設けて右端に寄せる
+                const taxValueStr = `¥${taxAmount.toLocaleString()}`;
+                t += padBetween("  内消費税", taxValueStr); 
+            });
             t += line;
             t += padBetween("小計", `¥${(data.subtotal || 0).toLocaleString()}`);
             
@@ -414,8 +414,8 @@ Object.keys(details).map(Number).sort((a,b) => b-a).forEach(rate => {
                 t += padBetween("釣銭", `¥${(data.change || 0).toLocaleString()}`);
             }
             if ((data.totalAmount || 0) >= 50000 && data.paymentMethod.includes('現金')) {
-    t += `\n[[STAMP_HERE]]\n`;
-}
+                t += `\n[[STAMP_HERE]]\n`;
+            }
             t += line + alignCenter("ありがとうございました");
             if(d.memo) t += `${d.memo}\n`;
         } else {
@@ -430,8 +430,8 @@ Object.keys(details).map(Number).sort((a,b) => b-a).forEach(rate => {
             t += padBetween("  税抜金額：", `¥${netTotal.toLocaleString()}`);
             t += padBetween("  消費税等：", `¥${totalTax.toLocaleString()}`);
             if ((data.totalAmount || 0) >= 50000 && data.paymentMethod.includes('現金')) {
-    t += `\n[[STAMP_HERE]]\n`;
-}
+                t += `\n[[STAMP_HERE]]\n`;
+            }
             t += `\n${line}発行者: ${displayStoreName}\n`;
             if(d.address) t += `${d.address}\n`;
             if(d.tel) t += `TEL: ${d.tel}\n`;
@@ -523,6 +523,7 @@ Object.keys(details).map(Number).sort((a,b) => b-a).forEach(rate => {
     };
     
     // --- CSV改善版（動的税率対応） ---
+    // --- CSV改善版（動的税率対応 + 割引名追加） ---
     document.getElementById('btn-csv-export').onclick = () => {
         // 1. 存在する税率をすべて抽出する（重複なし・降順）
         const activeRates = new Set();
@@ -534,7 +535,9 @@ Object.keys(details).map(Number).sort((a,b) => b-a).forEach(rate => {
         const sortedRates = Array.from(activeRates).sort((a, b) => b - a);
 
         // 2. ヘッダーの作成
-        let header = ["日時", "購入内訳", "小計", "割引", "税抜合計", "消費税額"];
+        // 「割引」の後に「割引名」を追加
+        let header = ["日時", "購入内訳", "小計", "割引", "割引名", "税抜合計", "消費税額"];
+        
         // 存在する税率分だけ列を追加
         sortedRates.forEach(rate => {
             header.push(`${rate}%対象(税抜)`);
@@ -556,6 +559,9 @@ Object.keys(details).map(Number).sort((a,b) => b-a).forEach(rate => {
             const voidTxt = h.isVoided ? "取消済" : "有効";
             const receiptTxt = h.receiptIssued ? "済" : "未";
             const billTxt = h.billIssued ? "済" : "未";
+            
+            // 割引名の取得（なければ空文字）
+            const discName = h.discountName || "";
 
             // 基本情報
             let row = [
@@ -563,6 +569,7 @@ Object.keys(details).map(Number).sort((a,b) => b-a).forEach(rate => {
                 `"${itemDetail}"`,
                 h.subtotal || 0,
                 h.discount || 0,
+                `"${discName}"`, // ここに割引名を追加
                 netTotal,
                 taxAmount
             ];
@@ -620,9 +627,20 @@ Object.keys(details).map(Number).sort((a,b) => b-a).forEach(rate => {
     };
 
     function downloadCSV(csv, filename) {
+        const now = new Date();
+        // YYYYMMDD 形式の文字列を作成
+        const y = now.getFullYear();
+        const m = String(now.getMonth() + 1).padStart(2, '0');
+        const d = String(now.getDate()).padStart(2, '0');
+        const dateSuffix = `${y}${m}${d}`;
+
+        // 拡張子の前に日付を挿入する（例：レポート.csv -> レポート_20260228.csv）
+        const newFilename = filename.replace(".csv", `_${dateSuffix}.csv`);
+
         const link = document.createElement("a");
         link.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
-        link.download = filename; link.click();
+        link.download = newFilename; 
+        link.click();
     }
 
     const menuBtn = document.getElementById('menu-btn');
