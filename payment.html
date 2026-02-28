@@ -223,8 +223,25 @@
     window.hasManualInput = false; // 手入力（キーパッド）があったかどうかのフラグ
 
     function playSnd(id) {
+        // 設定を読み込む（未設定の場合はデフォルトでONにする）
+        const sounds = JSON.parse(localStorage.getItem('rapireji_sounds') || '{"btn": true, "pay": true}');
         const audio = document.getElementById(id);
-        if (audio) { audio.currentTime = 0; audio.play().catch(e => {}); }
+        if (!audio) return;
+
+        // idに応じて再生するかどうかを判定
+        if (id === 'snd-beep1') {
+            // 操作音（btn）の設定をチェック
+            if (sounds.btn) {
+                audio.currentTime = 0;
+                audio.play().catch(e => {});
+            }
+        } else if (id === 'snd-beep2') {
+            // 決済完了音（pay）の設定をチェック
+            if (sounds.pay) {
+                audio.currentTime = 0;
+                audio.play().catch(e => {});
+            }
+        }
     }
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -496,17 +513,18 @@
     window.generateContent = (type) => {
         const info = window.currentPaymentData;
         const d = shopInfo;
+        // 郵便番号を取得（savedProfileから直接、またはshopInfo経由で）
+        const zip = savedProfile.zipCode ? `〒${savedProfile.zipCode}` : "";
         const regNo = (savedProfile && savedProfile.registrationNumber) ? savedProfile.registrationNumber : null;
         const receiptPreview = document.getElementById('receiptPreview');
 
-        // 幅を26から24に調整（印刷時の文字溢れ防止の安全圏）
+         // 幅を26から24に調整（印刷時の文字溢れ防止の安全圏）
         const MAX_WIDTH = 24; 
         const line = "-".repeat(MAX_WIDTH) + "\n";
 
         const getLen = (str) => {
             let len = 0; if (!str) return 0;
             for (let i = 0; i < str.length; i++) {
-                // 半角カナや特殊記号を考慮し、基本は255以下を1、それ以外を2とする
                 (str.charCodeAt(i) <= 255) ? len += 1 : len += 2;
             }
             return len;
@@ -515,12 +533,8 @@
         const formatLine = (label, value) => {
             const labelLen = getLen(label);
             const valueLen = getLen(value);
-            
-            // ラベルと値の間に最低1マスの空白を確保
             const freeSpace = MAX_WIDTH - (labelLen + valueLen);
-
             if (freeSpace < 1) {
-                // 1行に入り切らない場合は、ラベルを書いて次の行に右寄せで値を書く
                 return label + "\n" + " ".repeat(Math.max(0, MAX_WIDTH - valueLen)) + value + "\n";
             }
             return label + " ".repeat(freeSpace) + value + "\n";
@@ -530,9 +544,10 @@
         const dateStr = info.date.toLocaleString();
 
         if (type === 'receipt') {
-            t += `      レシート \n\n`; // 中央寄せ気味に調整
+            t += `       レシート \n\n`;
             t += `店名: ${d.companyName}\n`;
-            if (d.address) t += `住所: ${d.address}\n`;
+            // レシートに郵便番号＋住所を追加
+            if (zip || d.address) t += `${zip} ${d.address}\n`;
             if (d.tel) t += `TEL: ${d.tel}\n`;
             if (regNo) t += `登録番号: ${regNo}\n`;
             t += `日時: ${dateStr}\n${line}`;
@@ -546,14 +561,12 @@
             t += line;
             const details = info.finalTaxDetails || {};
             const originalExclTotal = Object.values(details).reduce((a, b) => a + (b.originalExcl || 0), 0);
-            
+ 
             t += formatLine("小計(税抜)", `¥${originalExclTotal.toLocaleString()}`);
 
             if (info.discount > 0) {
                 const dName = window.currentDiscountName || "割引";
-                // 割引名が長い場合でもformatLineが自動で改行処理します
                 t += formatLine(`割引(${dName})`, `-¥${info.discount.toLocaleString()}`);
-
                 const afterDiscountExclTotal = Object.values(details).reduce((a, b) => a + b.excl, 0);
                 t += formatLine("割引後小計", `¥${afterDiscountExclTotal.toLocaleString()}`);
             }
@@ -565,7 +578,7 @@
                 const data = details[rate];
                 if (data.excl > 0) {
                     t += `${rate}%対象(税抜 ¥${data.excl.toLocaleString()})\n`;
-                    t += formatLine("  内消費税", `¥${data.tax.toLocaleString()}`);
+                    t += formatLine("  内消費税", `¥${data.tax.toLocaleString()}`);
                 }
             });
 
@@ -582,10 +595,9 @@
         } else {
             // 領収書
             t += `      領 収 書\n\n日付：${info.date.toLocaleDateString()}\nNo. ${info.id}\n\n`;
-            t += `${tempRecipientName || "                "}  様\n\n`;
+            t += `${tempRecipientName || "             "}  様\n\n`;
             const amountStr = `金額 ¥${info.totalAmount.toLocaleString()} -`;
-            const amountLen = getLen(amountStr);
-            const padding = Math.max(0, Math.floor((MAX_WIDTH - amountLen) / 2));
+            const padding = Math.max(0, Math.floor((MAX_WIDTH - getLen(amountStr)) / 2));
             t += " ".repeat(padding) + amountStr + "\n\n";
             t += `但 ${d.receiptType || "商品代"} として\n正に領収いたしました\n\n [内訳]\n`;
             Object.keys(info.finalTaxDetails).map(Number).sort((a, b) => b - a).forEach(rate => {
@@ -597,7 +609,8 @@
             });
             if (info.totalAmount >= 50000 && info.paymentMethod.includes('現金')) t += `\n[[STAMP_HERE]]\n`;
             t += `\n${line}発行者: ${d.companyName}\n`;
-            if (d.address) t += `住所: ${d.address}\n`;
+            // 領収書に郵便番号＋住所を追加
+            if (zip || d.address) t += `${zip} ${d.address}\n`;
             if (d.tel) t += `TEL: ${d.tel}\n`;
             if (regNo) t += `登録番号: ${regNo}\n`;
             t += line;
