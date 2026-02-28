@@ -360,6 +360,10 @@
         const d = shopInfo;
         const displayStoreName = d.companyName || "らぴレジ店舗";
         const regNo = (d && d.registrationNumber) ? d.registrationNumber : null;
+        
+        // 郵便番号のフォーマット（入力があれば「〒123-4567」の形式にする）
+        const zipDisplay = d.zipCode ? `〒${d.zipCode}\n` : "";
+        
         const receiptPreview = document.getElementById('receipt-text');
     
         const line = "-".repeat(MAX_WIDTH) + "\n";
@@ -371,6 +375,8 @@
         if (type === 'receipt') {
             t += alignCenter("レシート");
             t += `\n${displayStoreName}\n`;
+            // --- 郵便番号と住所を表示 ---
+            t += zipDisplay; 
             if(d.address) t += `${d.address}\n`; 
             if(d.tel) t += `TEL: ${d.tel}\n`;
             if(regNo) t += `登録番号: ${regNo}\n`;
@@ -383,19 +389,12 @@
             });
         
             t += line;
-            // --- 修正版：税率別の表示ロジック ---
-            // --- 修正版：税率別の表示ロジック（内消費税を右揃えに） ---
             const details = data.taxDetails || {};
             Object.keys(details).map(Number).sort((a,b) => b-a).forEach(rate => {
                 const sub = details[rate];
                 const taxAmount = Math.floor(sub * (rate / 100));
-    
-                // 1行目: %対象行
                 const taxLabel = `${rate}%対象 (税抜¥${sub.toLocaleString()})`;
                 t += taxLabel + "\n";
-    
-                // 2行目: 内消費税を右揃えにする
-                // "内消費税"というラベルと金額の間に空白を設けて右端に寄せる
                 const taxValueStr = `¥${taxAmount.toLocaleString()}`;
                 t += padBetween("  内消費税", taxValueStr); 
             });
@@ -424,7 +423,6 @@
             t += alignCenter("領 収 書");
             t += `\n日付：${new Date(data.createdAt).toLocaleDateString()}\nNo. ${data.id}\n\n`;
             t += `${guestName || "                "}  様\n\n`;
-            // 金額を中央揃えに変更
             t += alignCenter(`金額  ¥${data.totalAmount.toLocaleString()} -`);
             t += `\n但 ${d.receiptType || "商品代"} として\n正に領収いたしました\n\n [内訳]\n`;
             t += padBetween("  税抜金額：", `¥${netTotal.toLocaleString()}`);
@@ -432,7 +430,9 @@
             if ((data.totalAmount || 0) >= 50000 && data.paymentMethod.includes('現金')) {
                 t += `\n[[STAMP_HERE]]\n`;
             }
+            // --- 発行者情報に郵便番号を追加 ---
             t += `\n${line}発行者: ${displayStoreName}\n`;
+            t += zipDisplay;
             if(d.address) t += `${d.address}\n`;
             if(d.tel) t += `TEL: ${d.tel}\n`;
             if(regNo) t += `登録番号: ${regNo}\n`;
@@ -553,8 +553,14 @@
             const itemDetail = h.items.map(i => `${i.name}x${i.qty}`).join(' / ');
             
             const details = h.taxDetails || {};
-            const netTotal = Object.values(details).reduce((sum, val) => sum + val, 0);
-            const taxAmount = (h.totalAmount || 0) - netTotal;
+            let calculatedTaxTotal = 0;
+            Object.keys(details).forEach(rate => {
+                const sub = details[rate]; // その税率の税抜対象額
+                const tax = Math.floor(sub * (Number(rate) / 100)); // 税額計算
+                calculatedTaxTotal += tax;
+            });
+
+            const finalNetTotal = (h.totalAmount || 0) - calculatedTaxTotal;
             
             const voidTxt = h.isVoided ? "取消済" : "有効";
             const receiptTxt = h.receiptIssued ? "済" : "未";
@@ -570,8 +576,8 @@
                 h.subtotal || 0,
                 h.discount || 0,
                 `"${discName}"`, // ここに割引名を追加
-                netTotal,
-                taxAmount
+                finalNetTotal,
+                calculatedTaxTotal
             ];
 
             // 動的な税率別の金額を追加
