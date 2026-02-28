@@ -499,21 +499,28 @@
         const regNo = (savedProfile && savedProfile.registrationNumber) ? savedProfile.registrationNumber : null;
         const receiptPreview = document.getElementById('receiptPreview');
 
-        const MAX_WIDTH = 26; 
+        // 幅を26から24に調整（印刷時の文字溢れ防止の安全圏）
+        const MAX_WIDTH = 24; 
         const line = "-".repeat(MAX_WIDTH) + "\n";
 
         const getLen = (str) => {
             let len = 0; if (!str) return 0;
-            for (let i = 0; i < str.length; i++) (str.charCodeAt(i) <= 255) ? len += 1 : len += 2;
+            for (let i = 0; i < str.length; i++) {
+                // 半角カナや特殊記号を考慮し、基本は255以下を1、それ以外を2とする
+                (str.charCodeAt(i) <= 255) ? len += 1 : len += 2;
+            }
             return len;
         };
 
         const formatLine = (label, value) => {
             const labelLen = getLen(label);
             const valueLen = getLen(value);
+            
+            // ラベルと値の間に最低1マスの空白を確保
             const freeSpace = MAX_WIDTH - (labelLen + valueLen);
 
-            if (freeSpace <= 0) {
+            if (freeSpace < 1) {
+                // 1行に入り切らない場合は、ラベルを書いて次の行に右寄せで値を書く
                 return label + "\n" + " ".repeat(Math.max(0, MAX_WIDTH - valueLen)) + value + "\n";
             }
             return label + " ".repeat(freeSpace) + value + "\n";
@@ -523,7 +530,7 @@
         const dateStr = info.date.toLocaleString();
 
         if (type === 'receipt') {
-            t += `          レシート \n\n`;
+            t += `      レシート \n\n`; // 中央寄せ気味に調整
             t += `店名: ${d.companyName}\n`;
             if (d.address) t += `住所: ${d.address}\n`;
             if (d.tel) t += `TEL: ${d.tel}\n`;
@@ -543,10 +550,9 @@
             t += formatLine("小計(税抜)", `¥${originalExclTotal.toLocaleString()}`);
 
             if (info.discount > 0) {
-                const dLabel = window.currentDiscountName ? `割引(${window.currentDiscountName})` : "割引";
-                // ★ 修正箇所：余計なスペースが入らないよう、金額文字列を直接渡します
-                const dValue = `-¥${info.discount.toLocaleString()}`;
-                t += formatLine(dLabel, dValue);
+                const dName = window.currentDiscountName || "割引";
+                // 割引名が長い場合でもformatLineが自動で改行処理します
+                t += formatLine(`割引(${dName})`, `-¥${info.discount.toLocaleString()}`);
 
                 const afterDiscountExclTotal = Object.values(details).reduce((a, b) => a + b.excl, 0);
                 t += formatLine("割引後小計", `¥${afterDiscountExclTotal.toLocaleString()}`);
@@ -574,8 +580,8 @@
             if (d.memo) t += `${d.memo}\n`;
 
         } else {
-            // 領収書（省略せず維持）
-            t += `          領 収 書\n\n日付：${info.date.toLocaleDateString()}\nNo. ${info.id}\n\n`;
+            // 領収書
+            t += `      領 収 書\n\n日付：${info.date.toLocaleDateString()}\nNo. ${info.id}\n\n`;
             t += `${tempRecipientName || "                "}  様\n\n`;
             const amountStr = `金額 ¥${info.totalAmount.toLocaleString()} -`;
             const amountLen = getLen(amountStr);
