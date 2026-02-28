@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>設定 | らぴレジ</title>
+    <script src="https://yubinbango.github.io/yubinbango/yubinbango.js" charset="UTF-8"></script>
     <style>
         :root {
             --black: #000000; --white: #ffffff; --gray-bg: #f8f9fa;
@@ -114,9 +115,39 @@
             border-radius: 0; appearance: none; -webkit-appearance: none;
         }
         .reset-btn:active { transform: scale(0.98); }
+        .settings-card.danger-zone {
+            border-color: var(--danger);
+            background: var(--white);
+            /* 影を黒から赤に変更 */
+            box-shadow: 6px 6px 0 var(--danger) !important;
+        }
+        .settings-card.danger-zone h3 {
+            color: var(--danger);
+            border-left-color: var(--danger) !important;
+        }
+        /* リセットボタン自体の枠線と文字も赤くする */
+        .settings-card.danger-zone .reset-btn {
+            color: var(--danger);
+            border-color: var(--danger);
+        }
 
         .flex-row { display: flex; gap: 10px; align-items: stretch; margin-bottom: 15px; }
         .flex-row input { margin-bottom: 0; flex: 1; width: 0; }
+
+        /* スマホ風スイッチのスタイル */
+        .switch { position: relative; display: inline-block; width: 50px; height: 28px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #ccc; transition: .4s; border-radius: 34px; border: 2px solid var(--black);
+        }
+        .slider:before {
+            position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px;
+            background-color: white; transition: .4s; border-radius: 50%; border: 2px solid var(--black);
+        }
+        input:checked + .slider { background-color: var(--accent); }
+        input:checked + .slider:before { transform: translateX(22px); }
+        .sound-setting-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
 
         @media screen and (max-width: 768px) {
             header { padding: 0 10px; }
@@ -146,24 +177,36 @@
 </nav>
 
 <main class="container">
+    <p style="font-size: 0.7rem; font-weight: 800; color: #666; margin-bottom: 10px; width: 100%; max-width: 500px;">※入力したデータは自動で保存されます</p>
     <div class="settings-card">
-    <h3 style="font-weight: 900; border-left: 8px solid #000; padding-left: 10px; margin-bottom: 20px;">店舗情報設定</h3>
-    <label>店舗名 / 会社名</label>
-    <input type="text" id="companyName" placeholder="例：らぴレジ カフェ">
-    <label>領収書用 但し書き（〇〇代として）</label>
-    <input type="text" id="receiptType" placeholder="例：お食事代、お品代">
-    
-    <label>インボイス登録番号</label>
-    <input type="text" id="registrationNumber" placeholder="例：T1234567890123" maxlength="14">
-    
-    <label>住所</label>
-    <input type="text" id="address" placeholder="東京都〇〇区1-2-3">
-    <label>電話番号</label>
-    <input type="text" id="tel" placeholder="03-1234-5678">
-    <label>一言メモ</label>
-    <input type="text" id="memo" placeholder="またのお越しをお待ちしております！">
-    <button id="saveProfileBtn" class="save-btn">店舗情報を保存する</button>
-</div>
+        <h3 style="font-weight: 900; border-left: 8px solid #000; padding-left: 10px; margin-bottom: 20px;">店舗情報設定</h3>
+        
+        <label>店舗名 / 会社名</label>
+        <input type="text" id="companyName" placeholder="例：らぴレジ カフェ">
+
+        <div class="h-adr">
+            <span class="p-country-name" style="display:none;">Japan</span>
+        
+            <label>郵便番号</label>
+            <input type="text" id="zipCode" class="p-postal-code" placeholder="例：1000001">
+        
+            <label>住所</label>
+            <input type="text" id="address" class="p-region p-locality p-street-address p-extended-address" placeholder="東京都〇〇区1-2-3">
+        </div>
+
+        <label>電話番号</label>
+        <input type="text" id="tel" placeholder="03-1234-5678">
+
+        <label>インボイス登録番号（T+13桁の数字）</label>
+        <input type="text" id="registrationNumber" placeholder="例：T1234567890123" maxlength="14">
+        
+
+        <label>領収書用 但し書き（〇〇代として）</label>
+        <input type="text" id="receiptType" placeholder="例：お食事代">
+        
+        <label>レシート用 一言メモ</label>
+        <input type="text" id="memo" placeholder="またのお越しをお待ちしております！">
+    </div>
 
     <div class="settings-card">
         <h3 style="font-weight: 900; margin-bottom: 20px; border-left: 8px solid #000; padding-left: 10px;">決済方法（最大5つ）</h3>
@@ -174,7 +217,6 @@
             <input type="text" class="payment-input" placeholder="決済4">
             <input type="text" class="payment-input" placeholder="決済5">
         </div>
-        <button id="savePaymentBtn" class="save-btn">決済方法を保存する</button>
     </div>
 
     <div class="settings-card">
@@ -193,7 +235,24 @@
                 <input type="text" class="discount-value" placeholder="金額（％も可）">
             </div>
         </div>
-        <button id="saveDiscountBtn" class="save-btn">割引設定を保存する</button>
+    </div>
+
+    <div class="settings-card">
+        <h3 style="font-weight: 900; margin-bottom: 20px; border-left: 8px solid #000; padding-left: 10px;">通知音設定</h3>
+        <div class="sound-setting-item">
+            <label style="margin-bottom: 0;">操作音</label>
+            <label class="switch">
+                <input type="checkbox" id="soundBtnEnabled" onchange="autoSaveSounds()">
+                <span class="slider"></span>
+            </label>
+        </div>
+        <div class="sound-setting-item">
+            <label style="margin-bottom: 0;">決済完了音</label>
+            <label class="switch">
+                <input type="checkbox" id="soundPayEnabled" onchange="autoSaveSounds()">
+                <span class="slider"></span>
+            </label>
+        </div>
     </div>
 
     <div class="settings-card">
@@ -223,8 +282,9 @@
         <a href="https://docs.google.com/forms/d/e/1FAIpQLSfvlhXZz0kiJ03ii4lFBBtK8QY3Q54M1ykejPiV0uDl8fR2SA/viewform?usp=header" target="_blank" class="save-btn" style="background: #fff; color: #000; border: 3px solid #000;">ご意見・ご要望を送る</a>
     </div>
 
-    <div class="settings-card" style="border-color: #000; box-shadow: 6px 6px 0 var(--black);">
-        <h3 style="color: var(--black); font-weight: 900; margin-bottom: 10px; border-left: 8px solid var(--black); padding-left: 10px;">⚠️ データリセット</h3>
+    <div class="settings-card danger-zone">
+        <h3 style="color: var(--danger); font-weight: 900; margin-bottom: 10px; border-left: 8px solid var(--black); padding-left: 10px;"> ⚠️ データリセット</h3>
+        <p style="color:var(--danger); font-size: 0.8rem; font-weight: 800; margin-bottom: 15px;">選択されたデータが削除されます。ご注意ください。</p>
         <button id="resetSalesBtn" class="reset-btn">販売履歴をすべてリセット</button>
         <button id="resetProductsBtn" class="reset-btn">商品・カテゴリ一覧をすべてリセット</button>
         <button id="resetAllDataBtn" class="reset-btn">すべてのデータをリセット</button>
@@ -237,6 +297,7 @@
         profile: ['rapireji_profile'],
         payments: ['rapireji_payments'],
         discounts: ['rapireji_discounts'],
+        sounds: ['rapireji_sounds'],
         products: ['rapireji_products', 'rapireji_categories'],
         history: ['rapireji_history'],
         stock: ['rapireji_stock_config']
@@ -252,6 +313,7 @@
         document.getElementById('companyName').value = profile.companyName || "";
         document.getElementById('receiptType').value = profile.receiptType || "";
         document.getElementById('registrationNumber').value = profile.registrationNumber || "";
+        document.getElementById('zipCode').value = profile.zipCode || "";
         document.getElementById('address').value = profile.address || "";
         document.getElementById('tel').value = profile.tel || "";
         document.getElementById('memo').value = profile.memo || "";
@@ -270,6 +332,10 @@
                 valueInputs[i].value = item.isPercent ? `${item.value}%` : (item.value || "");
             }
         });
+
+        const sounds = JSON.parse(localStorage.getItem('rapireji_sounds') || '{"btn": true, "pay": true}');
+        document.getElementById('soundBtnEnabled').checked = sounds.btn;
+        document.getElementById('soundPayEnabled').checked = sounds.pay;
     }
 
     function initBackupSystem() {
@@ -344,50 +410,69 @@
     }
 
     // 保存ボタン・リセットボタン
-    document.getElementById('saveProfileBtn').onclick = () => {
+    // 自動保存用の関数
+
+    function toHalfWidth(str) {
+        return str.replace(/[０-９]/g, (s) => {
+            return String.fromCharCode(s.charCodeAt(0) - 0xFEE0);
+        });
+    }
+
+    function autoSaveProfile() {
         const data = {
             companyName: document.getElementById('companyName').value,
             receiptType: document.getElementById('receiptType').value,
-            registrationNumber: document.getElementById('registrationNumber').value,
+            registrationNumber: toHalfWidth(document.getElementById('registrationNumber').value), // 半角化
+            zipCode: toHalfWidth(document.getElementById('zipCode').value), // 半角化
             address: document.getElementById('address').value,
-            tel: document.getElementById('tel').value,
+            tel: toHalfWidth(document.getElementById('tel').value), // 半角化
             memo: document.getElementById('memo').value
         };
         localStorage.setItem('rapireji_profile', JSON.stringify(data));
-        alert("店舗情報を保存しました");
-    };
+    }
 
-    document.getElementById('savePaymentBtn').onclick = () => {
+    function autoSavePayments() {
         const methods = Array.from(document.querySelectorAll('.payment-input')).map(el => el.value).filter(v => v !== "");
         localStorage.setItem('rapireji_payments', JSON.stringify(methods));
-        alert("決済方法を保存しました");
-    };
+    }
 
-    document.getElementById('saveDiscountBtn').onclick = () => {
+    function autoSaveDiscounts() {
         const items = [];
         const nameInputs = document.querySelectorAll('.discount-name');
         const valueInputs = document.querySelectorAll('.discount-value');
-
         nameInputs.forEach((el, i) => {
-            const rawValue = valueInputs[i].value.trim(); 
+            // 入力値を半角に変換してから処理
+            let rawValue = toHalfWidth(valueInputs[i].value.trim());
             
             if (el.value && rawValue !== "") {
                 const isPercent = rawValue.includes('%');
                 const numValue = parseFloat(rawValue.replace('%', ''));
-
                 if (!isNaN(numValue)) {
-                    items.push({ 
-                        name: el.value, 
-                        value: numValue,
-                        isPercent: isPercent 
-                    });
+                    items.push({ name: el.value, value: numValue, isPercent: isPercent });
                 }
             }
         });
         localStorage.setItem('rapireji_discounts', JSON.stringify(items));
-        alert("割引設定を保存しました");
-    };
+    }
 
+    function autoSaveSounds() {
+        const data = {
+            btn: document.getElementById('soundBtnEnabled').checked,
+            pay: document.getElementById('soundPayEnabled').checked
+        };
+        localStorage.setItem('rapireji_sounds', JSON.stringify(data));
+    }
+
+    // 入力イベントの紐付け（DOM読み込み完了後に追加）
+    document.addEventListener('input', (e) => {
+        if (e.target.closest('.settings-card')) {
+            if (e.target.id === 'soundBtnEnabled' || e.target.id === 'soundPayEnabled') return; // スイッチは別途処理
+            if (e.target.classList.contains('payment-input')) autoSavePayments();
+            else if (e.target.classList.contains('discount-name') || e.target.classList.contains('discount-value')) autoSaveDiscounts();
+            else autoSaveProfile();
+        }
+    });
+    
     document.getElementById('resetSalesBtn').onclick = () => { if(confirm("販売履歴を削除しますか？")) localStorage.removeItem('rapireji_history'); };
     document.getElementById('resetProductsBtn').onclick = () => { if(confirm("商品・カテゴリを削除しますか？")) { localStorage.removeItem('rapireji_products'); localStorage.removeItem('rapireji_categories'); } };
     document.getElementById('resetAllDataBtn').onclick = () => { if(confirm("すべて初期化しますか？")) { localStorage.clear(); location.reload(); } };
