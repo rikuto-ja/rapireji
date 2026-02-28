@@ -220,9 +220,15 @@
     let alertedStatus = {};
 
     function playRegisterSound() {
-        const sound = document.getElementById('reg-sound');
-        sound.currentTime = 0; 
-        sound.play().catch(e => console.log("Sound play blocked"));
+        // 設定を読み込む（未設定の場合はデフォルトでONにする）
+        const sounds = JSON.parse(localStorage.getItem('rapireji_sounds') || '{"btn": true, "pay": true}');
+        
+        // 操作音（btn）がONの場合のみ再生
+        if (sounds.btn) {
+            const sound = document.getElementById('reg-sound');
+            sound.currentTime = 0; 
+            sound.play().catch(e => console.log("Sound play blocked"));
+        }
     }
 
     window.addEventListener('DOMContentLoaded', () => {
