@@ -488,10 +488,10 @@
             taxDetails: order.taxDetails, // 元の税抜
             finalTaxDetails: order.finalCalculated.details, // 割引後
             discount: discountVal, 
-            discountName: window.currentDiscountName || "割引", // ★ここを追加！
+            discountName: window.currentDiscountName || "", // ★ここを追加！
             totalAmount: finalTotal,
             paymentMethod: method, 
-            cashReceived: cashReceived, 
+            cashReceived: cashReceived,
             change: change,
             createdAt: now.toISOString(), 
             isVoided: false, 
