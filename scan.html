@@ -122,25 +122,28 @@ document.addEventListener('touchstart', () => {
 // 引数でファイル名を指定できるように修正
 /* --- 変更点：playBeep関数を修正してbeep2に対応 --- */
 function playBeep(type = 'beep3') {
-    const sounds = JSON.parse(localStorage.getItem('rapireji_sounds')) || {btn: true, pay: true, scan: true, error: true};
-
-    // 音色と設定項目の紐付け
-    if (type === 'beep4') {
-        if (sounds.error === false) return; 
-    } else if (type === 'beep1') {
-        if (sounds.btn === false) return;   // 数量変更（ボタン）はbtn設定を参照
-    } else {
-        if (sounds.scan === false) return; 
+    // localStorage の値を安全にパースする
+    let sounds;
+    try {
+        const raw = localStorage.getItem('rapireji_sounds');
+        sounds = raw ? JSON.parse(raw) : {btn: true, pay: true, scan: true, error: true};
+    } catch (e) {
+        console.warn('rapireji_sounds の読み取りに失敗しました。デフォルトを使用します。', e);
+        sounds = {btn: true, pay: true, scan: true, error: true};
     }
 
-    // 音源の準備（beep2が未定義なら作成）
+    if (type === 'beep4') {
+        if (sounds.error === false) return;
+    } else if (type === 'beep1') {
+        if (sounds.btn === false) return;
+    } else {
+        if (sounds.scan === false) return;
+    }
+
     let targetAudio;
     if (type === 'beep4') targetAudio = scanAudio4;
     else if (type === 'beep3') targetAudio = scanAudio3;
-    else {
-        // beep2用のAudioオブジェクトを即時生成（一度生成すればブラウザがキャッシュします）
-        targetAudio = new Audio('beep1.mp3');
-    }
+    else targetAudio = new Audio('beep1.mp3');
 
     targetAudio.currentTime = 0;
     targetAudio.play().catch(e => console.warn("音声再生に失敗:", e));
