@@ -59,12 +59,13 @@
         .total-row { display: flex; justify-content: space-between; font-size: 1.3rem; font-weight: 900; margin-bottom: 10px; }
         .checkout-btn { width: 100%; background: var(--black); color: var(--white); border: none; padding: 15px; font-size: 1.1rem; font-weight: 900; cursor: pointer; }
         .sub-btn { width: 100%; background: none; border: none; padding: 10px; text-decoration: underline; font-weight: 800; cursor: pointer; }
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
 
 <header>
-    <div style="font-weight: 900; cursor: pointer;" onclick="history.back()">← 戻る</div>
+    <div style="font-weight: 900; cursor: pointer;" id="back-link" onclick="history.back()">← 戻る</div>
     <div id="mode-label" class="mode-badge">読み込み中...</div>
 </header>
 
@@ -95,6 +96,8 @@ let isPaused = false;
 // UIの初期化
 const modeLabel = document.getElementById('mode-label');
 const backBtn = document.querySelector('.back-btn');
+// 修正箇所3：戻るボタンの遷移先をモードで固定
+document.getElementById('back-link').onclick = (mode === 'reg') ? () => location.href='register.html' : () => history.back();
 
 if (mode === 'reg') {
     modeLabel.innerText = "注文スキャンモード";
@@ -260,19 +263,21 @@ function updateMiniCartUI() {
     const totalDisp = document.getElementById('totalAmount');
     const resultPanel = document.querySelector('.result-panel');
     
+    // 修正箇所1：addモード（商品登録）のときはカート情報を徹底的に隠す
     if (mode !== 'reg') {
-        if (list) list.style.display = 'none';
-        if (totalArea) totalArea.style.display = 'none';
+        if (list) list.classList.add('hidden');
+        if (totalArea) totalArea.classList.add('hidden');
         if (resultPanel) resultPanel.style.height = 'auto'; 
         return;
     }
 
+    // 修正箇所2：regモード（レジ）のときは隠しクラスを外して表示する
     if (list) {
-        list.classList.remove('reg-only');
+        list.classList.remove('hidden');
         list.style.display = 'block';
     }
     if (totalArea) {
-        totalArea.classList.remove('reg-only');
+        totalArea.classList.remove('hidden');
         totalArea.style.display = 'block';
     }
     if (resultPanel) resultPanel.style.height = '45vh';
