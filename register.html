@@ -526,12 +526,9 @@
     });
 
     function goToScanFromRegister() {
-        // 現在のカートをセッションに保存してから移動
-        sessionStorage.setItem('currentOrder', JSON.stringify({ 
-            items: cart, 
-            totalAmount: 0 
-        }));
-        // 'register' ではなく 'reg' に修正
+        // 現在のカート状態（中身、合計金額、税計算すべて）をそのまま保持して移動
+        const orderData = JSON.parse(sessionStorage.getItem('currentOrder') || '{"items":[]}');
+        sessionStorage.setItem('currentOrder', JSON.stringify(orderData));
         location.href = 'scan.html?mode=reg'; 
     }
 
