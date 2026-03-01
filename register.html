@@ -534,6 +534,13 @@
         // 'register' ではなく 'reg' に修正
         location.href = 'scan.html?mode=reg'; 
     }
+
+    // スキャン画面から「戻る」で帰ってきた際や、タブがアクティブになった時に最新のカートを反映する
+    window.addEventListener('pageshow', (event) => {
+        // ページがキャッシュから読み込まれた（戻るボタンなど）場合でも実行
+        restoreCart();
+    });
+    
 </script>
 </body>
 </html>
