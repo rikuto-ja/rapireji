@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>スキャン | らぴレジ</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
+    <style>
+        :root { --black: #000000; --white: #ffffff; --accent: #00ff00; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; }
+        
+        body { background: var(--black); color: var(--white); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+        /* スキャン画面のヘッダー */
+        header {
+            height: 60px; padding-top: env(safe-area-inset-top);
+            display: flex; align-items: center; justify-content: space-between;
+            padding-left: 20px; padding-right: 20px; background: var(--white); color: var(--black);
+            border-bottom: 3px solid var(--black);
+        }
+        .mode-badge { background: var(--black); color: var(--white); padding: 4px 8px; font-weight: 900; font-size: 0.8rem; }
+
+        /* カメラ表示エリア */
+        #interactive.viewport {
+            flex: 1; position: relative; overflow: hidden; width: 100%;
+        }
+        #interactive.viewport video {
+            width: 100%; height: 100%; object-fit: cover;
+        }
+        
+        /* 読み取りガイドの枠 */
+        .scan-overlay {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 70%; height: 30%; border: 2px solid var(--accent);
+            box-shadow: 0 0 0 2000px rgba(0,0,0,0.5); pointer-events: none;
+        }
+        .scan-overlay::after {
+            content: "バーコードを枠内に合わせてください";
+            position: absolute; bottom: -40px; left: 0; width: 100%;
+            text-align: center; color: var(--accent); font-weight: bold; font-size: 0.8rem;
+        }
+
+        /* 下部リザルトエリア */
+        .result-panel {
+            height: 120px; background: var(--white); color: var(--black);
+            padding: 15px; border-top: 3px solid var(--black);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        #last-code { font-size: 1.5rem; font-weight: 900; margin-bottom: 10px; }
+        .back-btn {
+            width: 100%; background: var(--black); color: var(--white);
+            border: none; padding: 12px; font-weight: 900; cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div style="font-weight: 900;" onclick="history.back()">← 戻る</div>
+    <div id="mode-label" class="mode-badge">読み込み中...</div>
+</header>
+
+<div id="interactive" class="viewport">
+    <div class="scan-overlay"></div>
+</div>
+
+<div class="result-panel">
+    <div id="last-code">読み取り待機中</div>
+    <button class="back-btn" onclick="history.back()">レジに戻る</button>
+</div>
+
+<script>
+    const urlParams = new URLSearchParams(window.location.search);
+const mode = urlParams.get('mode'); // 'reg' (注文リスト追加), 'add' (JANコード1回登録)
+const STORAGE_KEYS = { PRODUCTS: 'rapireji_products' };
+let isPaused = false;
+
+// UIの初期化
+const modeLabel = document.getElementById('mode-label');
+const backBtn = document.querySelector('.back-btn');
+
+if (mode === 'reg') {
+    modeLabel.innerText = "注文スキャンモード";
+    backBtn.innerText = "レジに戻る";
+} else {
+    modeLabel.innerText = "JAN登録モード";
+    backBtn.innerText = "商品登録に戻る";
+}
+
+// 音を鳴らす関数
+// 音を鳴らす関数（設定のON/OFFをチェックし、beep3.mp3を再生）
+function playBeep() {
+    // 設定を読み込む（デフォルトはON）
+    const sounds = JSON.parse(localStorage.getItem('rapireji_sounds') || '{"btn": true, "pay": true, "scan": true}');
+    
+    // スキャン音がOFFなら何もしない
+    if (sounds.scan === false) return;
+
+    // beep3.mp3 を再生
+    const audio = new Audio('beep3.mp3');
+    audio.play().catch(e => console.log("Audio play blocked"));
+}
+
+// ポップアップ表示（トースト）
+function showPopup(message, isError = false) {
+    const popup = document.createElement('div');
+    popup.style = `
+        position: fixed; top: 15%; left: 50%; transform: translateX(-50%);
+        background: ${isError ? 'red' : 'rgba(0,255,0,0.9)'}; color: ${isError ? 'white' : 'black'};
+        padding: 12px 24px; border-radius: 8px; font-weight: bold; z-index: 1000;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.3); transition: opacity 0.5s;
+    `;
+    popup.innerText = message;
+    document.body.appendChild(popup);
+    setTimeout(() => {
+        popup.style.opacity = '0';
+        setTimeout(() => popup.remove(), 500);
+    }, 1500);
+}
+
+// Quagga初期化
+Quagga.init({
+    inputStream: {
+        name: "Live", type: "LiveStream",
+        target: document.querySelector('#interactive'),
+        constraints: { facingMode: "environment", aspectRatio: { min: 1, max: 2 } },
+    },
+    decoder: { readers: ["ean_reader", "ean_8_reader"] }
+}, function(err) {
+    if (err) { console.error(err); return; }
+    Quagga.start();
+});
+
+Quagga.onDetected((data) => {
+    if (isPaused) return;
+    const code = data.codeResult.code;
+    isPaused = true;
+    
+    handleScannedCode(code);
+});
+
+async function handleScannedCode(code) {
+    document.getElementById('last-code').innerText = code;
+    playBeep();
+
+    if (mode === 'reg') {
+        // --- 注文リスト追加モード（連続スキャン） ---
+        const products = JSON.parse(localStorage.getItem(STORAGE_KEYS.PRODUCTS) || '[]');
+        const product = products.find(p => (p.jan === code || p.id === code));
+
+        if (product) {
+            let currentOrder = JSON.parse(sessionStorage.getItem('currentOrder') || '{"items":[]}');
+            const existing = currentOrder.items.find(item => item.id === product.id);
+
+            if (existing) {
+                existing.qty++;
+            } else {
+                currentOrder.items.push({ 
+                    id: product.id, 
+                    name: product.name, 
+                    price: Number(product.price), 
+                    qty: 1 
+                });
+            }
+            
+            sessionStorage.setItem('currentOrder', JSON.stringify(currentOrder));
+            showPopup(`追加：${product.name}`);
+        } else {
+            showPopup(`未登録の商品です (${code})`, true);
+        }
+        
+        // 1.5秒待ってから次をスキャン可能にする
+        setTimeout(() => { isPaused = false; }, 1500);
+
+    } else {
+        // --- JAN登録モード（1回で終了） ---
+        localStorage.setItem('last_scanned_barcode', code);
+        showPopup(`コード保存: ${code}`);
+        setTimeout(() => history.back(), 1000);
+    }
+}
+</script>
+</body>
+</html>
