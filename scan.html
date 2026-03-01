@@ -88,28 +88,34 @@ if (mode === 'reg') {
 }
 
 // スキャン音のインスタンスを固定
-const scanAudio = new Audio('beep3.mp3');
+const scanAudio3 = new Audio('beep3.mp3');
+const scanAudio4 = new Audio('beep4.mp3'); // 未登録用
 
 // ブラウザの音声ブロックを解除するためのフラグ
 let audioUnlocked = false;
 
-// 画面のどこかを触ったら音声のロックを解除する
+// 画面のどこかを触ったら音声のロックを解除する（両方の音を許可させる）
 document.addEventListener('touchstart', () => {
     if (!audioUnlocked) {
-        scanAudio.play().then(() => {
-            scanAudio.pause(); // 一瞬流してすぐ止める（これで許可が出る）
-            scanAudio.currentTime = 0;
-            audioUnlocked = true;
-        }).catch(() => {});
+        // 両方の音を一度再生して即停止することでブラウザの許可を得る
+        [scanAudio3, scanAudio4].forEach(audio => {
+            audio.play().then(() => {
+                audio.pause();
+                audio.currentTime = 0;
+            }).catch(() => {});
+        });
+        audioUnlocked = true;
     }
-}, { once: true }); // 最初の一回だけ実行
+}, { once: true });
 
-function playBeep() {
+// 引数でファイル名を指定できるように修正
+function playBeep(type = 'beep3') {
     const sounds = JSON.parse(localStorage.getItem('rapireji_sounds')) || {btn: true, pay: true, scan: true};
     if (sounds.scan === false) return;
 
-    scanAudio.currentTime = 0;
-    scanAudio.play().catch(e => console.warn("音声再生に失敗:", e));
+    const targetAudio = (type === 'beep4') ? scanAudio4 : scanAudio3;
+    targetAudio.currentTime = 0;
+    targetAudio.play().catch(e => console.warn("音声再生に失敗:", e));
 }
 
 // ポップアップ表示（トースト）
@@ -152,14 +158,14 @@ Quagga.onDetected((data) => {
 
 async function handleScannedCode(code) {
     document.getElementById('last-code').innerText = code;
-    playBeep();
 
     if (mode === 'reg') {
-        // --- 注文リスト追加モード（連続スキャン） ---
+        // --- 注文リスト追加モード ---
         const products = JSON.parse(localStorage.getItem(STORAGE_KEYS.PRODUCTS) || '[]');
         const product = products.find(p => (String(p.jan) === String(code) || String(p.id) === String(code)));
 
         if (product) {
+            playBeep('beep3'); // 商品あり：beep3
             let currentOrder = JSON.parse(sessionStorage.getItem('currentOrder') || '{"items":[]}');
             const existing = currentOrder.items.find(item => item.id === product.id);
 
@@ -177,14 +183,15 @@ async function handleScannedCode(code) {
             sessionStorage.setItem('currentOrder', JSON.stringify(currentOrder));
             showPopup(`追加：${product.name}`);
         } else {
+            playBeep('beep4'); // 商品なし：beep4
             showPopup(`未登録の商品です (${code})`, true);
         }
         
-        // 1.5秒待ってから次をスキャン可能にする
         setTimeout(() => { isPaused = false; }, 1500);
 
     } else {
-        // --- JAN登録モード（1回で終了） ---
+        // --- JAN登録モード ---
+        playBeep('beep3'); // 登録は常に beep3
         localStorage.setItem('last_scanned_barcode', code);
         showPopup(`コード保存: ${code}`);
         setTimeout(() => history.back(), 1000);
