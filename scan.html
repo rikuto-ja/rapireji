@@ -249,24 +249,31 @@ function updateScannedUI(item, originalProduct) {
 }
 
 // スキャン画面用の数量変更関数
+// window.changeQtyScan の内容を以下に差し替え
 window.changeQtyScan = (id, diff) => {
     if (typeof playBeep === 'function') playBeep('beep1');
     let currentOrder = JSON.parse(sessionStorage.getItem('currentOrder') || '{"items":[]}');
     let itemIndex = currentOrder.items.findIndex(i => i.id === id);
     
     if (itemIndex > -1) {
-        const products = JSON.parse(localStorage.getItem(STORAGE_KEYS.PRODUCTS) || '[]');
-        const product = products.find(p => p.id === id);
-        
+        // 数量を更新
         currentOrder.items[itemIndex].qty += diff;
         
+        // 0以下になったら削除
         if (currentOrder.items[itemIndex].qty <= 0) {
             window.removeItemScan(id);
             return;
         }
         
+        // ストレージに保存
         sessionStorage.setItem('currentOrder', JSON.stringify(currentOrder));
-        updateScannedUI(currentOrder.items[itemIndex], product);
+        
+        // 表示を更新するために商品マスタから情報を取得して再描画
+        const products = JSON.parse(localStorage.getItem(STORAGE_KEYS.PRODUCTS) || '[]');
+        const product = products.find(p => p.id === id);
+        if (product) {
+            updateScannedUI(currentOrder.items[itemIndex], product);
+        }
     }
 };
 
