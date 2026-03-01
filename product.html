@@ -666,20 +666,36 @@
         const returnFromScan = sessionStorage.getItem('is_scanning_mode');
 
         if (scannedCode && returnFromScan) {
-            // スキャンモードのフラグを折る
             sessionStorage.removeItem('is_scanning_mode');
             
-            // 保存されていた「編集中の商品データ」を復元（あれば）
             const tempState = JSON.parse(sessionStorage.getItem('temp_product_state') || '{}');
             
-            // モーダルを開く（新規ならnull、編集ならそのIDのオブジェクトを渡す）
+            // 1. まずモーダルを開く（IDの有無で編集/新規を判定）
             const p = tempState.id ? allProducts.find(item => item.id == tempState.id) : null;
             openModal(p, tempState.index || 0);
 
-            // スキャンしたコードを上書き入力
+            // 2. 保存されていたフォームの値を復元する
+            if (tempState.form) {
+                document.getElementById('p-name').value = tempState.form.name || "";
+                document.getElementById('p-price').value = tempState.form.price || "";
+                document.getElementById('p-tax-rate').value = tempState.form.taxRate || 0;
+                document.getElementById('p-category').value = tempState.form.category || "";
+                document.getElementById('p-stock').value = tempState.form.stock || 0;
+                document.getElementById('p-tag').value = tempState.form.tag || "";
+                document.getElementById('p-image-url').value = tempState.form.imageUrl || "";
+                document.getElementById('p-purchase-url').value = tempState.form.purchaseUrl || "";
+                
+                // 画像プレビューも再表示
+                if (tempState.form.imageUrl) {
+                    document.getElementById('image-preview-container').style.display = 'block';
+                    document.getElementById('p-preview').src = tempState.form.imageUrl;
+                }
+            }
+
+            // 3. スキャンしたコードをJAN欄に上書き
             document.getElementById('p-jan').value = scannedCode;
 
-            // 復元が終わったら一時データを削除
+            // 使い終わったデータを削除
             localStorage.removeItem('last_scanned_barcode');
             sessionStorage.removeItem('temp_product_state');
         }
@@ -687,17 +703,29 @@
 
     // JANコード横の「スキャン」リンク（またはボタン）が押された時の処理
     function goToScan() {
-        // 現在入力中の状態を一時保存（名前や価格が消えないように）
-        const tempState = {
-            id: editingProductId,
-            index: targetIndex
-        };
-        sessionStorage.setItem('temp_product_state', JSON.stringify(tempState));
-        sessionStorage.setItem('is_scanning_mode', 'true');
-        
-        // スキャン画面へ遷移
-        location.href = 'scan.html?mode=add';
-    }
+    // 現在入力中の全項目を一時保存
+    const tempState = {
+        id: editingProductId,
+        index: targetIndex,
+        // 入力フォームの内容をすべて保存
+        form: {
+            name: document.getElementById('p-name').value,
+            price: document.getElementById('p-price').value,
+            taxRate: document.getElementById('p-tax-rate').value,
+            category: document.getElementById('p-category').value,
+            stock: document.getElementById('p-stock').value,
+            tag: document.getElementById('p-tag').value,
+            imageUrl: document.getElementById('p-image-url').value,
+            purchaseUrl: document.getElementById('p-purchase-url').value
+        }
+    };
+    
+    sessionStorage.setItem('temp_product_state', JSON.stringify(tempState));
+    sessionStorage.setItem('is_scanning_mode', 'true');
+    
+    // スキャン画面へ遷移
+    location.href = 'scan.html?mode=add';
+}
 </script>
 </body>
 </html>
