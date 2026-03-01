@@ -195,7 +195,7 @@
     <section class="cart-section">
         <div id="drag-handle" class="drag-handle">
             <div class="handle-bar"></div>
-            <span>注文リスト</span>
+            <span>注文リスト<span onclick="goToScanFromRegister()" style="cursor: pointer; margin-left: 10px;">[スキャン]</span></span>
         </div>
         <div class="cart-list" id="cartList"></div>
         <div class="cart-total">
@@ -524,6 +524,15 @@
             }
         });
     });
+
+    function goToScanFromRegister() {
+        // 現在のカートをセッションに保存してから移動
+        sessionStorage.setItem('currentOrder', JSON.stringify({ 
+            items: cart, 
+            totalAmount: 0 // updateCartUIで再計算されるので0でOK
+        }));
+        location.href = 'scan.html?mode=register';
+    }
 </script>
 </body>
 </html>
