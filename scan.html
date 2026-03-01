@@ -231,6 +231,7 @@ function updateScannedUI(item, originalProduct) {
     const priceInclTax = Math.floor(item.price * (1 + taxRate / 100));
     const rowTotal = priceInclTax * item.qty;
 
+    // updateScannedUI 内の該当箇所のみ差し替え
     area.innerHTML = `
         <div class="cart-item">
             <div class="cart-item-top">
@@ -238,10 +239,10 @@ function updateScannedUI(item, originalProduct) {
                 <span>¥${rowTotal.toLocaleString()}</span>
             </div>
             <div class="cart-item-controls">
-                <button class="qty-btn" onclick="changeQtyScan('${item.id}', -1)">-</button>
+                <button class="qty-btn" onclick="window.changeQtyScan('${item.id}', -1)">-</button>
                 <span style="margin:0 10px; font-size:1.2rem;">× ${item.qty}</span>
-                <button class="qty-btn" onclick="changeQtyScan('${item.id}', 1)">+</button>
-                <button onclick="removeItemScan('${item.id}')" style="margin-left:auto; background:none; border:none; color:red; font-weight:bold; cursor:pointer;">削除</button>
+                <button class="qty-btn" onclick="window.changeQtyScan('${item.id}', 1)">+</button>
+                <button onclick="window.removeItemScan('${item.id}')" style="margin-left:auto; background:none; border:none; color:red; font-weight:bold; cursor:pointer;">削除</button>
             </div>
         </div>
     `;
@@ -249,28 +250,34 @@ function updateScannedUI(item, originalProduct) {
 
 // スキャン画面用の数量変更関数
 window.changeQtyScan = (id, diff) => {
-    if (typeof playBeep === 'function') playBeep('beep1'); // 数量変更の音（必要に応じて追加）
+    if (typeof playBeep === 'function') playBeep('beep1');
     let currentOrder = JSON.parse(sessionStorage.getItem('currentOrder') || '{"items":[]}');
-    const item = currentOrder.items.find(i => i.id === id);
-    const products = JSON.parse(localStorage.getItem(STORAGE_KEYS.PRODUCTS) || '[]');
-    const product = products.find(p => p.id === id);
-
-    if (item && product) {
-        item.qty += diff;
-        if (item.qty <= 0) {
-            removeItemScan(id);
+    let itemIndex = currentOrder.items.findIndex(i => i.id === id);
+    
+    if (itemIndex > -1) {
+        const products = JSON.parse(localStorage.getItem(STORAGE_KEYS.PRODUCTS) || '[]');
+        const product = products.find(p => p.id === id);
+        
+        currentOrder.items[itemIndex].qty += diff;
+        
+        if (currentOrder.items[itemIndex].qty <= 0) {
+            window.removeItemScan(id);
             return;
         }
+        
         sessionStorage.setItem('currentOrder', JSON.stringify(currentOrder));
-        updateScannedUI(item, product);
+        updateScannedUI(currentOrder.items[itemIndex], product);
     }
 };
 
 // スキャン画面用の削除関数
 window.removeItemScan = (id) => {
     let currentOrder = JSON.parse(sessionStorage.getItem('currentOrder') || '{"items":[]}');
+    // 指定したIDを除外して保存
     currentOrder.items = currentOrder.items.filter(i => i.id !== id);
     sessionStorage.setItem('currentOrder', JSON.stringify(currentOrder));
+    
+    // UIの表示を初期状態に戻す
     document.getElementById('scanned-item-area').innerHTML = '<div style="text-align: center; color: #999; margin-top: 20px;">削除しました。スキャンを続けてください</div>';
 };
 </script>
