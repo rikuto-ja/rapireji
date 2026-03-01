@@ -188,9 +188,8 @@ Quagga.onDetected((data) => {
 });
 
 /* --- 変更点：スキャン後の処理とUI更新 --- */
+/* --- handleScannedCode 関数の修正 --- */
 async function handleScannedCode(code) {
-    // document.getElementById('last-code').innerText = code; // この行は削除（またはID変更）
-
     if (mode === 'reg') {
         const products = JSON.parse(localStorage.getItem(STORAGE_KEYS.PRODUCTS) || '[]');
         const product = products.find(p => (String(p.jan) === String(code) || String(p.id) === String(code)));
@@ -198,7 +197,7 @@ async function handleScannedCode(code) {
         if (product) {
             playBeep('beep3');
             let currentOrder = JSON.parse(sessionStorage.getItem('currentOrder') || '{"items":[]}');
-            let existing = currentOrder.items.find(item => item.id === product.id);
+            let existing = currentOrder.items.find(item => String(item.id) === String(product.id));
 
             if (existing) {
                 existing.qty++;
@@ -207,19 +206,16 @@ async function handleScannedCode(code) {
                 currentOrder.items.push(existing);
             }
             
-            sessionStorage.setItem('currentOrder', JSON.stringify(currentOrder));
-            // 直前の商品のみを表示
+            // --- 変更点：register.html と同じ形式で合計と税計算を更新して保存 ---
+            saveOrderWithCalculation(currentOrder, products);
+            
             updateScannedUI(existing, product);
         } else {
             playBeep('beep4');
             showPopup(`未登録の商品です (${code})`, true);
         }
-        
-        // スキャン後、少し間を置いてから次を許可（連続読み取り防止）
         setTimeout(() => { isPaused = false; }, 1500);
-
     } else {
-        // JAN登録モード（変更なし）
         playBeep('beep3');
         localStorage.setItem('last_scanned_barcode', code);
         showPopup(`コード保存: ${code}`);
@@ -255,10 +251,10 @@ function updateScannedUI(item, originalProduct) {
 // スキャン画面用の数量変更関数
 // window.changeQtyScan の内容を以下に差し替え
 // window.changeQtyScan 関数の書き換え
+/* --- window.changeQtyScan 関数の修正 --- */
 window.changeQtyScan = (id, diff) => {
     if (typeof playBeep === 'function') playBeep('beep1');
     let currentOrder = JSON.parse(sessionStorage.getItem('currentOrder') || '{"items":[]}');
-    // 型を文字列に揃えて検索
     let itemIndex = currentOrder.items.findIndex(i => String(i.id) === String(id));
     
     if (itemIndex > -1) {
@@ -270,13 +266,12 @@ window.changeQtyScan = (id, diff) => {
             return;
         }
         
-        sessionStorage.setItem('currentOrder', JSON.stringify(currentOrder));
-        
-        // 表示更新のために商品情報を取得
         const products = JSON.parse(localStorage.getItem(STORAGE_KEYS.PRODUCTS) || '[]');
         const product = products.find(p => String(p.id) === String(id));
         
-        // UI更新を実行
+        // --- 変更点：保存時に計算を行う ---
+        saveOrderWithCalculation(currentOrder, products);
+        
         updateScannedUI(item, product);
     }
 };
@@ -291,6 +286,92 @@ window.removeItemScan = (id) => {
     // UIの表示を初期状態に戻す
     document.getElementById('scanned-item-area').innerHTML = '<div style="text-align: center; color: #999; margin-top: 20px;">削除しました。スキャンを続けてください</div>';
 };
+
+/* --- handleScannedCode 関数の修正 --- */
+async function handleScannedCode(code) {
+    if (mode === 'reg') {
+        const products = JSON.parse(localStorage.getItem(STORAGE_KEYS.PRODUCTS) || '[]');
+        const product = products.find(p => (String(p.jan) === String(code) || String(p.id) === String(code)));
+
+        if (product) {
+            playBeep('beep3');
+            let currentOrder = JSON.parse(sessionStorage.getItem('currentOrder') || '{"items":[]}');
+            let existing = currentOrder.items.find(item => String(item.id) === String(product.id));
+
+            if (existing) {
+                existing.qty++;
+            } else {
+                existing = { id: product.id, name: product.name, price: Number(product.price), qty: 1 };
+                currentOrder.items.push(existing);
+            }
+            
+            // --- 変更点：register.html と同じ形式で合計と税計算を更新して保存 ---
+            saveOrderWithCalculation(currentOrder, products);
+            
+            updateScannedUI(existing, product);
+        } else {
+            playBeep('beep4');
+            showPopup(`未登録の商品です (${code})`, true);
+        }
+        setTimeout(() => { isPaused = false; }, 1500);
+    } else {
+        playBeep('beep3');
+        localStorage.setItem('last_scanned_barcode', code);
+        showPopup(`コード保存: ${code}`);
+        setTimeout(() => history.back(), 1000);
+    }
+}
+
+/* --- window.changeQtyScan 関数の修正 --- */
+window.changeQtyScan = (id, diff) => {
+    if (typeof playBeep === 'function') playBeep('beep1');
+    let currentOrder = JSON.parse(sessionStorage.getItem('currentOrder') || '{"items":[]}');
+    let itemIndex = currentOrder.items.findIndex(i => String(i.id) === String(id));
+    
+    if (itemIndex > -1) {
+        let item = currentOrder.items[itemIndex];
+        item.qty += diff;
+        
+        if (item.qty <= 0) {
+            window.removeItemScan(id);
+            return;
+        }
+        
+        const products = JSON.parse(localStorage.getItem(STORAGE_KEYS.PRODUCTS) || '[]');
+        const product = products.find(p => String(p.id) === String(id));
+        
+        // --- 変更点：保存時に計算を行う ---
+        saveOrderWithCalculation(currentOrder, products);
+        
+        updateScannedUI(item, product);
+    }
+};
+
+/* --- 新規追加：計算と保存の共通関数（register.html の計算ロジックと同期） --- */
+function saveOrderWithCalculation(order, products) {
+    let finalSubtotal = 0;
+    let finalTaxTotal = 0;
+    let subtotalByRate = {};
+
+    order.items.forEach(it => {
+        const pInfo = products.find(p => String(p.id) === String(it.id));
+        const rate = pInfo ? Number(pInfo.taxRate || 0) : 0;
+        if (!subtotalByRate[rate]) subtotalByRate[rate] = 0;
+        subtotalByRate[rate] += (it.price * it.qty);
+    });
+
+    Object.keys(subtotalByRate).forEach(rate => {
+        const r = Number(rate);
+        const sub = subtotalByRate[r];
+        finalTaxTotal += Math.floor(sub * (r / 100)); // 税率ごとの税金（切り捨て）
+        finalSubtotal += sub;
+    });
+
+    order.totalAmount = finalSubtotal + finalTaxTotal;
+    order.taxDetails = subtotalByRate;
+    sessionStorage.setItem('currentOrder', JSON.stringify(order));
+}
+
 </script>
 </body>
 </html>
