@@ -41,11 +41,19 @@
         }
 
         /* 下部リザルトエリア */
+        /* --- 変更点：下部パネルの高さとカートアイテム用スタイル --- */
         .result-panel {
-            height: 120px; background: var(--white); color: var(--black);
-            padding: 15px; border-top: 3px solid var(--black);
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-        }
+            height: 160px; /* 少し高さを広げる */
+            background: var(--white); color: var(--black);
+            padding: 10px; border-top: 3px solid var(--black);
+            display: flex; flex-direction: column;
+        }   
+
+        /* register.htmlから踏襲したスタイル */
+        .cart-item { display: flex; flex-direction: column; padding: 8px 0; border-bottom: 1px solid #000; font-weight: 800; font-size: 0.85rem; width: 100%; }
+        .cart-item-top { display: flex; justify-content: space-between; margin-bottom: 5px; }
+        .cart-item-controls { display: flex; align-items: center; gap: 10px; }
+        .qty-btn { width: 32px; height: 32px; background: #fff; border: 2px solid #000; font-weight: 900; cursor: pointer; display: flex; align-items: center; justify-content: center; }
         #last-code { font-size: 1.5rem; font-weight: 900; margin-bottom: 10px; }
         .back-btn {
             width: 100%; background: var(--black); color: var(--white);
@@ -65,8 +73,10 @@
 </div>
 
 <div class="result-panel">
-    <div id="last-code">読み取り待機中</div>
-    <button class="back-btn" onclick="history.back()">レジに戻る</button>
+    <div id="scanned-item-area" style="flex: 1; overflow-y: auto;">
+        <div style="text-align: center; color: #999; margin-top: 20px;">バーコードを読み取ってください</div>
+    </div>
+    <button class="back-btn" onclick="history.back()" style="margin-top: 5px;">レジに戻る</button>
 </div>
 
 <script>
@@ -163,47 +173,94 @@ Quagga.onDetected((data) => {
     handleScannedCode(code);
 });
 
+/* --- 変更点：スキャン後の処理とUI更新 --- */
 async function handleScannedCode(code) {
-    document.getElementById('last-code').innerText = code;
+    // document.getElementById('last-code').innerText = code; // この行は削除（またはID変更）
 
     if (mode === 'reg') {
-        // --- 注文リスト追加モード ---
         const products = JSON.parse(localStorage.getItem(STORAGE_KEYS.PRODUCTS) || '[]');
         const product = products.find(p => (String(p.jan) === String(code) || String(p.id) === String(code)));
 
         if (product) {
-            playBeep('beep3'); // 商品あり：beep3
+            playBeep('beep3');
             let currentOrder = JSON.parse(sessionStorage.getItem('currentOrder') || '{"items":[]}');
-            const existing = currentOrder.items.find(item => item.id === product.id);
+            let existing = currentOrder.items.find(item => item.id === product.id);
 
             if (existing) {
                 existing.qty++;
             } else {
-                currentOrder.items.push({ 
-                    id: product.id, 
-                    name: product.name, 
-                    price: Number(product.price), 
-                    qty: 1 
-                });
+                existing = { id: product.id, name: product.name, price: Number(product.price), qty: 1 };
+                currentOrder.items.push(existing);
             }
             
             sessionStorage.setItem('currentOrder', JSON.stringify(currentOrder));
-            showPopup(`追加：${product.name}`);
+            // 直前の商品のみを表示
+            updateScannedUI(existing, product);
         } else {
-            playBeep('beep4'); // 商品なし：beep4
+            playBeep('beep4');
             showPopup(`未登録の商品です (${code})`, true);
         }
         
+        // スキャン後、少し間を置いてから次を許可（連続読み取り防止）
         setTimeout(() => { isPaused = false; }, 1500);
 
     } else {
-        // --- JAN登録モード ---
-        playBeep('beep3'); // 登録は常に beep3
+        // JAN登録モード（変更なし）
+        playBeep('beep3');
         localStorage.setItem('last_scanned_barcode', code);
         showPopup(`コード保存: ${code}`);
         setTimeout(() => history.back(), 1000);
     }
 }
+
+// 直前に読み込んだ商品1件のUIを描画する関数
+function updateScannedUI(item, originalProduct) {
+    const area = document.getElementById('scanned-item-area');
+    const taxRate = Number(originalProduct.taxRate || 0);
+    const priceInclTax = Math.floor(item.price * (1 + taxRate / 100));
+    const rowTotal = priceInclTax * item.qty;
+
+    area.innerHTML = `
+        <div class="cart-item">
+            <div class="cart-item-top">
+                <span>${item.name} <small>(${taxRate}%)</small></span>
+                <span>¥${rowTotal.toLocaleString()}</span>
+            </div>
+            <div class="cart-item-controls">
+                <button class="qty-btn" onclick="changeQtyScan('${item.id}', -1)">-</button>
+                <span style="margin:0 10px; font-size:1.2rem;">× ${item.qty}</span>
+                <button class="qty-btn" onclick="changeQtyScan('${item.id}', 1)">+</button>
+                <button onclick="removeItemScan('${item.id}')" style="margin-left:auto; background:none; border:none; color:red; font-weight:bold; cursor:pointer;">削除</button>
+            </div>
+        </div>
+    `;
+}
+
+// スキャン画面用の数量変更関数
+window.changeQtyScan = (id, diff) => {
+    let currentOrder = JSON.parse(sessionStorage.getItem('currentOrder') || '{"items":[]}');
+    const item = currentOrder.items.find(i => i.id === id);
+    const products = JSON.parse(localStorage.getItem(STORAGE_KEYS.PRODUCTS) || '[]');
+    const product = products.find(p => p.id === id);
+
+    if (item && product) {
+        item.qty += diff;
+        if (item.qty <= 0) {
+            removeItemScan(id);
+            return;
+        }
+        sessionStorage.setItem('currentOrder', JSON.stringify(currentOrder));
+        updateScannedUI(item, product);
+    }
+};
+
+// スキャン画面用の削除関数
+window.removeItemScan = (id) => {
+    let currentOrder = JSON.parse(sessionStorage.getItem('currentOrder') || '{"items":[]}');
+    currentOrder.items = currentOrder.items.filter(i => i.id !== id);
+    sessionStorage.setItem('currentOrder', JSON.stringify(currentOrder));
+    document.getElementById('scanned-item-area').innerHTML = '<div style="text-align: center; color: #999; margin-top: 20px;">削除しました。スキャンを続けてください</div>';
+};
 </script>
 </body>
 </html>
