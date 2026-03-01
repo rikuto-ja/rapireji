@@ -41,31 +41,22 @@
         }
 
         /* 下部リザルトエリア */
-        /* 下部エリア：レジ画面の構成を移植 */
         .result-panel {
-            height: 45vh; background: var(--white); color: var(--black);
-            border-top: 3px solid var(--black); display: flex; flex-direction: column; overflow: hidden;
+            height: 120px; background: var(--white); color: var(--black);
+            padding: 15px; border-top: 3px solid var(--black);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
         }
-        #last-code { 
-            padding: 8px; background: #eee; text-align: center; 
-            font-size: 1.2rem; font-weight: 900; border-bottom: 1px solid #000;
+        #last-code { font-size: 1.5rem; font-weight: 900; margin-bottom: 10px; }
+        .back-btn {
+            width: 100%; background: var(--black); color: var(--white);
+            border: none; padding: 12px; font-weight: 900; cursor: pointer;
         }
-        /* リスト表示部分 */
-        .cart-list { flex: 1; overflow-y: auto; padding: 10px; }
-        .cart-item { display: flex; flex-direction: column; padding: 8px 0; border-bottom: 1px solid #000; font-weight: 800; font-size: 0.85rem; }
-        .cart-item-top { display: flex; justify-content: space-between; margin-bottom: 5px; }
-        /* 合計・決済エリア */
-        .cart-total { padding: 15px; border-top: 3px solid var(--black); background: var(--white); flex-shrink: 0; }
-        .total-row { display: flex; justify-content: space-between; font-size: 1.3rem; font-weight: 900; margin-bottom: 10px; }
-        .checkout-btn { width: 100%; background: var(--black); color: var(--white); border: none; padding: 15px; font-size: 1.1rem; font-weight: 900; cursor: pointer; }
-        .sub-btn { width: 100%; background: none; border: none; padding: 10px; text-decoration: underline; font-weight: 800; cursor: pointer; }
-        .hidden { display: none !important; }
     </style>
 </head>
 <body>
 
 <header>
-    <div style="font-weight: 900; cursor: pointer;" id="back-link" onclick="history.back()">← 戻る</div>
+    <div style="font-weight: 900;" onclick="history.back()">← 戻る</div>
     <div id="mode-label" class="mode-badge">読み込み中...</div>
 </header>
 
@@ -75,16 +66,7 @@
 
 <div class="result-panel">
     <div id="last-code">読み取り待機中</div>
-    
-    <div class="cart-list reg-only" id="cartList"></div>
-
-    <div class="cart-total reg-only" id="cartTotalArea">
-        <div class="total-row">
-            <span>合計</span>
-            <span id="totalAmount">¥0</span>
-        </div>
-        <button class="checkout-btn" onclick="location.href='payment.html'">決済画面へ</button>
-    </div>
+    <button class="back-btn" onclick="history.back()">レジに戻る</button>
 </div>
 
 <script>
@@ -96,8 +78,6 @@ let isPaused = false;
 // UIの初期化
 const modeLabel = document.getElementById('mode-label');
 const backBtn = document.querySelector('.back-btn');
-// 修正箇所3：戻るボタンの遷移先をモードで固定
-document.getElementById('back-link').onclick = (mode === 'reg') ? () => location.href='register.html' : () => history.back();
 
 if (mode === 'reg') {
     modeLabel.innerText = "注文スキャンモード";
@@ -192,57 +172,25 @@ async function handleScannedCode(code) {
         const product = products.find(p => (String(p.jan) === String(code) || String(p.id) === String(code)));
 
         if (product) {
-            playBeep('beep3');
-            
-            // register.htmlと同じ形式でsessionStorageから読み込み
-            let orderData = JSON.parse(sessionStorage.getItem('currentOrder') || '{"items":[], "totalAmount":0, "taxDetails":{}}');
-            let items = orderData.items || [];
-            
-            const existing = items.find(item => item.id === product.id);
+            playBeep('beep3'); // 商品あり：beep3
+            let currentOrder = JSON.parse(sessionStorage.getItem('currentOrder') || '{"items":[]}');
+            const existing = currentOrder.items.find(item => item.id === product.id);
+
             if (existing) {
                 existing.qty++;
             } else {
-                items.push({ 
+                currentOrder.items.push({ 
                     id: product.id, 
                     name: product.name, 
                     price: Number(product.price), 
                     qty: 1 
                 });
             }
-
-            // --- register.htmlのロジックを再現して再計算 ---
-            const subtotalByRate = {};
-            let finalTaxTotal = 0;
-            let finalSubtotal = 0;
-
-            items.forEach(item => {
-                // localStorageにある最新の商品マスタから税率を取得
-                const pInfo = products.find(p => p.id === item.id);
-                const rate = pInfo ? Number(pInfo.taxRate || 0) : 0;
-                
-                if (!subtotalByRate[rate]) subtotalByRate[rate] = 0;
-                subtotalByRate[rate] += (item.price * item.qty);
-            });
-
-            Object.keys(subtotalByRate).forEach(rate => {
-                const r = Number(rate);
-                const sub = subtotalByRate[r];
-                finalSubtotal += sub;
-                // register.htmlと同じく税率ごとに計算して切り捨て
-                finalTaxTotal += Math.floor(sub * (r / 100)); 
-            });
-
-            // register.htmlが読み取れる形式で保存
-            sessionStorage.setItem('currentOrder', JSON.stringify({ 
-                items: items, 
-                totalAmount: finalSubtotal + finalTaxTotal,
-                taxDetails: subtotalByRate 
-            }));
-
-            updateMiniCartUI();
+            
+            sessionStorage.setItem('currentOrder', JSON.stringify(currentOrder));
             showPopup(`追加：${product.name}`);
         } else {
-            playBeep('beep4');
+            playBeep('beep4'); // 商品なし：beep4
             showPopup(`未登録の商品です (${code})`, true);
         }
         
@@ -250,76 +198,12 @@ async function handleScannedCode(code) {
 
     } else {
         // --- JAN登録モード ---
-        playBeep('beep3');
+        playBeep('beep3'); // 登録は常に beep3
         localStorage.setItem('last_scanned_barcode', code);
         showPopup(`コード保存: ${code}`);
         setTimeout(() => history.back(), 1000);
     }
 }
-
-function updateMiniCartUI() {
-    const list = document.getElementById('cartList');
-    const totalArea = document.getElementById('cartTotalArea');
-    const totalDisp = document.getElementById('totalAmount');
-    const resultPanel = document.querySelector('.result-panel');
-    
-    // 修正箇所1：addモード（商品登録）のときはカート情報を徹底的に隠す
-    if (mode !== 'reg') {
-        if (list) list.classList.add('hidden');
-        if (totalArea) totalArea.classList.add('hidden');
-        if (resultPanel) resultPanel.style.height = 'auto'; 
-        return;
-    }
-
-    // 修正箇所2：regモード（レジ）のときは隠しクラスを外して表示する
-    if (list) {
-        list.classList.remove('hidden');
-        list.style.display = 'block';
-    }
-    if (totalArea) {
-        totalArea.classList.remove('hidden');
-        totalArea.style.display = 'block';
-    }
-    if (resultPanel) resultPanel.style.height = '45vh';
-
-    // SessionStorageからデータを取得（register.htmlと完全に同じキー構造で取得）
-    const orderData = JSON.parse(sessionStorage.getItem('currentOrder') || '{"items":[], "totalAmount":0}');
-    const items = orderData.items || [];
-    
-    // リストの描画
-    if (items.length > 0) {
-        list.innerHTML = items.map(item => {
-            // スキャン画面でも税込単価を表示するための簡易計算
-            // (正確な計算はhandleScannedCodeで行われているため、ここは表示用)
-            return `
-                <div class="cart-item">
-                    <div class="cart-item-top">
-                        <span>${item.name}</span>
-                        <span>¥${(item.price * item.qty).toLocaleString()}</span>
-                    </div>
-                    <div style="font-size:0.75rem;">× ${item.qty}</div>
-                </div>
-            `;
-        }).join('');
-    } else {
-        list.innerHTML = '<div style="text-align:center; padding:20px; color:#999;">スキャンしてください</div>';
-    }
-    
-    // 合計金額の表示：計算し直すのではなく、保存されている「税込合計」をそのまま出す
-    const displayTotal = orderData.totalAmount || 0;
-    totalDisp.innerText = `¥${displayTotal.toLocaleString()}`;
-    
-    list.scrollTop = list.scrollHeight;
-}
-
-// ページ読み込み完了時に実行
-window.addEventListener('DOMContentLoaded', () => {
-    updateMiniCartUI();
-});
-
-// 初期表示
-if(mode === 'reg') updateMiniCartUI();
-
 </script>
 </body>
 </html>
