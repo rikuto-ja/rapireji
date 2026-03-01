@@ -189,6 +189,15 @@
             </div>
         </div>
         <div class="form-row">
+            <div class="form-group full">
+                <label style="display: flex; justify-content: space-between; align-items: center;">
+                    JANコード 
+                    <span onclick="goToScan()" style="color: blue; text-decoration: underline; font-size: 0.7rem; cursor: pointer;">[スキャンして入力]</span>
+                </label>
+                <input type="text" id="p-jan" placeholder="バーコード数値を入力">
+            </div>
+        </div>
+        <div class="form-row">
             <div class="form-group">
                 <label>カテゴリ</label>
                 <select id="p-category"></select>
@@ -496,6 +505,7 @@
         document.getElementById('p-name').value = p ? p.name : "";
         document.getElementById('p-price').value = p ? p.price : "";
         document.getElementById('p-tax-rate').value = p ? (p.taxRate ?? 0) : 0; 
+        document.getElementById('p-jan').value = p ? (p.jan || "") : "";
         document.getElementById('p-category').value = p ? p.category : (currentCategory || DEFAULT_CAT);
         
         const stockInputGroup = document.getElementById('stock-input-group');
@@ -528,6 +538,7 @@
         const name = document.getElementById('p-name').value;
         const price = Number(document.getElementById('p-price').value);
         const taxRate = Number(document.getElementById('p-tax-rate').value || 0);
+        const jan = document.getElementById('p-jan').value || "";
         let newCategory = document.getElementById('p-category').value || DEFAULT_CAT;
               
         if (!name || isNaN(price)) return alert("正しく入力してください");
@@ -552,7 +563,7 @@
 
         const data = {
             id: editingProductId || Date.now(),
-            name, price, taxRate, category: newCategory,
+            name, price, taxRate, jan, category: newCategory,
             stock: isStockEnabled ? Number(document.getElementById('p-stock').value) : (editingProductId ? (oldProduct?.stock || 0) : 0),
             tag: document.getElementById('p-tag').value,
             imageUrl: document.getElementById('p-image-url').value,
@@ -648,6 +659,45 @@
             }
         });
     });
+
+    // --- スキャンからの戻り判定と自動復元ロジック ---
+    window.addEventListener('pageshow', () => {
+        const scannedCode = localStorage.getItem('last_scanned_barcode');
+        const returnFromScan = sessionStorage.getItem('is_scanning_mode');
+
+        if (scannedCode && returnFromScan) {
+            // スキャンモードのフラグを折る
+            sessionStorage.removeItem('is_scanning_mode');
+            
+            // 保存されていた「編集中の商品データ」を復元（あれば）
+            const tempState = JSON.parse(sessionStorage.getItem('temp_product_state') || '{}');
+            
+            // モーダルを開く（新規ならnull、編集ならそのIDのオブジェクトを渡す）
+            const p = tempState.id ? allProducts.find(item => item.id == tempState.id) : null;
+            openModal(p, tempState.index || 0);
+
+            // スキャンしたコードを上書き入力
+            document.getElementById('p-jan').value = scannedCode;
+
+            // 復元が終わったら一時データを削除
+            localStorage.removeItem('last_scanned_barcode');
+            sessionStorage.removeItem('temp_product_state');
+        }
+    });
+
+    // JANコード横の「スキャン」リンク（またはボタン）が押された時の処理
+    function goToScan() {
+        // 現在入力中の状態を一時保存（名前や価格が消えないように）
+        const tempState = {
+            id: editingProductId,
+            index: targetIndex
+        };
+        sessionStorage.setItem('temp_product_state', JSON.stringify(tempState));
+        sessionStorage.setItem('is_scanning_mode', 'true');
+        
+        // スキャン画面へ遷移
+        location.href = 'scan.html?mode=add';
+    }
 </script>
 </body>
 </html>
