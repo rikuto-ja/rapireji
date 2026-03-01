@@ -253,6 +253,13 @@
                 <span class="slider"></span>
             </label>
         </div>
+        <div class="sound-setting-item">
+            <label style="margin-bottom: 0;">スキャン音</label>
+            <label class="switch">
+                <input type="checkbox" id="soundScanEnabled" onchange="autoSaveSounds()">
+                <span class="slider"></span>
+            </label>
+        </div>
     </div>
 
     <div class="settings-card">
@@ -336,6 +343,7 @@
         const sounds = JSON.parse(localStorage.getItem('rapireji_sounds') || '{"btn": true, "pay": true}');
         document.getElementById('soundBtnEnabled').checked = sounds.btn;
         document.getElementById('soundPayEnabled').checked = sounds.pay;
+        document.getElementById('soundScanEnabled').checked = sounds.scan;
     }
 
     function initBackupSystem() {
@@ -458,7 +466,8 @@
     function autoSaveSounds() {
         const data = {
             btn: document.getElementById('soundBtnEnabled').checked,
-            pay: document.getElementById('soundPayEnabled').checked
+            pay: document.getElementById('soundPayEnabled').checked,
+            scan: document.getElementById('soundScanEnabled').checked
         };
         localStorage.setItem('rapireji_sounds', JSON.stringify(data));
     }
