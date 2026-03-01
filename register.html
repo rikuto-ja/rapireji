@@ -529,9 +529,10 @@
         // 現在のカートをセッションに保存してから移動
         sessionStorage.setItem('currentOrder', JSON.stringify({ 
             items: cart, 
-            totalAmount: 0 // updateCartUIで再計算されるので0でOK
+            totalAmount: 0 
         }));
-        location.href = 'scan.html?mode=register';
+        // 'register' ではなく 'reg' に修正
+        location.href = 'scan.html?mode=reg'; 
     }
 </script>
 </body>
