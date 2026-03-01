@@ -228,13 +228,14 @@ async function handleScannedCode(code) {
 }
 
 // 直前に読み込んだ商品1件のUIを描画する関数
+// updateScannedUI 関数の書き換え
 function updateScannedUI(item, originalProduct) {
     const area = document.getElementById('scanned-item-area');
-    const taxRate = Number(originalProduct.taxRate || 0);
+    // 商品マスタ(originalProduct)から税率を取得、なければ0
+    const taxRate = Number(originalProduct ? originalProduct.taxRate : (item.taxRate || 0));
     const priceInclTax = Math.floor(item.price * (1 + taxRate / 100));
     const rowTotal = priceInclTax * item.qty;
 
-    // updateScannedUI 内の該当箇所のみ差し替え
     area.innerHTML = `
         <div class="cart-item">
             <div class="cart-item-top">
@@ -253,30 +254,30 @@ function updateScannedUI(item, originalProduct) {
 
 // スキャン画面用の数量変更関数
 // window.changeQtyScan の内容を以下に差し替え
+// window.changeQtyScan 関数の書き換え
 window.changeQtyScan = (id, diff) => {
     if (typeof playBeep === 'function') playBeep('beep1');
     let currentOrder = JSON.parse(sessionStorage.getItem('currentOrder') || '{"items":[]}');
-    let itemIndex = currentOrder.items.findIndex(i => i.id === id);
+    // 型を文字列に揃えて検索
+    let itemIndex = currentOrder.items.findIndex(i => String(i.id) === String(id));
     
     if (itemIndex > -1) {
-        // 数量を更新
-        currentOrder.items[itemIndex].qty += diff;
+        let item = currentOrder.items[itemIndex];
+        item.qty += diff;
         
-        // 0以下になったら削除
-        if (currentOrder.items[itemIndex].qty <= 0) {
+        if (item.qty <= 0) {
             window.removeItemScan(id);
             return;
         }
         
-        // ストレージに保存
         sessionStorage.setItem('currentOrder', JSON.stringify(currentOrder));
         
-        // 表示を更新するために商品マスタから情報を取得して再描画
+        // 表示更新のために商品情報を取得
         const products = JSON.parse(localStorage.getItem(STORAGE_KEYS.PRODUCTS) || '[]');
-        const product = products.find(p => p.id === id);
-        if (product) {
-            updateScannedUI(currentOrder.items[itemIndex], product);
-        }
+        const product = products.find(p => String(p.id) === String(id));
+        
+        // UI更新を実行
+        updateScannedUI(item, product);
     }
 };
 
