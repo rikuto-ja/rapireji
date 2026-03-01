@@ -260,6 +260,13 @@
                 <span class="slider"></span>
             </label>
         </div>
+        <div class="sound-setting-item">
+            <label style="margin-bottom: 0;">スキャン時のエラー音</label>
+            <label class="switch">
+                <input type="checkbox" id="soundErrorEnabled" onchange="autoSaveSounds()">
+                <span class="slider"></span>
+            </label>
+        </div>
     </div>
 
     <div class="settings-card">
@@ -340,10 +347,12 @@
             }
         });
 
-        const sounds = JSON.parse(localStorage.getItem('rapireji_sounds') || '{"btn": true, "pay": true, "scan": true}');
+        // 既存のsounds読み込み部分を下記に差し替え
+        const sounds = JSON.parse(localStorage.getItem('rapireji_sounds') || '{"btn": true, "pay": true, "scan": true, "error": true}');
         document.getElementById('soundBtnEnabled').checked = sounds.btn;
         document.getElementById('soundPayEnabled').checked = sounds.pay;
         document.getElementById('soundScanEnabled').checked = sounds.scan;
+        document.getElementById('soundErrorEnabled').checked = sounds.error; // 追加
     }
 
     function initBackupSystem() {
@@ -467,7 +476,8 @@
         const data = {
             btn: document.getElementById('soundBtnEnabled').checked,
             pay: document.getElementById('soundPayEnabled').checked,
-            scan: document.getElementById('soundScanEnabled').checked
+            scan: document.getElementById('soundScanEnabled').checked,
+            error: document.getElementById('soundErrorEnabled').checked // 追加
         };
         localStorage.setItem('rapireji_sounds', JSON.stringify(data));
     }
