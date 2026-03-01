@@ -90,15 +90,14 @@ if (mode === 'reg') {
 // 音を鳴らす関数
 // 音を鳴らす関数（設定のON/OFFをチェックし、beep3.mp3を再生）
 function playBeep() {
-    // 設定を読み込む（デフォルトはON）
-    const sounds = JSON.parse(localStorage.getItem('rapireji_sounds') || '{"btn": true, "pay": true, "scan": true}');
-    
-    // スキャン音がOFFなら何もしない
+    // localStorageに保存された最新の設定を読み込み、存在しない場合のみデフォルト値を適用
+    const sounds = JSON.parse(localStorage.getItem('rapireji_sounds')) || {btn: true, pay: true, scan: true};
     if (sounds.scan === false) return;
 
-    // beep3.mp3 を再生
     const audio = new Audio('beep3.mp3');
-    audio.play().catch(e => console.log("Audio play blocked"));
+    audio.play().catch(e => {
+        console.warn("音源ファイル beep3.mp3 が見つからないか、再生がブロックされました。");
+    });
 }
 
 // ポップアップ表示（トースト）
@@ -146,7 +145,7 @@ async function handleScannedCode(code) {
     if (mode === 'reg') {
         // --- 注文リスト追加モード（連続スキャン） ---
         const products = JSON.parse(localStorage.getItem(STORAGE_KEYS.PRODUCTS) || '[]');
-        const product = products.find(p => (p.jan === code || p.id === code));
+        const product = products.find(p => (String(p.jan) === String(code) || String(p.id) === String(code)));
 
         if (product) {
             let currentOrder = JSON.parse(sessionStorage.getItem('currentOrder') || '{"items":[]}');
