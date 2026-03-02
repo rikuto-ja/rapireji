@@ -13,7 +13,7 @@
 
         /* スキャン画面のヘッダー */
         header {
-            height: 60px; padding-top: env(safe-area-inset-top);
+            height: 80px; padding-top: env(safe-area-inset-top);
             display: flex; align-items: center; justify-content: space-between;
             padding-left: 20px; padding-right: 20px; background: var(--white); color: var(--black);
             border-bottom: 3px solid var(--black);
@@ -43,9 +43,10 @@
         /* 下部リザルトエリア */
         /* --- 変更点：下部パネルの高さとカートアイテム用スタイル --- */
         .result-panel {
-            height: 200px; /* 少し高さを広げる */
+            height: 240px; /* 少し高さを広げる */
             background: var(--white); color: var(--black);
-            padding: 10px; border-top: 3px solid var(--black);
+            padding: 10px 10px calc(10px + env(safe-area-inset-bottom));
+            border-top: 3px solid var(--black);
             display: flex; flex-direction: column;
         }   
 
