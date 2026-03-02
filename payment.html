@@ -586,7 +586,7 @@
                 const dName = window.currentDiscountName || "割引";
                 t += formatLine(`割引(${dName})`, `-¥${info.discount.toLocaleString()}`);
                 const afterDiscountExclTotal = Object.values(details).reduce((a, b) => a + b.excl, 0);
-                t += formatLine("割引後小計", `¥${afterDiscountExclTotal.toLocaleString()}`);
+                t += formatLine("割引後小計(税抜)", `¥${afterDiscountExclTotal.toLocaleString()}`);
             }
 
             t += formatLine("合計(税込)", `¥${info.totalAmount.toLocaleString()}`);
