@@ -6,18 +6,44 @@
     <title>スキャン | らぴレジ</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
     <style>
-        :root { --black: #000000; --white: #ffffff; --accent: #00ff00; }
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; touch-action: manipulation; }
-        
-        body { background: var(--black); color: var(--white); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
-
-        /* スキャン画面のヘッダー */
-        header {
-            height: 80px; padding-top: env(safe-area-inset-top);
-            display: flex; align-items: center; justify-content: space-between;
-            padding-left: 20px; padding-right: 20px; background: var(--white); color: var(--black);
-            border-bottom: 3px solid var(--black);
+        /* --- 以下の内容に差し替え --- */
+        :root { 
+            --black: #000000; --white: #ffffff; --accent: #00ff00; 
+            --header-h: 60px; 
         }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; touch-action: manipulation; }
+
+        body { background: var(--black); color: var(--white); height: 100vh; display: flex; flex-direction: column; overflow-x: hidden; }
+
+        header {
+            height: calc(var(--header-h) + env(safe-area-inset-top)); 
+            border-bottom: 3px solid var(--black);
+            display: flex; 
+            align-items: center; 
+            padding: env(safe-area-inset-top) 20px 0 20px; 
+            background: var(--white);
+            color: var(--black);
+            position: sticky; 
+            top: 0; 
+            z-index: 1100;
+            justify-content: space-between;
+        }
+
+        /* 戻るボタン：お支払い画面の四角い枠線を移植 */
+        .header-left { display: flex; align-items: center; }
+        .btn-back { 
+            background: var(--white); border: 2px solid var(--black); 
+            padding: 8px 15px; font-weight: 900; cursor: pointer; 
+            margin-right: 15px; font-size: 0.9rem; color: var(--black);
+        }
+
+        /* 広告スペース：お支払い画面と同じ設計 */
+        .header-ad-space {
+            flex: 1; margin-left: 10px; height: 40px; background: #fff;
+            display: flex; align-items: center; justify-content: center;
+            overflow: hidden; border: 1px dashed #ccc;
+        }
+    
         .mode-badge { background: var(--black); color: var(--white); padding: 4px 8px; font-weight: 900; font-size: 0.8rem; }
 
         /* カメラ表示エリア */
@@ -61,8 +87,13 @@
 <body>
 
 <header>
-    <div style="font-weight: 900;" onclick="history.back()">← 戻る</div>
-    <div id="mode-label" class="mode-badge">読み込み中...</div>
+    <div class="header-left">
+        <button class="btn-back" onclick="history.back()">← 戻る</button>
+        <div id="mode-label" class="mode-badge">読み込み中...</div>
+    </div>
+    <div class="header-ad-space" id="ad-top">
+        <span style="color:#ccc; font-size: 8px; font-weight: 900;">AD</span>
+    </div>
 </header>
 
 <div id="interactive" class="viewport">
@@ -87,6 +118,16 @@ const modeLabel = document.getElementById('mode-label');
 const scanAudio3 = new Audio('beep3.mp3');
 const scanAudio4 = new Audio('beep4.mp3');
 let audioUnlocked = false;
+
+// <script>内の冒頭あたりに追加
+document.addEventListener('DOMContentLoaded', () => {
+    const label = document.getElementById('mode-label');
+    if (mode === 'reg') {
+        label.innerText = '商品スキャン';
+    } else {
+        label.innerText = 'バーコード取得';
+    }
+});
 
 document.addEventListener('touchstart', () => {
     if (!audioUnlocked) {
