@@ -69,12 +69,19 @@
         /* 下部リザルトエリア */
         /* --- 変更点：下部パネルの高さとカートアイテム用スタイル --- */
         .result-panel {
-            height: 240px; /* 少し高さを広げる */
+            height: calc(240px + env(safe-area-inset-bottom)); /* 少し高さを広げる */
             background: var(--white); color: var(--black);
-            padding: 10px 10px calc(10px + env(safe-area-inset-bottom));
+            padding: 10px 10px calc(20px + env(safe-area-inset-bottom));
             border-top: 3px solid var(--black);
             display: flex; flex-direction: column;
-        }   
+        }  
+        
+        #scanned-item-area {
+            flex: 1; 
+            overflow-y: auto;
+            /* アイテムリストの最後に少し余裕を持たせる */
+            padding-bottom: 10px;
+        }
 
         /* register.htmlから踏襲したスタイル */
         .cart-item { display: flex; flex-direction: column; padding: 8px 0; border-bottom: 1px solid #000; font-weight: 800; font-size: 0.85rem; width: 100%; }
@@ -100,7 +107,7 @@
 </div>
 
 <div class="result-panel">
-    <div id="scanned-item-area" style="flex: 1; overflow-y: auto;">
+    <div id="scanned-item-area">
         <div style="text-align: center; color: #999; margin-top: 20px;">バーコードを読み取ってください</div>
     </div>
 </div>
