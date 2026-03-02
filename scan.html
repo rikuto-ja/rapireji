@@ -13,7 +13,7 @@
         }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; touch-action: manipulation; }
 
-        body { background: var(--black); color: var(--white); height: 100vh; display: flex; flex-direction: column; overflow-x: hidden; }
+        body { background: var(--black); color: var(--white); height: 100svh; display: flex; flex-direction: column; overflow: hidden; }
 
         header {
             height: calc(var(--header-h) + env(safe-area-inset-top)); 
@@ -69,11 +69,16 @@
         /* 下部リザルトエリア */
         /* --- 変更点：下部パネルの高さとカートアイテム用スタイル --- */
         .result-panel {
-            height: calc(260px + env(safe-area-inset-bottom)); /* 少し高さを広げる */
-            background: var(--white); color: var(--black);
-            padding: 15px 15px calc(40px + env(safe-area-inset-bottom));
+            flex-shrink: 0;
+            min-height: 200px; 
+            background: var(--white); 
+            color: var(--black);
+    
+            /* 下部のパディングを env(safe-area-inset-bottom) に基づいて調整 */
+            padding: 15px 15px calc(15px + env(safe-area-inset-bottom)); 
             border-top: 3px solid var(--black);
-            display: flex; flex-direction: column;
+            display: flex; 
+            flex-direction: column;
         }  
         
         #scanned-item-area {
