@@ -121,6 +121,7 @@ let isPaused = false;
 // UIの初期化
 const modeLabel = document.getElementById('mode-label');
 
+const btnAudio = new Audio('beep1.mp3');
 const scanAudio3 = new Audio('beep3.mp3');
 const scanAudio4 = new Audio('beep4.mp3');
 let audioUnlocked = false;
@@ -128,7 +129,8 @@ let audioUnlocked = false;
 document.addEventListener('touchstart', () => {
     if (!audioUnlocked) {
         const b1 = new Audio('beep1.mp3'); 
-        [scanAudio3, scanAudio4, b1].forEach(audio => {
+        // btnAudio を含めてアンロック
+        [scanAudio3, scanAudio4, btnAudio].forEach(audio => {
             audio.play().then(() => {
                 audio.pause();
                 audio.currentTime = 0;
@@ -151,7 +153,8 @@ function playBeep(type = 'beep3') {
     if (type === 'beep1' && sounds.btn === false) return;
     if (type === 'beep3' && sounds.scan === false) return;
 
-    let targetAudio = (type === 'beep4') ? scanAudio4 : (type === 'beep3') ? scanAudio3 : new Audio('beep1.mp3');
+   // targetAudio の割り当てを修正
+    let targetAudio = (type === 'beep4') ? scanAudio4 : (type === 'beep3') ? scanAudio3 : btnAudio;
     targetAudio.currentTime = 0;
     targetAudio.play().catch(e => console.warn("音声再生に失敗:", e));
 }
