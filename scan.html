@@ -68,18 +68,17 @@
 
         /* 下部リザルトエリア */
         /* --- 変更点：下部パネルの高さとカートアイテム用スタイル --- */
-        .result-panel {
+       .result-panel {
             flex-shrink: 0;
-            min-height: 200px; 
+            /* モバイル横向きでの圧迫を防ぐため、最小高さを抑える */
+            min-height: 120px; 
             background: var(--white); 
             color: var(--black);
-    
-            /* 下部のパディングを env(safe-area-inset-bottom) に基づいて調整 */
-            padding: 15px 15px calc(15px + env(safe-area-inset-bottom)); 
+            padding: 10px 15px calc(10px + env(safe-area-inset-bottom)); 
             border-top: 3px solid var(--black);
             display: flex; 
             flex-direction: column;
-        }  
+        } 
         
         #scanned-item-area {
             flex: 1; 
@@ -94,6 +93,26 @@
         .cart-item-controls { display: flex; align-items: center; gap: 10px; }
         .qty-btn { width: 32px; height: 32px; background: #fff; border: 2px solid #000; font-weight: 900; cursor: pointer; display: flex; align-items: center; justify-content: center; }
         #last-code { font-size: 1.5rem; font-weight: 900; margin-bottom: 10px; }
+
+        /* 横画面（Landscape）時の最適化 */
+        @media screen and (orientation: landscape) {
+            :root {
+                --header-h: 40px; /* ヘッダーを少し低く */
+            }
+            .result-panel {
+                min-height: 100px; /* パネルをさらに低く */
+                padding-top: 5px;
+            }
+            #scanned-item-area {
+                padding-bottom: 5px;
+            }
+            .cart-item {
+                padding: 4px 0; /* アイテムの上下余白を削る */
+            }
+            .scan-overlay {
+                height: 50%; /* 枠を少し広げて見やすく */
+            }
+        }
     </style>
 </head>
 <body>
