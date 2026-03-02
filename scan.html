@@ -43,7 +43,7 @@
         /* 下部リザルトエリア */
         /* --- 変更点：下部パネルの高さとカートアイテム用スタイル --- */
         .result-panel {
-            height: 160px; /* 少し高さを広げる */
+            height: 200px; /* 少し高さを広げる */
             background: var(--white); color: var(--black);
             padding: 10px; border-top: 3px solid var(--black);
             display: flex; flex-direction: column;
@@ -55,10 +55,6 @@
         .cart-item-controls { display: flex; align-items: center; gap: 10px; }
         .qty-btn { width: 32px; height: 32px; background: #fff; border: 2px solid #000; font-weight: 900; cursor: pointer; display: flex; align-items: center; justify-content: center; }
         #last-code { font-size: 1.5rem; font-weight: 900; margin-bottom: 10px; }
-        .back-btn {
-            width: 100%; background: var(--black); color: var(--white);
-            border: none; padding: 12px; font-weight: 900; cursor: pointer;
-        }
     </style>
 </head>
 <body>
@@ -76,7 +72,6 @@
     <div id="scanned-item-area" style="flex: 1; overflow-y: auto;">
         <div style="text-align: center; color: #999; margin-top: 20px;">バーコードを読み取ってください</div>
     </div>
-    <button class="back-btn" onclick="history.back()" style="margin-top: 5px;">レジに戻る</button>
 </div>
 
 <script>
@@ -87,16 +82,6 @@ let isPaused = false;
 
 // UIの初期化
 const modeLabel = document.getElementById('mode-label');
-// 修正点：コメントアウトされている可能性を考慮して安全に取得
-const backBtn = document.querySelector('.back-btn');
-
-if (mode === 'reg') {
-    modeLabel.innerText = "注文スキャンモード";
-    if (backBtn) backBtn.innerText = "レジに戻る"; // エラー防止
-} else {
-    modeLabel.innerText = "JAN登録モード";
-    if (backBtn) backBtn.innerText = "商品登録に戻る"; // エラー防止
-}
 
 const scanAudio3 = new Audio('beep3.mp3');
 const scanAudio4 = new Audio('beep4.mp3');
