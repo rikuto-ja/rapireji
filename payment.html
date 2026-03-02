@@ -141,12 +141,15 @@
 
 <main class="container">
     <div class="price-details">
-        <div class="price-line"><span>小計(税込)</span><span id="subtotal">¥0</span></div>
+        <div class="price-line"><span>小計(税抜)</span><span id="subtotal">¥0</span></div>
         
         <div id="taxBreakdown" class="tax-detail hidden">
             </div>
 
         <div class="price-line" style="color: var(--danger);"><span>割引額</span><span id="discountAmount">-¥0</span></div>
+        <div class="price-line" id="afterDiscountExclLine" style="font-size: 0.9rem; color: #333; margin-top: 10px; border-top: 1px dashed #ccc; padding-top: 5px; display: none;">
+            <span>割引後小計(税抜)</span><span id="afterDiscountExcl">¥0</span>
+        </div>
         <div class="price-line total"><span>最終合計</span><span id="finalTotal">¥0</span></div>
     </div>
 
@@ -314,13 +317,15 @@
     }
 
     function updateDisplay() {
-        const subtotalIncl = order.totalAmount; 
+        const subtotalExcl = Object.values(order.taxDetails || {}).reduce((a, b) => a + b, 0);
+
         let remainingDiscount = discountVal; 
         let workingTaxDetails = JSON.parse(JSON.stringify(order.taxDetails || {}));
         let rates = Object.keys(workingTaxDetails).map(Number).sort((a, b) => b - a); 
         let taxHtml = "";
         let finalTaxDetails = {}; 
         let totalAfterDiscount = 0;
+        let afterDiscountExclTotal = 0; // 追加：割引後の税抜合計用変数
 
         rates.forEach(rate => {
             const originalExcl = workingTaxDetails[rate];
@@ -335,13 +340,17 @@
                 }
             }
             const finalExcl = originalExcl - appliedDiscountForThisRate;
+            afterDiscountExclTotal += finalExcl; // 追加：各税率ごとの割引後税抜を合算
+
             const finalTax = Math.floor(finalExcl * (rate / 100));
             const finalIncl = finalExcl + finalTax;
             totalAfterDiscount += finalIncl;
+    
             finalTaxDetails[rate] = {
                 excl: finalExcl, tax: finalTax, originalExcl: originalExcl,
                 discountApplied: appliedDiscountForThisRate
             };
+
             if (originalExcl > 0) {
                 taxHtml += `<div class="tax-line" style="margin-bottom:8px; border-bottom:1px solid #eee; padding-bottom:4px;">
                     <div style="display:flex; justify-content:space-between; width:100%;">
@@ -357,9 +366,18 @@
             }
         });
 
-        document.getElementById('subtotal').innerText = `¥${subtotalIncl.toLocaleString()}`;
+        document.getElementById('subtotal').innerText = `¥${subtotalExcl.toLocaleString()}`;
         document.getElementById('discountAmount').innerText = `-¥${discountVal.toLocaleString()}`;
         document.getElementById('finalTotal').innerText = `¥${totalAfterDiscount.toLocaleString()}`;
+
+        // 追加：割引がある場合のみ「割引後小計（税抜）」を表示
+        const afterDiscountLine = document.getElementById('afterDiscountExclLine');
+        if (discountVal > 0) {
+            document.getElementById('afterDiscountExcl').innerText = `¥${afterDiscountExclTotal.toLocaleString()}`;
+            afterDiscountLine.style.display = 'flex';
+        } else {
+            afterDiscountLine.style.display = 'none';
+        }
 
         const taxArea = document.getElementById('taxBreakdown');
         taxArea.innerHTML = taxHtml;
