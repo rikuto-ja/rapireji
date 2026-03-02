@@ -117,7 +117,7 @@
         .stock-alert { color: #ff0000 !important; font-weight: 900 !important; }
 
         .cart-section { flex: 2.5; border-left: 3px solid var(--black); display: flex; flex-direction: column; background: var(--white); overflow: hidden; }
-        .drag-handle { padding: 10px; border-bottom: 2px solid var(--black); font-weight: 900; background: #eee; font-size: 0.8rem; display: flex; flex-direction: column; align-items: center; }
+        .drag-handle { padding: 10px 15px; border-bottom: 2px solid var(--black); font-weight: 900; background: #eee; font-size: 0.8rem; display: flex; flex-direction: column; align-items: center; }
         .handle-bar { display: none; width: 40px; height: 4px; background: #ccc; border-radius: 2px; margin-bottom: 5px; }
 
         .cart-list { flex: 1; overflow-y: auto; padding: 10px; }
@@ -195,7 +195,10 @@
     <section class="cart-section">
         <div id="drag-handle" class="drag-handle">
             <div class="handle-bar"></div>
-            <span>注文リスト<span onclick="goToScanFromRegister()" style="cursor: pointer; margin-left: 10px;">[スキャン]</span></span>
+            <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+                <span>注文リスト</span>
+                <span onclick="goToScanFromRegister()" style="cursor: pointer; font-size: 0.9rem; color: var(--black)">📷</span>
+            </div>
         </div>
         <div class="cart-list" id="cartList"></div>
         <div class="cart-total">
