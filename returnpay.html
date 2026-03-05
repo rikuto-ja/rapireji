@@ -155,7 +155,7 @@
 
     <div class="payment-grid" id="paymentGrid">
         <button class="pay-btn discount-trigger" onclick="openKeypad('discount')">金額調整</button>
-        <button class="pay-btn" onclick="playSnd('snd-beep2'); processPayment();">現金（返金）を確定</button>
+        <button class="pay-btn" onclick="playSnd('snd-beep2'); processPayment();">返金を確定</button>
     </div>
 </main>
 
@@ -523,21 +523,91 @@
         const line = "-".repeat(MAX_WIDTH) + "\n";
 
         // ... (getLen, formatLine 関数はそのまま) ...
+        const getLen = (str) => {
+            let len = 0; if (!str) return 0;
+            for (let i = 0; i < str.length; i++) {
+                    (str.charCodeAt(i) <= 255) ? len += 1 : len += 2;
+                }
+                return len;
+            };
+
+        // --- generateContent関数内の formatLine とテキスト生成ロジックの修正 ---
+
+        const formatLine = (label, value) => {
+            const labelLen = getLen(label);
+            const valueLen = getLen(value);
+
+            // 値（金額など）がない場合は、単なるラベルの折り返し処理
+            if (value === undefined || value === null || value === "") {
+                let result = "";
+                let currentLine = "";
+                let currentLen = 0;
+                // 1文字ずつ長さを判定して折り返し
+                for (const char of label) {
+                    const charLen = getLen(char);
+                    if (currentLen + charLen > MAX_WIDTH) {
+                        result += currentLine + "\n";
+                        currentLine = char;
+                        currentLen = charLen;
+                    } else {
+                        currentLine += char;
+                        currentLen += charLen;
+                    }
+                }
+                return result + currentLine + "\n";
+            }
+
+            // ラベルと値がある場合
+            const freeSpace = MAX_WIDTH - (labelLen + valueLen);
+            if (freeSpace < 1) {
+                // ラベルが長すぎる場合は折り返して、最後の行に値を右寄せする
+                let result = "";
+                let currentLine = "";
+                let currentLen = 0;
+                const chars = Array.from(label);
+                
+                for (let i = 0; i < chars.length; i++) {
+                    const charLen = getLen(chars[i]);
+                    // ラベルの途中で改行が必要か、あるいは最後の文字か
+                    if (currentLen + charLen > MAX_WIDTH) {
+                        result += currentLine + "\n";
+                        currentLine = chars[i];
+                        currentLen = charLen;
+                    } else {
+                        currentLine += chars[i];
+                        currentLen += charLen;
+                    }
+                }
+                    
+                // 最終行の空きスペースを計算
+                const lastLineSpace = MAX_WIDTH - (getLen(currentLine) + valueLen);
+                if (lastLineSpace >= 1) {
+                    return result + currentLine + " ".repeat(lastLineSpace) + value + "\n";
+                } else {
+                    // 最終行も入り切らなければ値だけ次の行へ
+                    return result + currentLine + "\n" + " ".repeat(Math.max(0, MAX_WIDTH - valueLen)) + value + "\n";
+                }
+            }
+            return label + " ".repeat(freeSpace) + value + "\n";
+        };
 
         let t = "";
         const dateStr = info.date.toLocaleString();
 
         // 名称を「返金伝票」に変更
-        t += `       返金伝票 \n\n`;
-        t += `店名: ${d.companyName}\n`;
-        if (zip || d.address) t += `${zip} ${d.address}\n`;
-        if (d.tel) t += `TEL: ${d.tel}\n`;
-        if (regNo) t += `登録番号: ${regNo}\n`;
-        t += `日時: ${dateStr}\n${line}`;
+        t += `      返 金 伝 票 \n\n`;
+        t += formatLine(`${d.companyName}`, "");
+        if (zip) t += formatLine(zip, "");         // 郵便番号のみで1行
+        if (d.address) t += formatLine(d.address, "");
+        if (d.tel) t += formatLine(`TEL: ${d.tel || ""}`, "");
+        if (regNo) t += formatLine(`登録番号: ${regNo}`, "");
+        t += formatLine(`日時: ${dateStr}\n${line}`, "");
 
         info.items.forEach(item => {
             const priceVal = `¥${(item.price * item.qty).toLocaleString()}`;
-            const label = item.name + (item.qty > 1 ? ` (x${item.qty})` : "");
+            const rate = (item.taxRate !== undefined) ? item.taxRate : (item.rate !== undefined ? item.rate : null);
+            const taxMarker = (rate !== null) ? ` *${rate}` : ""; 
+            const label = item.name + taxMarker + (item.qty > 1 ? ` (x${item.qty})` : "");
             t += formatLine(label, priceVal);
         });
 
