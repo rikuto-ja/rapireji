@@ -601,7 +601,7 @@
         if (d.address) t += formatLine(d.address, "");
         if (d.tel) t += formatLine(`TEL: ${d.tel || ""}`, "");
         if (regNo) t += formatLine(`登録番号: ${regNo}`, "");
-        t += formatLine(`日時: ${dateStr}\n${line}`, "");
+        t += `日時: ${dateStr}\n${line}`;
 
         info.items.forEach(item => {
             const priceVal = `¥${(item.price * item.qty).toLocaleString()}`;
