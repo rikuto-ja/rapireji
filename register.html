@@ -59,8 +59,8 @@
         .menu-link { display: block; padding: 15px; color: var(--black); font-weight: 800; text-decoration: none; border-bottom: 1px solid var(--gray-light); }
 
         .main-layout { display: flex; flex: 1; overflow: hidden; width: 100%; margin-bottom:0; }
-        .product-section { flex: 7.5; display: flex; flex-direction: column; background: var(--gray-bg); padding: 10px; overflow: hidden; }
-        .category-bar { display: flex; gap: 8px; margin-bottom: 10px; overflow-x: auto; padding-bottom: 10px; flex-shrink: 0; }
+        .product-section { flex: 7.5; display: flex; flex-direction: column; background: var(--gray-bg); padding: 10px; overflow: visible; }
+        .category-bar { display: flex; gap: 8px; margin-bottom: 10px; overflow-x: visible; padding-bottom: 10px; flex-shrink: 0; }
         .cat-tab { padding: 8px 16px; background: var(--white); border: 2px solid var(--black); font-weight: 800; font-size: 0.8rem; cursor: pointer; white-space: nowrap; box-shadow: 2px 2px 0px var(--black); border-radius: 0; }
         .cat-tab.active { background: var(--black); color: var(--white); transform: translate(1px, 1px); box-shadow: none; }
         
@@ -134,6 +134,37 @@
         .confirm-content { background: #fff; padding: 30px; width: 90%; max-width: 400px; text-align: center; box-shadow: 0 #000; }
         .hidden { display: none !important; }
 
+        /* 検索バーのレイアウト調整 */
+        .category-bar { position: relative; align-items: center; }
+        .search-btn { 
+            background: none; border: none; font-size: 1.2rem; cursor: pointer; 
+            flex-shrink: 0; padding: 0 10px; box-shadow: none; /* 影を消去 */
+        }
+        /* クリック時の挙動も無効化 */
+        .search-btn:active { transform: none; }
+        .search-container { 
+            display: none; position: absolute; left: 55px; right: 0; top: 0; bottom: 10px; 
+            background: var(--gray-bg); z-index: 100; align-items: center; gap: 5px;
+        }
+        .search-container.open { display: flex; }
+        .search-input { 
+            flex: 1; height: 35px; border: 2px solid var(--black); padding: 0 10px; 
+            font-weight: 800; font-size: 0.9rem; outline: none;
+        }
+        .search-close { cursor: pointer; font-weight: 900; padding: 0 10px; }
+
+        /* 検索候補リスト */
+        .search-results {
+            position: absolute; top: 40px; left: 55px; right: 0; 
+            background: white; border: 2px solid var(--black); 
+            z-index: 2000; max-height: 200px; overflow-y: auto; box-shadow: 4px 4px 0px rgba(0,0,0,0.2);
+        }
+        .search-result-item {
+            padding: 10px; border-bottom: 1px solid var(--gray-light); 
+            cursor: pointer; font-weight: 800; font-size: 0.85rem;
+        }
+        .search-result-item:hover { background: var(--gray-light); }
+
         @media screen and (max-width: 768px) {
             header { padding: 0 10px; }
             header h1 { font-size: 0.9rem; margin-left: 10px; }
@@ -188,7 +219,16 @@
 
 <main class="main-layout">
     <section class="product-section">
-        <div class="category-bar" id="categoryTabs"></div>
+        <div class="category-bar">
+            <button class="search-btn" id="openSearch">🔍</button>
+            <div id="categoryTabs" style="display: flex; gap: 8px; overflow-x: auto;"></div>
+    
+            <div class="search-container" id="searchWrapper">
+                <input type="text" class="search-input" id="searchInput" placeholder="商品名・JANコード入力...">
+                <span class="search-close" id="closeSearch">✕</span>
+            </div>
+            <div id="searchResults" class="search-results hidden"></div>
+        </div>
         <div class="product-grid" id="productGrid"></div>
     </section>
 
@@ -541,6 +581,69 @@
         restoreCart();
     });
     
+    // --- 検索機能のロジック ---
+    const openSearch = document.getElementById('openSearch');
+    const closeSearch = document.getElementById('closeSearch');
+    const searchWrapper = document.getElementById('searchWrapper');
+    const searchInput = document.getElementById('searchInput');
+    const searchResults = document.getElementById('searchResults');
+
+    openSearch.onclick = () => {
+        searchWrapper.classList.add('open');
+        searchInput.focus();
+        };
+
+    closeSearch.onclick = () => {
+        searchWrapper.classList.remove('open');
+        searchResults.classList.add('hidden');
+        searchInput.value = "";
+        };
+
+    searchInput.oninput = (e) => {
+        const val = e.target.value.toLowerCase();
+        if (!val) {
+            searchResults.classList.add('hidden');
+            return;
+        }
+
+        // 全商品から検索（名前またはJAN）
+        const matches = allProducts.filter(p => 
+            (p.name && p.name.toLowerCase().includes(val)) || 
+            (p.jan && p.jan.includes(val))
+        ).slice(0, 10); // 上位10件表示
+
+        if (matches.length > 0) {
+            searchResults.innerHTML = matches.map(p => `
+                <div class="search-result-item" onclick="jumpToProduct('${p.category}', ${p.index})">
+                    ${p.name} <small style="color:#666;">(${p.category})</small>
+                </div>
+            `).join('');
+            searchResults.classList.remove('hidden');
+        } else {
+            searchResults.classList.add('hidden');
+        }
+    };  
+
+    // 該当商品へジャンプする関数
+    window.jumpToProduct = (catName, index) => {
+        // 1. カテゴリを切り替え
+        switchCategory(catName);
+        
+        // 2. 検索窓を閉じる
+        closeSearch.onclick();
+
+        // 3. 描画を待ってからスクロール
+        setTimeout(() => {
+            const grid = document.getElementById('productGrid');
+            const cards = grid.querySelectorAll('.product-card, .empty-slot');
+            if (cards[index]) {
+                cards[index].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                // 強調演出（一瞬光らせる）
+                cards[index].style.outline = "4px solid var(--accent)";
+                setTimeout(() => cards[index].style.outline = "none", 1500);
+            }
+        }, 100);
+    };
 </script>
 </body>
 </html>
