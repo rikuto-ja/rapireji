@@ -209,7 +209,8 @@
     </div>
 
     <div class="settings-card">
-        <h3 style="font-weight: 900; margin-bottom: 20px; border-left: 8px solid #000; padding-left: 10px;">決済方法（最大5つ）</h3>
+        <h3 style="font-weight: 900; margin-bottom: 10px; border-left: 8px solid #000; padding-left: 10px;">決済方法（最大5つ）</h3>
+        <p style="font-size: 0.8rem; font-weight: 800; margin-bottom: 20px;">※「現金」と入力するとおつりなどの計算ができます</p>
         <div id="paymentMethodsContainer">
             <input type="text" class="payment-input" placeholder="決済1 (例: 現金)">
             <input type="text" class="payment-input" placeholder="決済2 (例: クレジット)">
@@ -261,7 +262,7 @@
             </label>
         </div>
         <div class="sound-setting-item">
-            <label style="margin-bottom: 0;">スキャン時のエラー音</label>
+            <label style="margin-bottom: 0;">エラー音</label>
             <label class="switch">
                 <input type="checkbox" id="soundErrorEnabled" onchange="autoSaveSounds()" checked>
                 <span class="slider"></span>
