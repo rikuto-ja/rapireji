@@ -60,7 +60,10 @@
 
         .main-layout { display: flex; flex: 1; overflow: hidden; width: 100%; margin-bottom:0; }
         .product-section { flex: 7.5; display: flex; flex-direction: column; background: var(--gray-bg); padding: 10px; overflow: visible; }
-        .category-bar { display: flex; gap: 8px; margin-bottom: 10px; overflow-x: visible; padding-bottom: 10px; flex-shrink: 0; }
+        .category-bar { 
+            display: flex; gap: 8px; margin-bottom: 10px; overflow: visible; padding: 2px; flex-shrink: 0; 
+            position: relative; align-items: center; min-height: 50px;
+        }
         .cat-tab { padding: 8px 16px; background: var(--white); border: 2px solid var(--black); font-weight: 800; font-size: 0.8rem; cursor: pointer; white-space: nowrap; box-shadow: 2px 2px 0px var(--black); border-radius: 0; }
         .cat-tab.active { background: var(--black); color: var(--white); transform: translate(1px, 1px); box-shadow: none; }
         
@@ -135,7 +138,6 @@
         .hidden { display: none !important; }
 
         /* 検索バーのレイアウト調整 */
-        .category-bar { position: relative; align-items: center; }
         .search-btn { 
             background: none; border: none; font-size: 1.2rem; cursor: pointer; 
             flex-shrink: 0; padding: 0 10px; box-shadow: none; /* 影を消去 */
@@ -143,7 +145,7 @@
         /* クリック時の挙動も無効化 */
         .search-btn:active { transform: none; }
         .search-container { 
-            display: none; position: absolute; left: 45px; right: 0; top: 0; bottom: 10px; 
+            display: none; position: absolute; left: 45px; right: 0; top: 0; bottom: -5px; 
             background: var(--gray-bg); z-index: 100; align-items: center; gap: 5px;
         }
         .search-container.open { display: flex; }
@@ -181,6 +183,18 @@
             .handle-bar { display: block; }
             .total-row { font-size: 1.1rem; }
             .checkout-btn { padding: 12px; font-size: 1rem; }
+        }
+
+        #categoryTabs {
+            display: flex; 
+            gap: 8px; 
+            overflow-x: auto; 
+            padding: 5px 0;    /* ボタンの影が切れないように上下パディング */
+            scrollbar-width: none; /* Firefox用：スクロールバーを隠す */
+        }
+
+        #categoryTabs::-webkit-scrollbar {
+            display: none; /* Chrome, Safari用：スクロールバーを隠す */
         }
     </style>
 </head>
