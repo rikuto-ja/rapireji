@@ -266,8 +266,6 @@
                     <span>${date}</span>
                 </div>
                 <div>
-                    ${h.receiptIssued ? '<span class="status-badge">レ済</span>' : ''}
-                    ${h.billIssued ? '<span class="status-badge">領済</span>' : ''}
                     <span style="margin-left:10px;">¥${(h.totalAmount || 0).toLocaleString()}</span>
                 </div>`;
             div.onclick = () => showDetail(h);
