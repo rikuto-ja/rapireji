@@ -833,7 +833,6 @@
             t += formatLine(`${d.companyName}`, "");
             if (zip) t += formatLine(zip, "");
             if (d.address) t += formatLine(d.address, "");
-            if (d.tel || regNo) t += "\n";
             if (d.tel) t += formatLine(`TEL: ${d.tel || ""}`, "");
             if (regNo) t += formatLine(`登録番号: ${regNo}`, "");
             t += line;
