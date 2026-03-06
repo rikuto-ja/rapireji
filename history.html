@@ -193,6 +193,7 @@
         <h2 style="font-weight: 900; margin-bottom: 10px; border-left: 10px solid #000; padding-left: 10px;">販売詳細</h2>
         <div id="detail-info"></div>
         <div id="receipt-text" class="receipt-area"></div>
+        <button class="btn-gray" style="width:100%; margin-bottom:10px; display:none;" id="btn-reissue-return">払い戻し伝票発行</button>
         <button class="btn-gray" style="width:100%; margin-bottom:10px;" id="btn-reissue-receipt">レシート発行</button>
         <button class="btn-gray" style="width:100%; margin-bottom:10px;" id="btn-reissue-bill">領収書発行</button>
         <button id="btn-void-action" class="btn-outline" style="width:100%; color:red; border-color:red;">この取引を取り消す</button>
@@ -310,9 +311,27 @@
             <div style="display:flex;justify-content:space-between; font-weight:900; font-size:1.5rem; border-top:1px solid #eee;"><span>最終合計</span><span>¥${(data.totalAmount || 0).toLocaleString()}</span></div>
             <div style="font-size:0.8rem; margin-top:10px;">決済: ${data.paymentMethod}</div>`;
     
-        document.getElementById('btn-void-action').style.display = data.isVoided ? 'none' : 'block';
-    
-        generatePreview('receipt');
+        // --- ボタンの出し分け制御 ---
+        const isRefund = (data.paymentMethod === '返金');
+        const btnReceipt = document.getElementById('btn-reissue-receipt');
+        const btnBill = document.getElementById('btn-reissue-bill');
+        const btnReturn = document.getElementById('btn-reissue-return');
+        const btnVoid = document.getElementById('btn-void-action');
+
+        if (isRefund) {
+            btnReceipt.style.display = 'none';
+            btnBill.style.display = 'none';
+            btnVoid.style.display = 'none'; // 返金取引をさらに取り消すことはできない運用
+            btnReturn.style.display = 'block';
+            generatePreview('return'); // 払い戻しプレビュー
+        } else {
+            btnReceipt.style.display = 'block';
+            btnBill.style.display = 'block';
+            btnVoid.style.display = data.isVoided ? 'none' : 'block';
+            btnReturn.style.display = 'none';
+            generatePreview('receipt'); // 通常レシートプレビュー
+        }
+
         document.getElementById('detailModal').classList.remove('hidden');
     }
 
@@ -371,7 +390,22 @@
         const dateStr = new Date(data.createdAt).toLocaleString();
         const netTotal = data.taxDetails ? Object.values(data.taxDetails).reduce((a, b) => a + b, 0) : data.totalAmount;
 
-        if (type === 'receipt') {
+        if (type === 'return') {
+            // --- 払い戻し伝票のフォーマット ---
+            t += alignCenter("払い戻し伝票");
+            t += `\n${displayStoreName}\n`;
+            t += `日時: ${dateStr}\n${line}`;
+            t += "【返金内容】\n";
+            data.items.forEach(item => { 
+                const priceStr = `¥${(item.price * item.qty).toLocaleString()}`;
+                t += padBetween(`${item.name} x${item.qty}`, priceStr);
+            });
+            t += line;
+            t += padBetween("返金合計", `¥${(data.totalAmount || 0).toLocaleString()}`);
+            t += `元の決済: ${data.originalPaymentMethod || '不明'}\n`;
+            t += line + "\n\n" + alignCenter("(受領印)");
+            t += "\n" + " ".repeat(12) + "┌────┐\n" + " ".repeat(12) + "│    │\n" + " ".repeat(12) + "└────┘\n";
+        } else if (type === 'receipt') {
             t += alignCenter("レシート");
             t += `\n${displayStoreName}\n`;
             // --- 郵便番号と住所を表示 ---
@@ -440,6 +474,9 @@
     
         receiptPreview.innerHTML = t.replace('[[STAMP_HERE]]', `<div style="border: 1px solid #000; width: 60px; height: 70px; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 10px; margin: 10px auto;">収入印紙<br>貼付枠</div>`);
     }
+
+    // --- ボタンのイベント登録 ---
+    document.getElementById('btn-reissue-return').onclick = () => reissue('return');
     
     // --- 長押し・クリック処理 ---
     function initLongPress() {
@@ -540,6 +577,7 @@
         // 存在する税率分だけ列を追加
         sortedRates.forEach(rate => {
             header.push(`${rate}%対象(税抜)`);
+            header.push(`${rate}%内消費税`);
         });
         header.push("最終合計", "支払方法", "取引状態", "レシート発行", "領収書発行");
 
@@ -561,7 +599,12 @@
 
             const finalNetTotal = (h.totalAmount || 0) - calculatedTaxTotal;
             
-            const voidTxt = h.isVoided ? "取消済" : "有効";
+            let voidTxt = "有効";
+            if (h.isVoided) {
+                voidTxt = "取消済";
+            } else if (h.paymentMethod === '返金') {
+                voidTxt = "払戻";
+            }
             const receiptTxt = h.receiptIssued ? "済" : "未";
             const billTxt = h.billIssued ? "済" : "未";
             
@@ -581,7 +624,10 @@
 
             // 動的な税率別の金額を追加
             sortedRates.forEach(rate => {
-                row.push(details[rate] || 0); // 存在しない税率は0
+                const sub = details[rate] || 0;
+                const tax = sub > 0 ? Math.floor(sub * (Number(rate) / 100)) : 0;
+                row.push(sub); // 税抜
+                row.push(tax); // 内消費税
             });
 
             // 残りの情報
