@@ -664,12 +664,10 @@
     window.generateContent = (type) => {
         const info = window.currentPaymentData;
         const d = shopInfo;
-        // 郵便番号を取得（savedProfileから直接、またはshopInfo経由で）
         const zip = savedProfile.zipCode ? `〒${savedProfile.zipCode}` : "";
         const regNo = (savedProfile && savedProfile.registrationNumber) ? savedProfile.registrationNumber : null;
         const receiptPreview = document.getElementById('receiptPreview');
 
-         // 幅を26から24に調整（印刷時の文字溢れ防止の安全圏）
         const MAX_WIDTH = 24; 
         const line = "-".repeat(MAX_WIDTH) + "\n";
 
@@ -679,7 +677,7 @@
                     (str.charCodeAt(i) <= 255) ? len += 1 : len += 2;
                 }
                 return len;
-            };
+        };
 
         // --- generateContent関数内の formatLine とテキスト生成ロジックの修正 ---
 
@@ -687,14 +685,14 @@
             const labelLen = getLen(label);
             const valueLen = getLen(value);
 
-            // 値（金額など）がない場合は、単なるラベルの折り返し処理
-            if (value === undefined || value === null || value === "") {
+            // 値がない場合（住所・店名など）の自動折り返し
+            if (!value) {
                 let result = "";
                 let currentLine = "";
                 let currentLen = 0;
-                // 1文字ずつ長さを判定して折り返し
                 for (const char of label) {
                     const charLen = getLen(char);
+                    // 現在の長さ + 次の文字 > 最大幅 なら改行
                     if (currentLen + charLen > MAX_WIDTH) {
                         result += currentLine + "\n";
                         currentLine = char;
@@ -707,18 +705,16 @@
                 return result + currentLine + "\n";
             }
 
-            // ラベルと値がある場合
+            // 値がある場合（商品名と価格など）
             const freeSpace = MAX_WIDTH - (labelLen + valueLen);
             if (freeSpace < 1) {
-                // ラベルが長すぎる場合は折り返して、最後の行に値を右寄せする
+                // ラベルを折り返し処理し、最後の行に値を右寄せ
                 let result = "";
                 let currentLine = "";
                 let currentLen = 0;
                 const chars = Array.from(label);
-                
                 for (let i = 0; i < chars.length; i++) {
                     const charLen = getLen(chars[i]);
-                    // ラベルの途中で改行が必要か、あるいは最後の文字か
                     if (currentLen + charLen > MAX_WIDTH) {
                         result += currentLine + "\n";
                         currentLine = chars[i];
@@ -728,15 +724,10 @@
                         currentLen += charLen;
                     }
                 }
-                    
-                // 最終行の空きスペースを計算
                 const lastLineSpace = MAX_WIDTH - (getLen(currentLine) + valueLen);
-                if (lastLineSpace >= 1) {
-                    return result + currentLine + " ".repeat(lastLineSpace) + value + "\n";
-                } else {
-                    // 最終行も入り切らなければ値だけ次の行へ
-                    return result + currentLine + "\n" + " ".repeat(Math.max(0, MAX_WIDTH - valueLen)) + value + "\n";
-                }
+                return (lastLineSpace >= 1) 
+                    ? result + currentLine + " ".repeat(lastLineSpace) + value + "\n"
+                    : result + currentLine + "\n" + " ".repeat(MAX_WIDTH - valueLen) + value + "\n";
             }
             return label + " ".repeat(freeSpace) + value + "\n";
         };
