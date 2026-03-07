@@ -336,163 +336,179 @@
     }
 
     // --- 変更点：generatePreview 関数を formatLine ロジックベースに統一 ---
-function generatePreview(type, guestName = "") {
-    const data = selectedItem; if (!data) return;
-    const d = shopInfo;
-    const displayStoreName = d.companyName || "らぴレジ店舗";
-    const regNo = (d && d.registrationNumber) ? d.registrationNumber : null;
-    const zip = d.zipCode ? `〒${d.zipCode}` : "";
-    const receiptPreview = document.getElementById('receipt-text');
+    function generatePreview(type, guestName = "") {
+        const data = selectedItem; if (!data) return;
+        const d = shopInfo;
+        const displayStoreName = d.companyName || "らぴレジ店舗";
+        const regNo = (d && d.registrationNumber) ? d.registrationNumber : null;
+        const zip = d.zipCode ? `〒${d.zipCode}` : "";
+        const receiptPreview = document.getElementById('receipt-text');
 
-    const MAX_WIDTH = 24; 
-    const line = "-".repeat(MAX_WIDTH) + "\n";
+        const MAX_WIDTH = 24; 
+        const line = "-".repeat(MAX_WIDTH) + "\n";
 
-    const getLen = (str) => {
-        let len = 0; if (!str) return 0;
-        for (let i = 0; i < str.length; i++) {
-            (str.charCodeAt(i) <= 255) ? len += 1 : len += 2;
-        }
-        return len;
-    };
-
-    const formatLine = (label, value) => {
-        const labelLen = getLen(label);
-        const valueLen = getLen(value);
-        if (!value) {
-            let result = "";
-            let currentLine = "";
-            let currentLen = 0;
-            for (const char of label) {
-                const charLen = getLen(char);
-                if (currentLen + charLen > MAX_WIDTH) {
-                    result += currentLine + "\n";
-                    currentLine = char;
-                    currentLen = charLen;
-                } else {
-                    currentLine += char;
-                    currentLen += charLen;
-                }
+        const getLen = (str) => {
+            let len = 0; if (!str) return 0;
+            for (let i = 0; i < str.length; i++) {
+                (str.charCodeAt(i) <= 255) ? len += 1 : len += 2;
             }
-            return result + currentLine + "\n";
-        }
-        const freeSpace = MAX_WIDTH - (labelLen + valueLen);
-        if (freeSpace < 1) {
-            let result = "";
-            let currentLine = "";
-            let currentLen = 0;
-            const chars = Array.from(label);
-            for (let i = 0; i < chars.length; i++) {
-                const charLen = getLen(chars[i]);
-                if (currentLen + charLen > MAX_WIDTH) {
-                    result += currentLine + "\n";
-                    currentLine = chars[i];
-                    currentLen = charLen;
-                } else {
-                    currentLine += chars[i];
-                    currentLen += charLen;
+            return len;
+        };
+
+        const formatLine = (label, value) => {
+            const labelLen = getLen(label);
+            const valueLen = getLen(value);
+            if (!value) {
+                let result = "";
+                let currentLine = "";
+                let currentLen = 0;
+                for (const char of label) {
+                    const charLen = getLen(char);
+                    if (currentLen + charLen > MAX_WIDTH) {
+                        result += currentLine + "\n";
+                        currentLine = char;
+                        currentLen = charLen;
+                    } else {
+                        currentLine += char;
+                        currentLen += charLen;
+                    }
                 }
+                return result + currentLine + "\n";
             }
-            const lastLineSpace = MAX_WIDTH - (getLen(currentLine) + valueLen);
-            return (lastLineSpace >= 1) 
-                ? result + currentLine + " ".repeat(lastLineSpace) + value + "\n"
-                : result + currentLine + "\n" + " ".repeat(MAX_WIDTH - valueLen) + value + "\n";
+            const freeSpace = MAX_WIDTH - (labelLen + valueLen);
+            if (freeSpace < 1) {
+                let result = "";
+                let currentLine = "";
+                let currentLen = 0;
+                const chars = Array.from(label);
+                for (let i = 0; i < chars.length; i++) {
+                    const charLen = getLen(chars[i]);
+                    if (currentLen + charLen > MAX_WIDTH) {
+                        result += currentLine + "\n";
+                        currentLine = chars[i];
+                        currentLen = charLen;
+                    } else {
+                        currentLine += chars[i];
+                        currentLen += charLen;
+                    }
+                }
+                const lastLineSpace = MAX_WIDTH - (getLen(currentLine) + valueLen);
+                return (lastLineSpace >= 1) 
+                    ? result + currentLine + " ".repeat(lastLineSpace) + value + "\n"
+                    : result + currentLine + "\n" + " ".repeat(MAX_WIDTH - valueLen) + value + "\n";
+                }
+             return label + " ".repeat(freeSpace) + value + "\n";
+        };
+
+        let t = "";
+        const dateStr = new Date(data.createdAt).toLocaleString();
+        const netTotal = data.taxDetails ? Object.values(data.taxDetails).reduce((a, b) => a + b, 0) : data.totalAmount;
+
+        if (type === 'return') {
+            t += `      払い戻し伝票 \n\n`;
+            t += formatLine(displayStoreName, "");
+            t += `日時: ${dateStr}\n${line}`;
+            t += "【返金内容】\n";
+            data.items.forEach(item => {
+                const priceVal = `¥${(item.price * item.qty).toLocaleString()}`;
+                const label = item.name + (item.qty > 1 ? ` (x${item.qty})` : "");
+                t += formatLine(label, priceVal);
+            });
+            t += line;
+            t += formatLine("返金合計", `¥${(data.totalAmount || 0).toLocaleString()}`);
+            t += `元の決済: ${data.originalPaymentMethod || '不明'}\n`;
+            t += line + `\n\n      (受領印)\n\n`;
+            t += " ".repeat(12) + "┌────┐\n" + " ".repeat(12) + "│    │\n" + " ".repeat(12) + "└────┘\n";
+
+        } else if (type === 'receipt') {
+            t += `       レ シ ー ト \n\n`;
+            t += formatLine(displayStoreName, "");
+            if (zip) t += formatLine(zip, "");
+            if (d.address) t += formatLine(d.address, "");
+            if (d.tel) t += formatLine(`TEL: ${d.tel}`, "");
+            if (regNo) t += formatLine(`登録番号: ${regNo}`, "");
+            t += `日時: ${dateStr}\n${line}`;
+
+            data.items.forEach(item => {
+                const priceVal = `¥${(item.price * item.qty).toLocaleString()}`;
+                const rate = item.taxRate !== undefined ? item.taxRate : (item.rate !== undefined ? item.rate : null);
+                const taxMarker = (rate !== null) ? ` *${rate}` : "";
+                const label = item.name + taxMarker + (item.qty > 1 ? ` (x${item.qty})` : "");
+                t += formatLine(label, priceVal);
+            });
+            t += line;
+            
+            // 税抜小計の算出（割引前の税抜合計）
+            const details = data.taxDetails || {};
+            const originalExclTotal = Object.values(details).reduce((a, b) => a + (b.originalExcl || b.subtotal || 0), 0);
+            
+            t += formatLine("小計(税抜)", `¥${originalExclTotal.toLocaleString()}`);
+
+            if (data.discount > 0) {
+                const dName = data.discountName || "割引";
+                t += formatLine(`割引(${dName})`, `-¥${(data.discount || 0).toLocaleString()}`);
+                
+                // 割引後小計（税抜）の算出
+                const afterDiscountExclTotal = Object.values(details).reduce((a, b) => a + (b.excl || 0), 0);
+                t += formatLine("割引後小計(税抜)", `¥${afterDiscountExclTotal.toLocaleString()}`);
+            }
+
+            t += formatLine("合計(税込)", `¥${(data.totalAmount || 0).toLocaleString()}`);
+            t += line;
+
+
+            Object.keys(details).map(Number).sort((a, b) => b - a).forEach(rate => {
+                const targetData = details[rate];
+                const exclAmount = targetData.excl !== undefined ? targetData.excl : targetData; // 割引後税抜
+                const taxAmount = targetData.tax !== undefined ? targetData.tax : Math.floor(exclAmount * (rate / 100));
+                
+                if (exclAmount > 0) {
+                    t += `${rate}%対象(税抜 ¥${exclAmount.toLocaleString()})\n`;
+                    t += formatLine("  内消費税", `¥${taxAmount.toLocaleString()}`);
+                }
+            });
+
+            t += line;
+            t += `決済方法: ${data.paymentMethod}\n`;
+            if (data.cashReceived > 0) {
+                t += formatLine("お預かり", `¥${(data.cashReceived || 0).toLocaleString()}`);
+                t += formatLine("お釣り", `¥${(data.change || 0).toLocaleString()}`);
+            }
+            if ((data.totalAmount || 0) >= 50000 && data.paymentMethod.includes('現金')) t += `\n[[STAMP_HERE]]\n`;
+            t += line;
+            t += `※ *の後の数字は税率です\n`;
+            t += `ありがとうございました\n`;
+            if (d.memo) t += `${d.memo}\n`;
+
+        } else {
+            // 領収書
+            const totalTax = data.totalAmount - netTotal;
+            t += `       領 収 書\n\n 日付：${new Date(data.createdAt).toLocaleDateString()}\n No. ${data.id}\n\n`;
+            
+            const recipientLabel = `${guestName || "                "}  様`;
+            const namePadding = Math.max(0, Math.floor((MAX_WIDTH - getLen(recipientLabel)) / 2));
+            t += " ".repeat(namePadding) + recipientLabel + "\n\n";
+
+            const amountStr = `金額 ¥${data.totalAmount.toLocaleString()}-`;
+            const amtPadding = Math.max(0, Math.floor((MAX_WIDTH - getLen(amountStr)) / 2));
+            t += " ".repeat(amtPadding) + amountStr + "\n\n";
+
+            t += formatLine(` 但 ${d.receiptType || "商品代"} として`, "");
+            t += ` 正に領収いたしました\n\n [内訳]\n`;
+            t += formatLine(` 税抜金額:`, `¥${netTotal.toLocaleString()}`);
+            t += formatLine(` 消費税等:`, `¥${totalTax.toLocaleString()}`);
+            
+            if ((data.totalAmount || 0) >= 50000 && data.paymentMethod.includes('現金')) t += `\n[[STAMP_HERE]]\n`;
+            t += `\n${line}[発行者]\n`;
+            t += formatLine(displayStoreName, "");
+            if (zip) t += formatLine(zip, "");
+            if (d.address) t += formatLine(d.address, "");
+            if (d.tel) t += formatLine(`TEL: ${d.tel}`, "");
+            if (regNo) t += formatLine(`登録番号: ${regNo}`, "");
+            t += line;
         }
-        return label + " ".repeat(freeSpace) + value + "\n";
-    };
-
-    let t = "";
-    const dateStr = new Date(data.createdAt).toLocaleString();
-    const netTotal = data.taxDetails ? Object.values(data.taxDetails).reduce((a, b) => a + b, 0) : data.totalAmount;
-
-    if (type === 'return') {
-        t += `      払い戻し伝票 \n\n`;
-        t += formatLine(displayStoreName, "");
-        t += `日時: ${dateStr}\n${line}`;
-        t += "【返金内容】\n";
-        data.items.forEach(item => {
-            const priceVal = `¥${(item.price * item.qty).toLocaleString()}`;
-            const label = item.name + (item.qty > 1 ? ` (x${item.qty})` : "");
-            t += formatLine(label, priceVal);
-        });
-        t += line;
-        t += formatLine("返金合計", `¥${(data.totalAmount || 0).toLocaleString()}`);
-        t += `元の決済: ${data.originalPaymentMethod || '不明'}\n`;
-        t += line + `\n\n      (受領印)\n\n`;
-        t += " ".repeat(12) + "┌────┐\n" + " ".repeat(12) + "│    │\n" + " ".repeat(12) + "└────┘\n";
-
-    } else if (type === 'receipt') {
-        t += `       レ シ ー ト \n\n`;
-        t += formatLine(displayStoreName, "");
-        if (zip) t += formatLine(zip, "");
-        if (d.address) t += formatLine(d.address, "");
-        if (d.tel) t += formatLine(`TEL: ${d.tel}`, "");
-        if (regNo) t += formatLine(`登録番号: ${regNo}`, "");
-        t += `日時: ${dateStr}\n${line}`;
-
-        data.items.forEach(item => {
-            const priceVal = `¥${(item.price * item.qty).toLocaleString()}`;
-            const label = item.name + (item.qty > 1 ? ` (x${item.qty})` : "");
-            t += formatLine(label, priceVal);
-        });
-        t += line;
-        
-        t += formatLine("小計", `¥${(data.subtotal || 0).toLocaleString()}`);
-        if (data.discount > 0) {
-            const dName = data.discountName || "割引";
-            t += formatLine(`割引(${dName})`, `-¥${(data.discount || 0).toLocaleString()}`);
-        }
-        t += formatLine("合計(税込)", `¥${(data.totalAmount || 0).toLocaleString()}`);
-        t += line;
-
-        const details = data.taxDetails || {};
-        Object.keys(details).map(Number).sort((a, b) => b - a).forEach(rate => {
-            const sub = details[rate];
-            const tax = Math.floor(sub * (rate / 100));
-            t += `${rate}%対象(税抜 ¥${sub.toLocaleString()})\n`;
-            t += formatLine("  内消費税", `¥${tax.toLocaleString()}`);
-        });
-
-        t += line;
-        t += `決済方法: ${data.paymentMethod}\n`;
-        if (data.cashReceived > 0) {
-            t += formatLine("お預かり", `¥${(data.cashReceived || 0).toLocaleString()}`);
-            t += formatLine("お釣り", `¥${(data.change || 0).toLocaleString()}`);
-        }
-        if ((data.totalAmount || 0) >= 50000 && data.paymentMethod.includes('現金')) t += `\n[[STAMP_HERE]]\n`;
-        t += line;
-        t += `ありがとうございました\n`;
-        if (d.memo) t += `${d.memo}\n`;
-
-    } else {
-        // 領収書
-        const totalTax = data.totalAmount - netTotal;
-        t += `       領 収 書\n\n 日付：${new Date(data.createdAt).toLocaleDateString()}\n No. ${data.id}\n\n`;
-        
-        const recipientLabel = `${guestName || "                "}  様`;
-        const namePadding = Math.max(0, Math.floor((MAX_WIDTH - getLen(recipientLabel)) / 2));
-        t += " ".repeat(namePadding) + recipientLabel + "\n\n";
-
-        const amountStr = `金額 ¥${data.totalAmount.toLocaleString()}-`;
-        const amtPadding = Math.max(0, Math.floor((MAX_WIDTH - getLen(amountStr)) / 2));
-        t += " ".repeat(amtPadding) + amountStr + "\n\n";
-
-        t += formatLine(` 但 ${d.receiptType || "商品代"} として`, "");
-        t += ` 正に領収いたしました\n\n [内訳]\n`;
-        t += formatLine(` 税抜金額:`, `¥${netTotal.toLocaleString()}`);
-        t += formatLine(` 消費税等:`, `¥${totalTax.toLocaleString()}`);
-        
-        if ((data.totalAmount || 0) >= 50000 && data.paymentMethod.includes('現金')) t += `\n[[STAMP_HERE]]\n`;
-        t += `\n${line}[発行者]\n`;
-        t += formatLine(displayStoreName, "");
-        if (zip) t += formatLine(zip, "");
-        if (d.address) t += formatLine(d.address, "");
-        if (d.tel) t += formatLine(`TEL: ${d.tel}`, "");
-        if (regNo) t += formatLine(`登録番号: ${regNo}`, "");
-        t += line;
+        receiptPreview.innerHTML = t.replace('[[STAMP_HERE]]', `<div style="border: 1px solid #000; width: 60px; height: 70px; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 10px; margin: 10px auto;">収入印紙<br>貼付枠</div>`);
     }
-
-    receiptPreview.innerHTML = t.replace('[[STAMP_HERE]]', `<div style="border: 1px solid #000; width: 60px; height: 70px; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 10px; margin: 10px auto;">収入印紙<br>貼付枠</div>`);
-}
 
     // --- ボタンのイベント登録 ---
     document.getElementById('btn-reissue-return').onclick = () => reissue('return');
