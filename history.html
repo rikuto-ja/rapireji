@@ -457,14 +457,28 @@
             t += line;
 
 
-            Object.keys(details).map(Number).sort((a, b) => b - a).forEach(rate => {
-                const targetData = details[rate];
-                const exclAmount = targetData.excl !== undefined ? targetData.excl : targetData; // 割引後税抜
-                const taxAmount = targetData.tax !== undefined ? targetData.tax : Math.floor(exclAmount * (rate / 100));
-                
+            // --- 最終修正版：finalTaxDetails のオブジェクト構造に対応 ---
+            const targetDetails = data.finalTaxDetails || data.taxDetails || {};
+
+            Object.keys(targetDetails).map(Number).sort((a, b) => b - a).forEach(rate => {
+                const val = targetDetails[rate];
+                if (!val) return;
+
+                let exclAmount = 0;
+
+                // オブジェクト形式 {8: {excl: 90000, tax: 7200}} の場合を処理
+                if (typeof val === 'object') {
+                    // excl があればそれを使用、なければ subtotal を使用
+                    exclAmount = val.excl !== undefined ? val.excl : (val.subtotal || 0);
+                } else {
+                    // 万が一数値で入っていた場合のバックアップ
+                    exclAmount = val;
+                }
+
                 if (exclAmount > 0) {
+                    const taxAmount = Math.floor(exclAmount * (rate / 100));
                     t += `${rate}%対象(税抜 ¥${exclAmount.toLocaleString()})\n`;
-                    t += formatLine("  内消費税", `¥${taxAmount.toLocaleString()}`);
+                    t += formatLine("  内消費税", `¥${taxAmount.toLocaleString()}`);
                 }
             });
 
