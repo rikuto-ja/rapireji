@@ -189,7 +189,7 @@
         <div id="paymentResultMsg" style="text-align: center; margin-bottom: 15px; min-height: 20px;"></div>
         <div id="receiptPreview" class="receipt-area"></div>
         <div style="display: flex; flex-direction: column; gap: 5px;">
-            <button id="btnPrintReceipt" class="btn-black" style="background: #808080;">返金伝票を印刷</button>
+            <button id="btnPrintReceipt" class="btn-black" style="background: #808080;">払い戻し伝票を印刷</button>
             <button onclick="location.href='history.html'" class="btn-outline" style="border-width:3px; background:#eee;">履歴画面へ戻る</button>
         </div>
     </div>
@@ -477,7 +477,7 @@
             discount: -discountVal,
             discountName: (window.currentDiscountName || "") + " (返金時適用)",
             totalAmount: -finalTotal, 
-            paymentMethod: "現金(返金)", 
+            paymentMethod: "返金", 
             cashReceived: finalTotal,
             change: 0,
             createdAt: now.toISOString(), 
@@ -594,8 +594,7 @@
         let t = "";
         const dateStr = info.date.toLocaleString();
 
-        // 名称を「返金伝票」に変更
-        t += `      返 金 伝 票 \n\n`;
+        t += `    払 い 戻 し 伝 票 \n\n`;
         t += formatLine(`${d.companyName}`, "");
         if (zip) t += formatLine(zip, "");         // 郵便番号のみで1行
         if (d.address) t += formatLine(d.address, "");
@@ -650,14 +649,14 @@
         const history = JSON.parse(localStorage.getItem(STORAGE_KEYS.HISTORY) || '[]');
         const idx = history.findIndex(h => h.id === lastHistoryId);
         if (idx !== -1) {
-            history[idx][field] = true;
+            history[idx]['refundReceiptIssued'] = true;
             localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(history));
         }
     }
 
     document.getElementById('btnPrintReceipt').onclick = () => {
         generateContent('receipt');
-        updateHistoryFlag('receiptIssued');
+        updateHistoryFlag('refundReceiptIssued');
         window.print();
     };
 
