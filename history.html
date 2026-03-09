@@ -281,10 +281,20 @@
     function updateStatusBadges(data) {
         const header = document.getElementById('detail-status-header');
         if (!header) return;
-        header.innerHTML = `
-            <div class="status-pill" style="border:2px solid #000; font-size:0.7rem; font-weight:900; margin-right:5px; padding:2px 6px; opacity:${data.receiptIssued ? 1 : 0.2}">レシート: ${data.receiptIssued ? '済' : '未'}</div>
-            <div class="status-pill" style="border:2px solid #000; font-size:0.7rem; font-weight:900; margin-right:5px; padding:2px 6px; opacity:${data.billIssued ? 1 : 0.2}">領収書: ${data.billIssued ? '済' : '未'}</div>
-            ${data.isVoided ? '<div class="status-pill" style="background:#000; color:#fff; font-size:0.7rem; padding:2px 6px;">取消済</div>' : ''}`;
+        const isRefund = (data.paymentMethod === '返金');
+
+        if (isRefund) {
+            // 払戻取引の場合：払戻伝票の状況のみ表示
+            header.innerHTML = `
+                <div class="status-pill" style="border:2px solid #000; font-size:0.7rem; font-weight:900; margin-right:5px; padding:2px 6px; opacity:${data.refundReceiptIssued ? 1 : 0.2}">払戻伝票: ${data.refundReceiptIssued ? '済' : '未'}</div>
+                ${data.isVoided ? '<div class="status-pill" style="background:#000; color:#fff; font-size:0.7rem; padding:2px 6px;">取消済</div>' : ''}`;
+        } else {
+            // 通常取引の場合：レシートと領収書の状況を表示
+            header.innerHTML = `
+                <div class="status-pill" style="border:2px solid #000; font-size:0.7rem; font-weight:900; margin-right:5px; padding:2px 6px; opacity:${data.receiptIssued ? 1 : 0.2}">レシート: ${data.receiptIssued ? '済' : '未'}</div>
+                <div class="status-pill" style="border:2px solid #000; font-size:0.7rem; font-weight:900; margin-right:5px; padding:2px 6px; opacity:${data.billIssued ? 1 : 0.2}">領収書: ${data.billIssued ? '済' : '未'}</div>
+                ${data.isVoided ? '<div class="status-pill" style="background:#000; color:#fff; font-size:0.7rem; padding:2px 6px;">取消済</div>' : ''}`;
+        }
     }
 
     function showDetail(data) {
@@ -556,28 +566,30 @@
         btnBill.addEventListener('touchend', end);
     }
 
+    // --- 変更点：reissue 関数内のフラグ更新処理 ---
     function reissue(type, guestName = "") { 
         if (!selectedItem) return;
 
-        // 1. プレビュー内容を生成（payment.htmlの generateContent と同じ役割）
         generatePreview(type, guestName);
-    
-        // 2. 即座に印刷（payment.html と同じ挙動）
         window.print(); 
 
-        // 3. 印刷後にデータのフラグを更新
         const history = JSON.parse(localStorage.getItem(STORAGE_KEYS.HISTORY) || '[]');
         const idx = history.findIndex(h => h.id === selectedItem.id);
-    
+
         if (idx !== -1) {
-            if (type === 'receipt') history[idx].receiptIssued = true;
-            else history[idx].billIssued = true;
-        
+            if (type === 'receipt') {
+                history[idx].receiptIssued = true;
+            } else if (type === 'return') {
+                // ここを修正：払戻伝票専用のフラグを更新
+                history[idx].refundReceiptIssued = true;
+            } else if (type === 'bill') {
+                history[idx].billIssued = true;
+            }
+    
             localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(history));
             selectedItem = history[idx];
-        
-            // 画面の「済/未」バッジだけを更新
-            updateStatusDisplay();
+    
+            updateStatusBadges(selectedItem); // 修正：updateStatusDisplayではなく定義済みのこちらを呼ぶのが確実です
             loadHistory(); 
         }
     }
@@ -607,7 +619,6 @@
         }
     };
     
-    // --- CSV改善版（動的税率対応） ---
     // --- CSV改善版（動的税率対応 + 割引名追加） ---
     document.getElementById('btn-csv-export').onclick = () => {
         // 1. 存在する税率をすべて抽出する（重複なし・降順）
@@ -654,7 +665,12 @@
             } else if (h.paymentMethod === '返金') {
                 voidTxt = "払戻";
             }
-            const receiptTxt = h.receiptIssued ? "済" : "未";
+            
+            /* --- 修正後（このように貼り付ける） --- */
+            const isRefund = (h.paymentMethod === '返金');
+            const receiptTxt = isRefund 
+                ? (h.refundReceiptIssued ? "済(払戻)" : "未(払戻)") 
+                : (h.receiptIssued ? "済" : "未");
             const billTxt = h.billIssued ? "済" : "未";
             
             // 割引名の取得（なければ空文字）
