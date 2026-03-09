@@ -415,20 +415,54 @@
         const netTotal = data.taxDetails ? Object.values(data.taxDetails).reduce((a, b) => a + b, 0) : data.totalAmount;
 
         if (type === 'return') {
-            t += `      払い戻し伝票 \n\n`;
+            t += `    払 い 戻 し 伝 票 \n\n`;
             t += formatLine(displayStoreName, "");
+            if (zip) t += formatLine(zip, "");
+            if (d.address) t += formatLine(d.address, "");
+            if (d.tel) t += formatLine(`TEL: ${d.tel}`, "");
+            if (regNo) t += formatLine(`登録番号: ${regNo}`, "");
             t += `日時: ${dateStr}\n${line}`;
-            t += "【返金内容】\n";
+
             data.items.forEach(item => {
                 const priceVal = `¥${(item.price * item.qty).toLocaleString()}`;
-                const label = item.name + (item.qty > 1 ? ` (x${item.qty})` : "");
+                const rate = (item.taxRate !== undefined) ? item.taxRate : (item.rate !== undefined ? item.rate : null);
+                const taxMarker = (rate !== null) ? ` *${rate}` : ""; 
+                const label = item.name + taxMarker + (item.qty > 1 ? ` (x${item.qty})` : "");
                 t += formatLine(label, priceVal);
             });
+
             t += line;
-            t += formatLine("返金合計", `¥${(data.totalAmount || 0).toLocaleString()}`);
-            t += `元の決済: ${data.originalPaymentMethod || '不明'}\n`;
-            t += line + `\n\n      (受領印)\n\n`;
-            t += " ".repeat(12) + "┌────┐\n" + " ".repeat(12) + "│    │\n" + " ".repeat(12) + "└────┘\n";
+            const details = data.finalTaxDetails || data.taxDetails || {};
+            const originalExclTotal = Object.values(details).reduce((a, b) => a + (b.originalExcl || b.subtotal || 0), 0);
+
+            t += formatLine("小計(税抜)", `¥${originalExclTotal.toLocaleString()}`);
+
+            if (data.discount > 0) {
+                const dName = data.discountName || "金額調整";
+                t += formatLine(`金額調整(${dName})`, `-¥${data.discount.toLocaleString()}`);
+                const afterDiscountExclTotal = Object.values(details).reduce((a, b) => a + (b.excl || 0), 0);
+                t += formatLine("調整後小計(税抜)", `¥${afterDiscountExclTotal.toLocaleString()}`);
+            }
+
+            t += formatLine("返金合計(税込)", `¥${(data.totalAmount || 0).toLocaleString()}`);
+            t += line;
+
+            Object.keys(details).map(Number).sort((a, b) => b - a).forEach(rate => {
+                const val = details[rate];
+                if (!val) return;
+                const exclAmount = val.excl !== undefined ? val.excl : (val.subtotal || 0);
+                const taxAmount = val.tax !== undefined ? val.tax : Math.floor(exclAmount * (rate / 100));
+
+                if (exclAmount > 0) {
+                    t += `${rate}%対象(税抜 ¥${exclAmount.toLocaleString()})\n`;
+                    t += formatLine("  内消費税", `¥${taxAmount.toLocaleString()}`);
+                }
+            });
+
+            t += line;
+            t += `処理方法: ${data.paymentMethod}\n`;
+            t += line + `返品・返金を承りました\n`;
+            if (d.memo) t += `${d.memo}\n`;
 
         } else if (type === 'receipt') {
             t += `       レ シ ー ト \n\n`;
