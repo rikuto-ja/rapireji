@@ -431,7 +431,7 @@
         if (existing) { 
             existing.qty = nextQty; 
         } else { 
-            cart.push({ id: p.id, name: p.name, price: Number(p.price), qty: 1 }); 
+            cart.push({ id: p.id, name: p.name, price: Number(p.price), qty: 1, taxRate: Number(p.taxRate || 0) }); 
         }
         // 警告チェックも不要なため削除
         updateCartUI(); 
