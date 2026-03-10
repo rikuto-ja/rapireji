@@ -98,10 +98,10 @@
             background: #fff;
             border: 1px dashed #000;
             padding: 15px;
-            font-family: "Courier New", Courier, monospace; 
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace; 
             white-space: pre-wrap;
             font-size: 0.85rem;
-            line-height: 1.4;
+            line-height: 1.2;
             margin-bottom: 15px;
             color: #000;
             /* 修正ポイント：単語の途中でも枠の端で改行させ、 tabular-nums で数字の幅を固定 */
@@ -301,25 +301,8 @@
         selectedItem = data;
         updateStatusBadges(data);
     
-        let itemsHtml = data.items.map(i => `
-            <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
-                <span>${i.name} x${i.qty}</span>
-                <span>¥${(i.price*i.qty).toLocaleString()}</span>
-            </div>`).join('');
-            
-        // --- 修正：割引がある場合、割引名を表示 ---
-        const discountRow = (data.discount > 0) ? `
-            <div style="display:flex;justify-content:space-between; color:#666;">
-                <span>割引${data.discountName ? `(${data.discountName})` : ''}</span>
-                <span>-¥${(data.discount || 0).toLocaleString()}</span>
-            </div>` : '';
-
         document.getElementById('detail-info').innerHTML = `
-            <div style="padding:15px 0; border-bottom:2px solid #000;">${itemsHtml}</div>
-            <div style="display:flex;justify-content:space-between; padding-top:10px;"><span>小計</span><span>¥${(data.subtotal || 0).toLocaleString()}</span></div>
-            ${discountRow}
-            <div style="display:flex;justify-content:space-between; font-weight:900; font-size:1.5rem; border-top:1px solid #eee;"><span>最終合計</span><span>¥${(data.totalAmount || 0).toLocaleString()}</span></div>
-            <div style="font-size:0.8rem; margin-top:10px;">決済: ${data.paymentMethod}</div>`;
+            <div style="display:flex;justify-content:space-between; font-weight:900; font-size:1.5rem; padding:20px 0;"><span>最終合計</span><span>¥${(data.totalAmount || 0).toLocaleString()}</span></div>`;
     
         // --- ボタンの出し分け制御 ---
         const isRefund = (data.paymentMethod === '返金');
@@ -331,15 +314,15 @@
         if (isRefund) {
             btnReceipt.style.display = 'none';
             btnBill.style.display = 'none';
-            btnVoid.style.display = 'none'; // 返金取引をさらに取り消すことはできない運用
+            btnVoid.style.display = 'none'; 
             btnReturn.style.display = 'block';
-            generatePreview('return'); // 払い戻しプレビュー
+            generatePreview('return'); 
         } else {
             btnReceipt.style.display = 'block';
             btnBill.style.display = 'block';
             btnVoid.style.display = data.isVoided ? 'none' : 'block';
             btnReturn.style.display = 'none';
-            generatePreview('receipt'); // 通常レシートプレビュー
+            generatePreview('receipt'); 
         }
 
         document.getElementById('detailModal').classList.remove('hidden');
@@ -444,7 +427,7 @@
                 t += formatLine("調整後小計(税抜)", `¥${afterDiscountExclTotal.toLocaleString()}`);
             }
 
-            t += formatLine("返金合計(税込)", `¥${(data.totalAmount || 0).toLocaleString()}`);
+            t += formatLine("返金合計(税込)", `¥${Math.abs(data.totalAmount || 0).toLocaleString()}`);
             t += line;
 
             Object.keys(details).map(Number).sort((a, b) => b - a).forEach(rate => {
@@ -462,7 +445,6 @@
             t += line;
             t += `処理方法: ${data.paymentMethod}\n`;
             t += line + `返品・返金を承りました\n`;
-            if (d.memo) t += `${d.memo}\n`;
 
         } else if (type === 'receipt') {
             t += `       レ シ ー ト \n\n`;
@@ -484,7 +466,20 @@
             
             // 税抜小計の算出（割引前の税抜合計）
             const details = data.taxDetails || {};
-            const originalExclTotal = Object.values(details).reduce((a, b) => a + (b.originalExcl || b.subtotal || 0), 0);
+            // --- generatePreview 関数内の金額集計ロジックを修正 ---
+
+            // 1. 全税率のデータを取得 (finalTaxDetails を優先、なければ taxDetails)
+            const targetDetails = data.finalTaxDetails || data.taxDetails || {};
+            
+            // 2. 小計(税抜)の算出：割引前の「税抜金額」をすべて足す
+            const originalExclTotal = Object.values(targetDetails).reduce((sum, val) => {
+                if (typeof val === 'object') {
+                    // オブジェクト形式の場合: originalExcl > subtotal > excl の順で探す
+                    return sum + (Number(val.originalExcl) || Number(val.subtotal) || Number(val.excl) || 0);
+                }
+                // 数値形式（旧データ）の場合
+                return sum + (Number(val) || 0);
+            }, 0);
             
             t += formatLine("小計(税抜)", `¥${originalExclTotal.toLocaleString()}`);
 
@@ -492,17 +487,26 @@
                 const dName = data.discountName || "割引";
                 t += formatLine(`割引(${dName})`, `-¥${(data.discount || 0).toLocaleString()}`);
                 
-                // 割引後小計（税抜）の算出
-                const afterDiscountExclTotal = Object.values(details).reduce((a, b) => a + (b.excl || 0), 0);
-                t += formatLine("割引後小計(税抜)", `¥${afterDiscountExclTotal.toLocaleString()}`);
+                // 3. 割引後小計(税抜)の算出：割引適用後の「税抜金額」をすべて足す
+                const afterDiscountExclTotal = Object.values(targetDetails).reduce((sum, val) => {
+                    if (typeof val === 'object') {
+                        // excl が割引後の税抜額
+                        return sum + (Number(val.excl) || Number(val.subtotal) || 0);
+                    }
+                    // 数値形式の場合、discountを引いた値を概算（または記録がないのでそのまま）
+                    return sum + (Number(val) || 0);
+                }, 0);
+                
+                // 履歴データにおいて afterDiscountExclTotal が originalExclTotal と同じ（割引適用前）だった場合の補正
+                const finalExcl = (afterDiscountExclTotal === originalExclTotal) 
+                    ? originalExclTotal - (data.discount / 1.1) // 概算で税抜割引を引く
+                    : afterDiscountExclTotal;
+
+                t += formatLine("割引後小計(税抜)", `¥${Math.round(finalExcl).toLocaleString()}`);
             }
 
             t += formatLine("合計(税込)", `¥${(data.totalAmount || 0).toLocaleString()}`);
             t += line;
-
-
-            // --- 最終修正版：finalTaxDetails のオブジェクト構造に対応 ---
-            const targetDetails = data.finalTaxDetails || data.taxDetails || {};
 
             Object.keys(targetDetails).map(Number).sort((a, b) => b - a).forEach(rate => {
                 const val = targetDetails[rate];
@@ -536,7 +540,7 @@
             t += line;
             t += `※ *の後の数字は税率です\n`;
             t += `ありがとうございました\n`;
-            if (d.memo) t += `${d.memo}\n`;
+            if (d.memo) t += formatLine(`${d.memo}\n`);
 
         } else {
             // 領収書
@@ -809,6 +813,54 @@
             }
         });
     });
+
+    // finalizeTransaction 関数内の該当箇所を差し替え
+    function finalizeTransaction() {
+        playSnd('snd-beep2');
+        const now = new Date();
+        lastHistoryId = Date.now();
+
+        const methodSummary = paymentDetails.map(p => p.method).join('・');
+
+        // order.finalCalculated.details が正しく生成されているか確認しつつ代入
+        const historyEntry = {
+            id: lastHistoryId,
+            items: order.items,
+            subtotal: order.totalAmount,
+            taxDetails: order.taxDetails, 
+            finalTaxDetails: order.finalCalculated.details, // ★ここが重要
+            discount: discountVal,
+            discountName: window.currentDiscountName || "",
+            totalAmount: order.finalCalculated.total,
+            paymentMethod: methodSummary,
+            paymentDetails: JSON.parse(JSON.stringify(paymentDetails)), 
+            cashReceived: paymentDetails.reduce((sum, p) => sum + p.cashReceived, 0),
+            change: paymentDetails.reduce((sum, p) => sum + p.change, 0),
+            createdAt: now.toISOString(),
+            isVoided: false,
+            receiptIssued: false,
+            billIssued: false,
+            date: now // generateContentで使うためにDateオブジェクトも保持
+        };
+
+        // グローバル変数に即座に代入（これでundefinedを防ぐ）
+        window.currentPaymentData = historyEntry;
+
+        let history = JSON.parse(localStorage.getItem(STORAGE_KEYS.HISTORY) || '[]');
+        history.push(historyEntry);
+        localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(history));
+
+        const msgArea = document.getElementById('paymentResultMsg');
+        const totalChange = historyEntry.change;
+        msgArea.innerHTML = "";
+        if (totalChange > 0) {
+            msgArea.innerHTML += `<div style="color: var(--danger); font-size: 1.5rem; font-weight: 900;">お釣り: ¥${totalChange.toLocaleString()}</div>`;
+        }
+        
+        sessionStorage.removeItem('currentOrder');
+        generateContent('receipt'); 
+        openModal('receiptModal');
+    }   
 </script>
 </body>
 </html>
