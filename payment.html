@@ -796,7 +796,7 @@
             t += line;
             t += `※ *の後の数字は税率です\n`;
             t += `ありがとうございました\n`;
-            if (d.memo) t += `${d.memo}\n`;
+            if (d.memo) t += formatLine(`${d.memo}`);
 
         } else {
             // 領収書
