@@ -677,7 +677,7 @@
             header.push(`${rate}%対象(税抜)`);
             header.push(`${rate}%内消費税`);
         });
-        header.push("最終合計", "支払方法", "取引状態", "レシート発行", "領収書発行");
+        header.push("最終合計", "支払方法", "取引状態", "レシート発行", "領収書発行", "払戻伝票発行");
 
         let csv = "\uFEFF" + header.map(h => `"${h}"`).join(",") + "\n";
 
@@ -710,7 +710,7 @@
                 ? (h.refundReceiptIssued ? "済" : "未") 
                 : (h.receiptIssued ? "済" : "未");
             const billTxt = h.billIssued ? "済" : "未";
-            
+            const refundTxt = (isRefund && h.refundReceiptIssued) ? "済" : "未";
             // 割引名の取得（なければ空文字）
             const discName = h.discountName || "";
 
@@ -739,7 +739,8 @@
                 `"${h.paymentMethod}"`,
                 `"${voidTxt}"`,
                 `"${receiptTxt}"`,
-                `"${billTxt}"`
+                `"${billTxt}"`,
+                `"${refundTxt}"`
             );
 
             csv += row.join(",") + "\n";
