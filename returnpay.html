@@ -474,8 +474,8 @@
             subtotal: -order.totalAmount,
             taxDetails: order.taxDetails, 
             finalTaxDetails: order.finalCalculated.details,
-            discount: -discountVal,
-            discountName: (window.currentDiscountName || "") + " (返金時適用)",
+            discount: discountVal,
+            discountName: (window.currentDiscountName || ""),
             totalAmount: -finalTotal, 
             paymentMethod: "返金", 
             cashReceived: finalTotal,
@@ -638,7 +638,6 @@
         t += `処理方法: ${info.paymentMethod}\n`;
         // お預かり・お釣りの表示は返金時は不要なためカット
         t += line + `返品・返金を承りました\n`;
-        if (d.memo) t += `${d.memo}\n`;
 
         receiptPreview.innerHTML = t;
     };
