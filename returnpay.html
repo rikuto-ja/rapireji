@@ -219,6 +219,7 @@
     let discountVal = 0, keypadBuffer = "0", keypadMode = "";
     let discountUnit = "¥";
     let lastHistoryId = null;
+    let tempRefundMemo = "";
     
     // 状態管理用
     window.discountCounts = {}; 
@@ -639,6 +640,11 @@
         // お預かり・お釣りの表示は返金時は不要なためカット
         t += line + `返品・返金を承りました\n`;
 
+        if (tempRefundMemo) {
+            t += line;
+            t += formatLine(tempRefundMemo, "");
+        }
+
         receiptPreview.innerHTML = t;
     };
 
@@ -693,6 +699,45 @@
 
     window.openModal = (id) => document.getElementById(id).classList.remove('hidden');
     window.closeModal = (id) => document.getElementById(id).classList.add('hidden');
+
+    // --- ボタンのイベント制御（DOMContentLoaded内、または末尾へ） ---
+    const btnPrintRefund = document.getElementById('btnPrintReceipt');
+    let refundLongPressTimer;
+    let isRefundLongPress = false;
+
+    const startRefundPress = (e) => {
+        isRefundLongPress = false;
+        refundLongPressTimer = setTimeout(() => {
+            isRefundLongPress = true;
+            const memo = prompt("伝票に記載するメモを入力してください", "");
+            if (memo !== null) {
+                tempRefundMemo = memo;
+                generateContent('receipt');
+                updateHistoryFlag('refundReceiptIssued');
+                window.print();
+            }
+        }, 500);
+    };
+
+    const endRefundPress = (e) => {
+        clearTimeout(refundLongPressTimer);
+        if (!isRefundLongPress && (e.type === 'mouseup' || e.type === 'touchend')) {
+            tempRefundMemo = ""; // 通常クリック時はメモをクリア
+            generateContent('receipt');
+            updateHistoryFlag('refundReceiptIssued');
+            window.print();
+        }
+    };
+
+    // 既存の onclick は無効化してリスナーを登録
+    btnPrintRefund.onclick = null;
+    btnPrintRefund.addEventListener('mousedown', startRefundPress);
+    btnPrintRefund.addEventListener('mouseup', endRefundPress);
+    btnPrintRefund.addEventListener('touchstart', startRefundPress, {passive: false});
+    btnPrintRefund.addEventListener('touchend', (e) => {
+        e.preventDefault(); 
+        endRefundPress(e);
+    });
 </script>
 </body>
 </html>
