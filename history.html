@@ -707,7 +707,7 @@
             /* --- 修正後（このように貼り付ける） --- */
             const isRefund = (h.paymentMethod === '返金');
             const receiptTxt = isRefund 
-                ? (h.refundReceiptIssued ? "済(払戻)" : "未(払戻)") 
+                ? (h.refundReceiptIssued ? "済" : "未") 
                 : (h.receiptIssued ? "済" : "未");
             const billTxt = h.billIssued ? "済" : "未";
             
