@@ -690,8 +690,8 @@
             const details = h.taxDetails || {};
             let calculatedTaxTotal = 0;
             Object.keys(details).forEach(rate => {
-                const sub = details[rate]; // その税率の税抜対象額
-                const tax = Math.floor(sub * (Number(rate) / 100)); // 税額計算
+                const sub = details[rate]; 
+                const tax = Math.floor(sub * (Number(rate) / 100)); 
                 calculatedTaxTotal += tax;
             });
 
@@ -704,14 +704,22 @@
                 voidTxt = "払戻";
             }
             
-            /* --- 修正後（このように貼り付ける） --- */
+            // --- 修正箇所：取引種別による表示の切り分け ---
             const isRefund = (h.paymentMethod === '返金');
-            const receiptTxt = isRefund 
-                ? (h.refundReceiptIssued ? "済" : "未") 
-                : (h.receiptIssued ? "済" : "未");
-            const billTxt = h.billIssued ? "済" : "未";
-            const refundTxt = (isRefund && h.refundReceiptIssued) ? "済" : "未";
-            // 割引名の取得（なければ空文字）
+            let receiptTxt, billTxt, refundTxt;
+
+            if (isRefund) {
+                // 払戻（返金）取引の場合
+                receiptTxt = "--"; 
+                billTxt = "--";
+                refundTxt = h.refundReceiptIssued ? "済" : "未";
+            } else {
+                // 通常取引の場合
+                receiptTxt = h.receiptIssued ? "済" : "未";
+                billTxt = h.billIssued ? "済" : "未";
+                refundTxt = "--";
+            }
+            
             const discName = h.discountName || "";
 
             // 基本情報
@@ -720,7 +728,7 @@
                 `"${itemDetail}"`,
                 h.subtotal || 0,
                 h.discount || 0,
-                `"${discName}"`, // ここに割引名を追加
+                `"${discName}"`, 
                 finalNetTotal,
                 calculatedTaxTotal
             ];
@@ -729,8 +737,8 @@
             sortedRates.forEach(rate => {
                 const sub = details[rate] || 0;
                 const tax = sub > 0 ? Math.floor(sub * (Number(rate) / 100)) : 0;
-                row.push(sub); // 税抜
-                row.push(tax); // 内消費税
+                row.push(sub); 
+                row.push(tax); 
             });
 
             // 残りの情報
