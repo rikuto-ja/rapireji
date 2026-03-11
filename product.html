@@ -20,7 +20,7 @@
             align-items: center; 
             padding: env(safe-area-inset-top) 20px 0 20px; 
             background: var(--white);
-            position: sticky; 
+            position: fixed; 
             top: 0; 
             z-index: 1100;
             justify-content: space-between;
@@ -170,6 +170,10 @@
         #categoryList input {
             padding: 5px;
             font-size: 0.9rem;
+        }
+
+        main.container {
+            padding-top: calc(var(--header-h) + env(safe-area-inset-top) + 10px);
         }
     </style>
 </head>
@@ -834,6 +838,13 @@
                 }, 2000);
             }
         }, 150);
+    };
+
+    openSearch.onclick = () => {
+        searchWrapper.classList.add('open');
+        searchInput.focus();
+        // キーボード表示時に画面が勝手にスクロールするのを防ぐ
+        window.scrollTo(0, 0); 
     };
 </script>
 </body>
