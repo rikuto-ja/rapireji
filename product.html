@@ -62,7 +62,7 @@
         .side-nav.hidden { transform: translateX(-100%); }
         .menu-link { display: block; padding: 15px; color: var(--black); font-weight: 800; text-decoration: none; border-bottom: 1px solid var(--gray-light); }
 
-        .container { flex: 1; overflow-y: auto; padding: 10px; background: var(--gray-bg); display: flex; flex-direction: column; }
+        .container { flex: 1; overflow-y: auto; padding: 10px; background: var(--gray-bg); }
         .category-bar { 
             display: flex; gap: 8px; margin-bottom: 10px; overflow-x: auto; padding-bottom: 10px; 
             position: relative; align-items: center; 
@@ -171,16 +171,6 @@
             padding: 5px;
             font-size: 0.9rem;
         }
-
-        .action-controls {
-            position: sticky;
-            top: -10px; /* containerのpadding分を相殺 */
-            background: var(--gray-bg);
-            z-index: 900;
-            padding-bottom: 10px;
-            margin-bottom: 10px;
-            border-bottom: 1px solid var(--gray-light);
-        }
     </style>
 </head>
 <body>
@@ -204,22 +194,19 @@
 </nav>
 
 <main class="container">
-    <div class="action-controls">
-        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-            <button id="open-cat-modal-btn" class="btn-outline" style="width: auto; padding: 10px 25px; margin: 0;">カテゴリ管理</button>
-            <button class="search-btn" id="openSearch">🔍</button>
-        </div>
-        
-        <div style="position: relative;">
-            <div class="category-bar" id="categoryTabs" style="margin-bottom: 0;"></div>
-            <div class="search-container" id="searchWrapper">
-                <input type="text" class="search-input" id="searchInput" placeholder="商品名またはJANコードで検索...">
-                <div class="search-close" id="closeSearch">✕</div>
-                <div class="search-results hidden" id="searchResults"></div>
-            </div>
+    <div style="margin-bottom: 20px;">
+        <button id="open-cat-modal-btn" class="btn-outline" style="width: auto; padding: 10px 25px;">カテゴリ管理</button>
+        <button class="search-btn" id="openSearch">🔍</button>
+    </div>
+    <div style="position: relative;">
+        <div class="category-bar" id="categoryTabs"></div>
+        <div class="search-container" id="searchWrapper">
+            <input type="text" class="search-input" id="searchInput" placeholder="商品名またはJANコードで検索...">
+            <div class="search-close" id="closeSearch">✕</div>
+            <div class="search-results hidden" id="searchResults"></div>
         </div>
     </div>
-
+    <div class="category-bar" id="categoryTabs"></div>
     <div class="productGrid" id="productGrid"></div>
 </main>
 
@@ -246,7 +233,1685 @@
             <div class="form-group full">
                 <label style="display: flex; justify-content: space-between; align-items: center;">
                     JANコード 
-                    <span onclick="goToScan()" style="color: var(--black); text-decoration: underline; font-size: 0.7rem; cursor: pointer;">[スキャンして入力]</span>
+                    <span onclick="goToScan()" style="color: blue; text-decoration: underline; font-size: 0.7rem; cursor: pointer;">[スキャンして入力]</span>
+                </label>
+                <input type="text" id="p-jan" placeholder="バーコード数値を入力">
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>カテゴリ</label>
+                <select id="p-category"></select>
+            </div>
+            <div class="form-group" id="stock-input-group">
+                <label>現在の商品在庫数</label>
+                <input type="number" id="p-stock" placeholder="0" min="0">
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group" style="flex: 2;">
+                <label>タグ説明</label>
+                <input type="text" id="p-tag" placeholder="例：年齢制限あり">
+            </div>
+            <div class="form-group" style="flex: 1;">
+                <label>画像URL</label>
+                <input type="text" id="p-image-url" placeholder="https://...">
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>仕入れ先URL</label>
+                <input type="text" id="p-purchase-url" placeholder="URLを入力">
+            </div>
+        </div>
+        <div id="image-preview-container" style="display: none; text-align: center; margin-bottom: 10px;">
+            <img id="p-preview" src="" style="width: 80px; height: 80px; object-fit: cover; border: 2px solid #000;">
+        </div>
+        <div style="display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap;">
+            <button id="save-product-btn" class="btn-black" style="flex: 2; min-width: 150px;">保存する</button>
+            <button id="delete-product-btn" class="btn-danger hidden" style="flex: 1; min-width: 80px;">削除</button>
+            <button id="close-product-modal-btn" class="btn-outline" style="flex: 1; min-width: 80px;">閉じる</button>
+        </div>
+    </div>
+</div>
+
+<div id="categoryModal" class="modal hidden">
+    <div class="modal-content" style="width: 500px;">
+        <h2 style="margin-bottom:15px;">カテゴリ管理</h2>
+        <div style="display: flex; gap: 5px; margin-bottom: 15px;">
+            <input type="text" id="new-cat-name" placeholder="カテゴリ名" style="margin:0;">
+            <button id="add-cat-btn" class="btn-black" style="width: auto; margin:0; padding: 0 20px;">追加</button>
+        </div>
+        <div id="categoryList" style="max-height: 200px; overflow-y: auto; border: 2px solid #000; margin-bottom: 10px;"></div>
+        <button id="close-cat-modal-btn" class="btn-outline">閉じる</button>
+    </div>
+</div>
+
+<script>
+    const STORAGE_KEYS = {
+        PRODUCTS: 'rapireji_products',
+        CATEGORIES: 'rapireji_categories',
+        STOCK_CONFIG: 'rapireji_stock_config'
+    };
+
+    let allProducts = JSON.parse(localStorage.getItem(STORAGE_KEYS.PRODUCTS) || '[]');
+    let categories = JSON.parse(localStorage.getItem(STORAGE_KEYS.CATEGORIES) || '[]');
+    
+    const savedStockConfig = localStorage.getItem(STORAGE_KEYS.STOCK_CONFIG);
+    let stockConfig = savedStockConfig ? JSON.parse(savedStockConfig) : { enabled: false };
+    let isStockEnabled = stockConfig.enabled;
+
+    let currentCategory = "";
+    let editingProductId = null;
+    let targetIndex = null;
+    const DEFAULT_CAT = "未分類";
+
+    document.addEventListener('DOMContentLoaded', () => {
+        ensureDefaultCategory();
+        loadData();
+    });
+
+    function ensureDefaultCategory() {
+        if (categories.length === 0) {
+            categories.push({ id: 'default', name: DEFAULT_CAT });
+            saveCategories();
+        } else if (!categories.some(c => c.name === DEFAULT_CAT)) {
+            categories.push({ id: 'default', name: DEFAULT_CAT });
+            saveCategories();
+        }
+    }
+
+    // カテゴリを上に移動
+    window.moveCatUp = (id) => {
+        const idx = categories.findIndex((c, i) => (c.id || i) == id);
+        if (idx > 0) {
+            [categories[idx], categories[idx - 1]] = [categories[idx - 1], categories[idx]];
+            saveCategories();
+            loadData();
+        }
+    };
+
+    // カテゴリを下に移動
+    window.moveCatDown = (id) => {
+        const idx = categories.findIndex((c, i) => (c.id || i) == id);
+        if (idx < categories.length - 1) {
+            [categories[idx], categories[idx + 1]] = [categories[idx + 1], categories[idx]];
+            saveCategories();
+            loadData();
+        }
+    };
+
+    // カテゴリのドラッグ開始
+    window.handleCatDragStart = (e, id) => {
+        e.dataTransfer.setData("text/plain", id);
+        e.currentTarget.style.opacity = '0.5';
+    };
+
+    // カテゴリのドラッグ終了
+    window.handleCatDragEnd = (e) => {
+        e.currentTarget.style.opacity = '1';
+    };
+
+    // カテゴリのドロップ処理
+    window.handleCatDrop = (e, targetId) => {
+        e.preventDefault();
+        const draggedId = e.dataTransfer.getData("text/plain");
+        if (draggedId === targetId) return;
+
+        const draggedIdx = categories.findIndex((c, i) => (c.id || i) == draggedId);
+        const targetIdx = categories.findIndex((c, i) => (c.id || i) == targetId);
+
+        if (draggedIdx !== -1 && targetIdx !== -1) {
+            // 要素を入れ替え
+            const [removed] = categories.splice(draggedIdx, 1);
+            categories.splice(targetIdx, 0, removed);
+            
+            saveCategories();
+            loadData();
+        }
+    };
+
+    function loadData() {
+        const bar = document.getElementById('categoryTabs'), 
+              select = document.getElementById('p-category'), 
+              list = document.getElementById('categoryList');
+        bar.innerHTML = ""; select.innerHTML = ""; list.innerHTML = "";
+        
+        categories.forEach((cat, idx) => {
+            const name = cat.name;
+            const id = cat.id || idx;
+            
+            const btn = document.createElement('button');
+            btn.className = "cat-tab"; btn.textContent = name;
+            btn.draggable = true; 
+            btn.dataset.id = id;
+            btn.onclick = () => switchCategory(name);
+
+            // ドラッグ開始
+            btn.ondragstart = (e) => {
+                e.dataTransfer.setData("text/plain", id);
+                btn.classList.add('dragging');
+            };
+    
+            // ドラッグ終了
+            btn.ondragend = () => {
+                btn.classList.remove('dragging');
+            };
+
+            // ドロップを許可
+            btn.ondragover = (e) => {
+                e.preventDefault(); // これがないとdropイベントが動かない
+            };
+
+            // ドロップした時
+            btn.ondrop = (e) => {
+                e.preventDefault();
+                const draggedId = e.dataTransfer.getData("text/plain");
+                const targetId = id;
+        
+                if (draggedId == targetId) return;
+
+                // カテゴリ配列の並び替えロジック
+                const draggedIdx = categories.findIndex((c, i) => (c.id || i) == draggedId);
+                const targetIdx = categories.findIndex((c, i) => (c.id || i) == targetId);
+
+                if (draggedIdx !== -1 && targetIdx !== -1) {
+                    const [removed] = categories.splice(draggedIdx, 1);
+                    categories.splice(targetIdx, 0, removed);
+            
+                    saveCategories();
+                    loadData(); // 再描画
+                }
+            };
+
+            bar.appendChild(btn);
+
+            const opt = document.createElement('option'); 
+            opt.value = name; opt.textContent = name; 
+            select.appendChild(opt);
+
+            const li = document.createElement('div');
+            // 背景色とカーソルを指定して「動かせる感」を出します
+            li.style = "display:flex; gap:10px; padding:8px; border-bottom:1px solid #eee; align-items:center; cursor:move; background:#fff;";
+            li.draggable = true;
+
+            // ドラッグイベントの紐付け
+            li.ondragstart = (e) => handleCatDragStart(e, id);
+            li.ondragend = (e) => handleCatDragEnd(e);
+            li.ondragover = (e) => e.preventDefault();
+            li.ondrop = (e) => handleCatDrop(e, id);
+
+            li.innerHTML = `
+                <div style="display:flex; flex-direction:column; gap:2px; cursor:default;">
+                    <button onclick="moveCatUp('${id}')" style="font-size:10px; cursor:pointer; background:var(--black); color:var(--white); border:none; padding:2px; width:22px; height:18px; font-weight:bold;">▲</button>
+                    <button onclick="moveCatDown('${id}')" style="font-size:10px; cursor:pointer; background:var(--black); color:var(--white); border:none; padding:2px; width:22px; height:18px; font-weight:bold;">▼</button>
+                </div>
+                <input type="text" value="${name}" id="cat-edit-${id}" 
+                       style="flex:1;" 
+                       draggable="false" 
+                       onpointerdown="event.stopPropagation();" 
+                       onmousedown="event.stopPropagation();">
+                <button class="btn-black" onclick="updateCat('${id}')" style="width:auto; padding:5px 10px; font-size:0.7rem;">更新</button>
+                ${name !== DEFAULT_CAT ? `<button onclick="delCat('${id}')" style="color:red; cursor:pointer; background:none; border:none; font-size:0.7rem;">削除</button>` : '<span></span>'}
+            `;
+            list.appendChild(li);
+        });
+
+        // loadData関数の最後の方、switchCategoryを呼んでいる部分を以下に差し替え
+        if (currentCategory && categories.some(c => c.name === currentCategory)) {
+            switchCategory(currentCategory); // 現在のカテゴリを維持して色を付ける
+        } else {
+            switchCategory(categories[0].name); // なければ最初のカテゴリへ
+        }
+        renderGrid();
+    }
+
+    function switchCategory(name) {
+        currentCategory = name;
+        document.querySelectorAll('.cat-tab').forEach(t => t.classList.toggle('active', t.textContent === name));
+        renderGrid();
+    }
+
+    function renderGrid() {
+        const grid = document.getElementById('productGrid'); grid.innerHTML = "";
+        const filtered = allProducts.filter(p => p.category === currentCategory && p.isActive !== false);
+        
+        for (let i = 0; i < 50; i++) {
+            const p = filtered.find(item => item.index === i);
+            const div = document.createElement('div');
+            
+            const isOutOfStock = isStockEnabled && p && p.stock !== undefined && Number(p.stock) <= 0;
+            div.className = p ? (isOutOfStock ? "product-item out-of-stock" : "product-item") : "product-item empty-slot";
+            
+            div.draggable = !!p;
+            
+            if (p) {
+                // 税込価格を計算（税抜価格 * (1 + 税率/100)）
+                const taxRate = p.taxRate ?? 0;
+                const priceInclTax = Math.floor(Number(p.price) * (1 + taxRate / 100));
+                const stockBadge = isStockEnabled ? `<span class="product-stock-badge">残:${p.stock || 0}</span>` : "";
+
+                // まるごとHTMLを構築する
+                div.innerHTML = `
+                    ${isOutOfStock ? '<div class="out-of-stock-label">終了</div>' : ''}
+                    <img src="${p.imageUrl || ''}" class="product-image" onerror="this.style.visibility='hidden'">
+                    <div class="product-info">
+                        <strong>${p.name}</strong>
+                        <span>¥${priceInclTax.toLocaleString()}</span>
+                        ${stockBadge}
+                    </div>`;
+
+                div.onclick = () => openModal(p, i);
+
+                div.ondragstart = (e) => {
+                    e.dataTransfer.setData("text/plain", p.id);
+                    div.classList.add('dragging');
+                };
+                div.ondragend = () => div.classList.remove('dragging');
+            } else {
+                div.innerHTML = "＋"; div.onclick = () => openModal(null, i);
+            }
+
+            div.ondragover = (e) => e.preventDefault();
+            div.ondrop = (e) => {
+                e.preventDefault();
+                const draggedId = e.dataTransfer.getData("text/plain");
+                if (!draggedId) return;
+
+                const isOccupied = allProducts.some(item => 
+                    item.category === currentCategory && item.index === i && item.id != draggedId && item.isActive !== false
+                );
+
+                if (isOccupied) {
+                    alert("移動先にはすでに商品があります。");
+                    return;
+                }
+
+                const productIdx = allProducts.findIndex(item => item.id == draggedId);
+                if (productIdx !== -1) {
+                    allProducts[productIdx].index = i;
+                    saveProducts();
+                    renderGrid();
+                }
+            };
+
+            grid.appendChild(div);
+        }
+    }
+
+    // --- 以下、管理用ロジック（変更なし） ---
+    function openModal(p, index) {
+        editingProductId = p ? p.id : null; targetIndex = index;
+        document.getElementById('modalTitle').innerText = p ? "商品編集" : "新規登録";
+        document.getElementById('p-name').value = p ? p.name : "";
+        document.getElementById('p-price').value = p ? p.price : "";
+        document.getElementById('p-tax-rate').value = p ? (p.taxRate ?? 0) : 0; 
+        document.getElementById('p-jan').value = p ? (p.jan || "") : "";
+        document.getElementById('p-category').value = p ? p.category : (currentCategory || DEFAULT_CAT);
+        
+        const stockInputGroup = document.getElementById('stock-input-group');
+        if (isStockEnabled) {
+            stockInputGroup.classList.remove('hidden');
+            document.getElementById('p-stock').value = p ? (p.stock || 0) : 0;
+        } else {
+            stockInputGroup.classList.add('hidden');
+        }
+
+        document.getElementById('p-tag').value = p ? (p.tag || "") : "";
+        document.getElementById('p-image-url').value = p ? (p.imageUrl || "") : "";
+        document.getElementById('p-purchase-url').value = p ? (p.purchaseUrl || "") : "";
+        
+        const url = p ? p.imageUrl : "";
+        document.getElementById('image-preview-container').style.display = url ? 'block' : 'none';
+        document.getElementById('p-preview').src = url;
+        
+        document.getElementById('delete-product-btn').classList.toggle('hidden', !p);
+        document.getElementById('productModal').classList.remove('hidden');
+    }
+
+    document.getElementById('p-image-url').oninput = (e) => {
+        const url = e.target.value;
+        document.getElementById('image-preview-container').style.display = url ? 'block' : 'none';
+        document.getElementById('p-preview').src = url;
+    };
+
+    document.getElementById('save-product-btn').onclick = () => {
+        const name = document.getElementById('p-name').value;
+        const price = Number(document.getElementById('p-price').value);
+        const taxRate = Number(document.getElementById('p-tax-rate').value || 0);
+        const jan = document.getElementById('p-jan').value || "";
+        let newCategory = document.getElementById('p-category').value || DEFAULT_CAT;
+              
+        if (!name || isNaN(price)) return alert("正しく入力してください");
+
+        let finalIndex = targetIndex;
+        const oldProduct = editingProductId ? allProducts.find(p => p.id === editingProductId) : null;
+
+        if (!oldProduct || oldProduct.category !== newCategory) {
+            const isOccupied = allProducts.some(p => p.category === newCategory && p.index === finalIndex && p.isActive !== false);
+            if (isOccupied) {
+                let foundEmpty = false;
+                for (let i = 0; i < 50; i++) {
+                    if (!allProducts.some(p => p.category === newCategory && p.index === i && p.isActive !== false)) {
+                        finalIndex = i;
+                        foundEmpty = true;
+                        break;
+                    }
+                }
+                if (!foundEmpty) return alert("遷移先のカテゴリが満杯です");
+            }
+        }
+
+        const data = {
+            id: editingProductId || Date.now(),
+            name, price, taxRate, jan, category: newCategory,
+            stock: isStockEnabled ? Number(document.getElementById('p-stock').value) : (editingProductId ? (oldProduct?.stock || 0) : 0),
+            tag: document.getElementById('p-tag').value,
+            imageUrl: document.getElementById('p-image-url').value,
+            purchaseUrl: document.getElementById('p-purchase-url').value,
+            index: finalIndex,
+            isActive: true,
+            updatedAt: new Date().toISOString()
+        };
+
+        if (editingProductId) {
+            const idx = allProducts.findIndex(p => p.id === editingProductId);
+            allProducts[idx] = data;
+        } else {
+            allProducts.push(data);
+        }
+
+        saveProducts();
+        document.getElementById('productModal').classList.add('hidden');
+        loadData();
+    };
+
+    document.getElementById('delete-product-btn').onclick = () => {
+        if(confirm("削除しますか？")) { 
+            const idx = allProducts.findIndex(p => p.id === editingProductId);
+            if (idx !== -1) {
+                allProducts.splice(idx, 1);
+                saveProducts();
+            }
+            document.getElementById('productModal').classList.add('hidden'); 
+            renderGrid();
+        }
+    };
+
+    window.updateCat = (id) => {
+        const newVal = document.getElementById(`cat-edit-${id}`).value.trim();
+        if (!newVal) return;
+        const catIdx = categories.findIndex((c, i) => (c.id || i) == id);
+        const oldName = categories[catIdx].name;
+        categories[catIdx].name = newVal;
+        allProducts.forEach(p => { if (p.category === oldName) p.category = newVal; });
+        saveCategories(); saveProducts();
+        if (currentCategory === oldName) currentCategory = newVal;
+        loadData();
+    };
+
+    window.delCat = (id) => {
+        const cat = categories.find((c, i) => (c.id || i) == id);
+        if (cat.name === DEFAULT_CAT) return alert("未分類カテゴリは削除できません");
+        if (confirm("カテゴリを削除しますか？(このカテゴリ内の商品も削除されます）)")) {
+            const catIdx = categories.findIndex((c, i) => (c.id || i) == id);
+            categories.splice(catIdx, 1);
+            saveCategories(); 
+            loadData();
+        }
+    };
+
+    document.getElementById('add-cat-btn').onclick = () => {
+        const name = document.getElementById('new-cat-name').value.trim();
+        if(!name) return;
+        categories.push({ id: Date.now(), name: name });
+        saveCategories();
+        document.getElementById('new-cat-name').value = ""; 
+        loadData();
+    };
+
+    function saveProducts() { localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(allProducts)); }
+    function saveCategories() { localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(categories)); }
+
+    document.getElementById('close-product-modal-btn').onclick = () => document.getElementById('productModal').classList.add('hidden');   
+    // スクリプトの一番下の方にあるイベントリスナーを修正
+    document.getElementById('close-cat-modal-btn').onclick = () => {
+        document.getElementById('categoryModal').classList.add('hidden');
+        loadData(); // 閉じるときに再読み込みしてハイライトを確実に適用
+    };
+    document.getElementById('open-cat-modal-btn').onclick = () => document.getElementById('categoryModal').classList.remove('hidden');
+
+    const menuBtn = document.getElementById('menu-btn');
+    menuBtn.onclick = () => { 
+        menuBtn.classList.toggle('open'); 
+        document.getElementById('side-menu').classList.toggle('hidden'); 
+    };
+
+    // --- 現在のページをメニューで強調表示する処理 ---
+    document.addEventListener('DOMContentLoaded', () => {
+        const currentPath = window.location.pathname.split("/").pop();
+        const menuLinks = document.querySelectorAll('.menu-link');
+
+        menuLinks.forEach(link => {
+            const linkPath = link.getAttribute('href');
+            // 現在のファイル名と href が一致したら 'active' クラスをつける
+            if (currentPath === linkPath) {
+                link.classList.add('active');
+            }
+        });
+    });
+
+    // --- スキャンからの戻り判定と自動復元ロジック ---
+    window.addEventListener('pageshow', () => {
+        const scannedCode = localStorage.getItem('last_scanned_barcode');
+        const returnFromScan = sessionStorage.getItem('is_scanning_mode');
+
+        if (scannedCode && returnFromScan) {
+            sessionStorage.removeItem('is_scanning_mode');
+            
+            const tempState = JSON.parse(sessionStorage.getItem('temp_product_state') || '{}');
+            
+            // 1. まずモーダルを開く（IDの有無で編集/新規を判定）
+            const p = tempState.id ? allProducts.find(item => item.id == tempState.id) : null;
+            openModal(p, tempState.index || 0);
+
+            // 2. 保存されていたフォームの値を復元する
+            if (tempState.form) {
+                document.getElementById('p-name').value = tempState.form.name || "";
+                document.getElementById('p-price').value = tempState.form.price || "";
+                document.getElementById('p-tax-rate').value = tempState.form.taxRate || 0;
+                document.getElementById('p-category').value = tempState.form.category || "";
+                document.getElementById('p-stock').value = tempState.form.stock || 0;
+                document.getElementById('p-tag').value = tempState.form.tag || "";
+                document.getElementById('p-image-url').value = tempState.form.imageUrl || "";
+                document.getElementById('p-purchase-url').value = tempState.form.purchaseUrl || "";
+                
+                // 画像プレビューも再表示
+                if (tempState.form.imageUrl) {
+                    document.getElementById('image-preview-container').style.display = 'block';
+                    document.getElementById('p-preview').src = tempState.form.imageUrl;
+                }
+            }
+
+            // 3. スキャンしたコードをJAN欄に上書き
+            document.getElementById('p-jan').value = scannedCode;
+
+            // 使い終わったデータを削除
+            localStorage.removeItem('last_scanned_barcode');
+            sessionStorage.removeItem('temp_product_state');
+        }
+    });
+
+    // JANコード横の「スキャン」リンク（またはボタン）が押された時の処理
+    function goToScan() {
+        // 現在入力中の全項目を一時保存
+        const tempState = {
+            id: editingProductId,
+            index: targetIndex,
+            // 入力フォームの内容をすべて保存
+            form: {
+                name: document.getElementById('p-name').value,
+                price: document.getElementById('p-price').value,
+                taxRate: document.getElementById('p-tax-rate').value,
+                category: document.getElementById('p-category').value,
+                stock: document.getElementById('p-stock').value,
+                tag: document.getElementById('p-tag').value,
+                imageUrl: document.getElementById('p-image-url').value,
+                purchaseUrl: document.getElementById('p-purchase-url').value
+            }
+        };
+    
+        sessionStorage.setItem('temp_product_state', JSON.stringify(tempState));
+        sessionStorage.setItem('is_scanning_mode', 'true');
+        
+        // スキャン画面へ遷移
+        location.href = 'scan.html?mode=add';
+    }
+
+    // --- 検索機能のロジック ---
+    const openSearch = document.getElementById('openSearch');
+    const closeSearch = document.getElementById('closeSearch');
+    const searchWrapper = document.getElementById('searchWrapper');
+    const searchInput = document.getElementById('searchInput');
+    const searchResults = document.getElementById('searchResults');
+
+    openSearch.onclick = () => {
+        searchWrapper.classList.add('open');
+        searchInput.focus();
+    };
+
+    closeSearch.onclick = () => {
+        searchWrapper.classList.remove('open');
+        searchResults.classList.add('hidden');
+        searchInput.value = "";
+    };
+
+    searchInput.oninput = (e) => {
+        const val = e.target.value.toLowerCase();
+        if (!val) {
+            searchResults.classList.add('hidden');
+            return;
+        }
+
+        // 全商品から検索（名前またはJAN）
+        const matches = allProducts.filter(p => 
+            (p.name && p.name.toLowerCase().includes(val)) || 
+            (p.jan && p.jan.includes(val))
+        ).slice(0, 10);
+
+        if (matches.length > 0) {
+            searchResults.innerHTML = matches.map(p => `
+                <div class="search-result-item" onclick="jumpToProduct('${p.category}', ${p.index})">
+                 ${p.name} <small style="color:#666;">(${p.category})</small>
+                </div>
+            `).join('');
+            searchResults.classList.remove('hidden');
+        } else {
+            searchResults.classList.add('hidden');
+        }
+    };
+
+    // 該当商品へジャンプする関数
+    window.jumpToProduct = (catName, index) => {
+        // 1. カテゴリを切り替え
+        switchCategory(catName);
+    
+        // 2. 検索窓を閉じる
+        closeSearch.onclick();
+
+        // 3. 描画を待ってからスクロール
+        setTimeout(() => {
+            const grid = document.getElementById('productGrid');
+            const items = grid.querySelectorAll('.product-item');
+            if (items[index]) {
+                items[index].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                // 強調演出
+                items[index].style.outline = "4px solid #ff0000";
+                items[index].style.zIndex = "10";
+                setTimeout(() => {
+                    items[index].style.outline = "none";
+                    items[index].style.zIndex = "1";
+                }, 2000);
+            }
+        }, 150);
+    };
+</script>
+</body>
+</html><!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>商品管理 | らぴレジ</title>
+    <style>
+        :root {
+            --black: #000000; --white: #ffffff; --gray-bg: #f8f9fa;
+            --gray-light: #e9ecef; --danger: #ff0000; --header-h: 60px;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; touch-action: manipulation; }
+        
+        body { background-color: var(--white); overflow: hidden; display: flex; flex-direction: column; height: 100vh; }
+        
+        header {
+            height: calc(var(--header-h) + env(safe-area-inset-top)); 
+            border-bottom: 3px solid var(--black);
+            display: flex; 
+            align-items: center; 
+            padding: env(safe-area-inset-top) 20px 0 20px; 
+            background: var(--white);
+            position: sticky; 
+            top: 0; 
+            z-index: 1100;
+            justify-content: space-between;
+        }
+        .header-left { display: flex; align-items: center; }
+        header h1 { font-size: 1.2rem; font-weight: 900; margin-left: 20px; white-space: nowrap; }
+        
+        .header-ad-space {
+            flex: 1; margin-left: 20px; height: 45px; background: #fff;
+            display: flex; align-items: center; justify-content: center;
+            overflow: hidden; border: 1px dashed #ccc;
+        }
+
+        .menu-trigger { width: 30px; height: 22px; cursor: pointer; position: relative; }
+        .menu-trigger span { display: block; width: 100%; height: 4px; background: var(--black); position: absolute; left: 0; transition: all 0.3s; }
+        .menu-trigger span:nth-child(1) { top: 0; }
+        .menu-trigger span:nth-child(2) { top: 9px; }
+        .menu-trigger span:nth-child(3) { top: 18px; }
+        .menu-trigger.open span:nth-child(1) { transform: translateY(9px) rotate(45deg); }
+        .menu-trigger.open span:nth-child(2) { opacity: 0; }
+        .menu-trigger.open span:nth-child(3) { transform: translateY(-9px) rotate(-45deg); }
+        .menu-link.active { background-color: transparent; color: var(--black); font-weight: 900; font-size: 1.1rem; border-left: 8px solid var(--black); padding-left: 7px; }
+        
+        .side-nav { 
+            position: fixed; 
+            top: var(--header-h); 
+            left: 0; 
+            width: 250px; 
+            height: calc(100% - var(--header-h)); 
+            padding-bottom: env(safe-area-inset-bottom); 
+            background: var(--white); 
+            border-right: 3px solid var(--black); 
+            z-index: 1050; 
+            transition: transform 0.3s; 
+            padding-left: 20px;
+            padding-right: 20px;
+            padding-top: 20px;
+        }
+        .side-nav.hidden { transform: translateX(-100%); }
+        .menu-link { display: block; padding: 15px; color: var(--black); font-weight: 800; text-decoration: none; border-bottom: 1px solid var(--gray-light); }
+
+        .container { flex: 1; overflow-y: auto; padding: 10px; background: var(--gray-bg); }
+        .category-bar { 
+            display: flex; gap: 8px; margin-bottom: 10px; overflow-x: auto; padding-bottom: 10px; 
+            position: relative; align-items: center; 
+        }
+        .cat-tab {
+            padding: 8px 16px; background: var(--white); border: 2px solid var(--black);
+            font-weight: 800; font-size: 0.8rem; cursor: pointer; white-space: nowrap; box-shadow: 2px 2px 0px var(--black);
+            border-radius: 0;
+        }
+        .cat-tab.active { background: var(--black); color: var(--white); transform: translate(1px, 1px); box-shadow: none; }
+        .cat-tab.dragging {
+            opacity: 0.5;
+            border: 2px dashed var(--black);
+        }
+
+        /* 検索バーのレイアウト調整 */
+        .search-btn { 
+            background: none; border: none; font-size: 1.2rem; cursor: pointer; 
+            flex-shrink: 0; padding: 0 10px; box-shadow: none;
+        }
+        .search-btn:active { transform: none; }
+        .search-container { 
+            display: none; position: absolute; left: 0; right: 0; top: 0; bottom: 10px; 
+            background: var(--gray-bg); z-index: 100; align-items: center; gap: 5px;
+        }
+        .search-container.open { display: flex; }
+        .search-input { 
+            flex: 1; height: 35px; border: 2px solid var(--black); padding: 0 10px; 
+            font-weight: 800; font-size: 0.9rem; outline: none; border-radius: 0;
+        }
+        .search-close { cursor: pointer; font-weight: 900; padding: 0 10px; }
+
+        /* 検索候補リスト */
+        .search-results {
+            position: absolute; top: 40px; left: 0; right: 0; 
+            background: white; border: 2px solid var(--black); 
+            z-index: 2000; max-height: 200px; overflow-y: auto; box-shadow: 4px 4px 0px rgba(0,0,0,0.2);
+        }
+        .search-result-item {
+            padding: 10px; border-bottom: 1px solid var(--gray-light); 
+            cursor: pointer; font-weight: 800; font-size: 0.85rem; color: var(--black);
+        }
+        .search-result-item:hover { background: var(--gray-light); }
+
+        /* 商品グリッドをレジ画面に合わせる */
+        .productGrid { 
+            display: grid; 
+            grid-template-columns: repeat(6, 1fr); 
+            gap: 8px; 
+            padding-bottom: 50px; 
+        }
+
+        .product-item {
+            min-height: 110px; background: var(--white); border: 2px solid var(--black);
+            display: flex; flex-direction: column; cursor: pointer; position: relative;
+            box-shadow: 2px 2px 0px var(--black); overflow: hidden;
+        }
+        .product-item:active { transform: translate(1px, 1px); box-shadow: none; }
+        
+        .product-item.out-of-stock { opacity: 0.5; background-color: #eee; }
+        .out-of-stock-label { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: red; color: white; padding: 2px 5px; font-size: 0.7rem; font-weight: 900; z-index: 10; pointer-events: none; }
+
+        .product-image { width: 100%; height: 55px; object-fit: cover; border-bottom: 1px solid var(--black); }
+        .product-info { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 800; font-size: 0.7rem; padding: 4px 2px; text-align: center; line-height: 1.2; }
+        .product-stock-badge { font-size: 0.6rem; color: #666; margin-top: 1px; }
+        
+        .empty-slot { min-height: 110px; border: 1px solid transparent; color: #ccc; justify-content: center; align-items: center; font-size: 1.5rem; display: flex; cursor: pointer; }
+
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 9999; }
+        .modal-content { 
+            background: var(--white); padding: 20px; border: 4px solid var(--black); 
+            width: 95%; max-width: 700px; max-height: 95vh; overflow-y: auto;
+            box-shadow: 10px 10px 0px var(--black);
+        }
+
+        .form-row { display: flex; gap: 15px; margin-bottom: 15px; flex-wrap: wrap; }
+        .form-group { flex: 1; min-width: 200px; }
+        .form-group.full { flex: 1 1 100%; }
+        label { display: block; font-weight: 900; font-size: 0.8rem; margin-bottom: 5px; }
+        
+        input, select { 
+            width: 100%; padding: 10px; border: 2px solid var(--black); font-size: 1rem; 
+            border-radius: 0;
+        }
+
+        .btn-black { background: var(--black); color: var(--white); border: none; padding: 15px; font-weight: 900; cursor: pointer; width: 100%; border-radius: 0; }
+        .btn-outline { background: var(--white); border: 2px solid var(--black); padding: 15px; font-weight: 900; cursor: pointer; width: 100%; border-radius: 0; }
+        .btn-danger { background: var(--white); color: var(--danger); border: 2px solid var(--danger); padding: 15px; font-weight: 900; cursor: pointer; width: 100%; border-radius: 0; }
+        .hidden { display: none !important; }
+
+        /* スマホレスポンシブ（レジ画面と統一） */
+        @media screen and (max-width: 768px) {
+            header { padding: 0 10px; }
+            header h1 { font-size: 0.9rem; margin-left: 10px; }
+            .header-ad-space { margin-left: 10px; height: 35px; min-width: 80px; font-size: 8px; }
+            
+            .productGrid { grid-template-columns: repeat(4, 1fr); }
+            .product-item { min-height: 95px; }
+            .product-image { height: 40px; }
+            .empty-slot { min-height: 95px; }
+        }
+        
+        .dragging { opacity: 0.5; border: 2px dashed #000; }
+
+        #categoryList input {
+            padding: 5px;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-left">
+        <div class="menu-trigger" id="menu-btn"><span></span><span></span><span></span></div>
+        <h1>商品管理</h1>
+    </div>
+    <div class="header-ad-space" id="ad-top">
+        <span style="color:#ccc; font-size: 8px; font-weight: 900;">AD</span>
+    </div>
+</header>
+
+<nav class="side-nav hidden" id="side-menu">
+    <a href="register.html" class="menu-link">レジ操作</a>
+    <a href="product.html" class="menu-link">商品管理</a>
+    <a href="stock.html" class="menu-link">在庫管理</a>
+    <a href="history.html" class="menu-link">販売履歴</a>
+    <a href="settings.html" class="menu-link">設定</a>
+</nav>
+
+<main class="container">
+    <div style="margin-bottom: 20px;">
+        <button id="open-cat-modal-btn" class="btn-outline" style="width: auto; padding: 10px 25px;">カテゴリ管理</button>
+        <button class="search-btn" id="openSearch">🔍</button>
+    </div>
+    <div style="position: relative;">
+        <div class="category-bar" id="categoryTabs"></div>
+        <div class="search-container" id="searchWrapper">
+            <input type="text" class="search-input" id="searchInput" placeholder="商品名またはJANコードで検索...">
+            <div class="search-close" id="closeSearch">✕</div>
+            <div class="search-results hidden" id="searchResults"></div>
+        </div>
+    </div>
+    <div class="category-bar" id="categoryTabs"></div>
+    <div class="productGrid" id="productGrid"></div>
+</main>
+
+<div id="productModal" class="modal hidden">
+    <div class="modal-content">
+        <h2 id="modalTitle" style="margin-bottom: 15px; font-weight: 900;">商品詳細設定</h2>
+        <div class="form-row">
+            <div class="form-group full">
+                <label>商品名</label>
+                <input type="text" id="p-name">
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>価格 (税抜き)</label>
+                <input type="number" id="p-price">
+            </div>
+            <div class="form-group">
+                <label>税率 (%)</label>
+                <input type="number" id="p-tax-rate" placeholder="0" min="0">
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group full">
+                <label style="display: flex; justify-content: space-between; align-items: center;">
+                    JANコード 
+                    <span onclick="goToScan()" style="color: blue; text-decoration: underline; font-size: 0.7rem; cursor: pointer;">[スキャンして入力]</span>
+                </label>
+                <input type="text" id="p-jan" placeholder="バーコード数値を入力">
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>カテゴリ</label>
+                <select id="p-category"></select>
+            </div>
+            <div class="form-group" id="stock-input-group">
+                <label>現在の商品在庫数</label>
+                <input type="number" id="p-stock" placeholder="0" min="0">
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group" style="flex: 2;">
+                <label>タグ説明</label>
+                <input type="text" id="p-tag" placeholder="例：年齢制限あり">
+            </div>
+            <div class="form-group" style="flex: 1;">
+                <label>画像URL</label>
+                <input type="text" id="p-image-url" placeholder="https://...">
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>仕入れ先URL</label>
+                <input type="text" id="p-purchase-url" placeholder="URLを入力">
+            </div>
+        </div>
+        <div id="image-preview-container" style="display: none; text-align: center; margin-bottom: 10px;">
+            <img id="p-preview" src="" style="width: 80px; height: 80px; object-fit: cover; border: 2px solid #000;">
+        </div>
+        <div style="display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap;">
+            <button id="save-product-btn" class="btn-black" style="flex: 2; min-width: 150px;">保存する</button>
+            <button id="delete-product-btn" class="btn-danger hidden" style="flex: 1; min-width: 80px;">削除</button>
+            <button id="close-product-modal-btn" class="btn-outline" style="flex: 1; min-width: 80px;">閉じる</button>
+        </div>
+    </div>
+</div>
+
+<div id="categoryModal" class="modal hidden">
+    <div class="modal-content" style="width: 500px;">
+        <h2 style="margin-bottom:15px;">カテゴリ管理</h2>
+        <div style="display: flex; gap: 5px; margin-bottom: 15px;">
+            <input type="text" id="new-cat-name" placeholder="カテゴリ名" style="margin:0;">
+            <button id="add-cat-btn" class="btn-black" style="width: auto; margin:0; padding: 0 20px;">追加</button>
+        </div>
+        <div id="categoryList" style="max-height: 200px; overflow-y: auto; border: 2px solid #000; margin-bottom: 10px;"></div>
+        <button id="close-cat-modal-btn" class="btn-outline">閉じる</button>
+    </div>
+</div>
+
+<script>
+    const STORAGE_KEYS = {
+        PRODUCTS: 'rapireji_products',
+        CATEGORIES: 'rapireji_categories',
+        STOCK_CONFIG: 'rapireji_stock_config'
+    };
+
+    let allProducts = JSON.parse(localStorage.getItem(STORAGE_KEYS.PRODUCTS) || '[]');
+    let categories = JSON.parse(localStorage.getItem(STORAGE_KEYS.CATEGORIES) || '[]');
+    
+    const savedStockConfig = localStorage.getItem(STORAGE_KEYS.STOCK_CONFIG);
+    let stockConfig = savedStockConfig ? JSON.parse(savedStockConfig) : { enabled: false };
+    let isStockEnabled = stockConfig.enabled;
+
+    let currentCategory = "";
+    let editingProductId = null;
+    let targetIndex = null;
+    const DEFAULT_CAT = "未分類";
+
+    document.addEventListener('DOMContentLoaded', () => {
+        ensureDefaultCategory();
+        loadData();
+    });
+
+    function ensureDefaultCategory() {
+        if (categories.length === 0) {
+            categories.push({ id: 'default', name: DEFAULT_CAT });
+            saveCategories();
+        } else if (!categories.some(c => c.name === DEFAULT_CAT)) {
+            categories.push({ id: 'default', name: DEFAULT_CAT });
+            saveCategories();
+        }
+    }
+
+    // カテゴリを上に移動
+    window.moveCatUp = (id) => {
+        const idx = categories.findIndex((c, i) => (c.id || i) == id);
+        if (idx > 0) {
+            [categories[idx], categories[idx - 1]] = [categories[idx - 1], categories[idx]];
+            saveCategories();
+            loadData();
+        }
+    };
+
+    // カテゴリを下に移動
+    window.moveCatDown = (id) => {
+        const idx = categories.findIndex((c, i) => (c.id || i) == id);
+        if (idx < categories.length - 1) {
+            [categories[idx], categories[idx + 1]] = [categories[idx + 1], categories[idx]];
+            saveCategories();
+            loadData();
+        }
+    };
+
+    // カテゴリのドラッグ開始
+    window.handleCatDragStart = (e, id) => {
+        e.dataTransfer.setData("text/plain", id);
+        e.currentTarget.style.opacity = '0.5';
+    };
+
+    // カテゴリのドラッグ終了
+    window.handleCatDragEnd = (e) => {
+        e.currentTarget.style.opacity = '1';
+    };
+
+    // カテゴリのドロップ処理
+    window.handleCatDrop = (e, targetId) => {
+        e.preventDefault();
+        const draggedId = e.dataTransfer.getData("text/plain");
+        if (draggedId === targetId) return;
+
+        const draggedIdx = categories.findIndex((c, i) => (c.id || i) == draggedId);
+        const targetIdx = categories.findIndex((c, i) => (c.id || i) == targetId);
+
+        if (draggedIdx !== -1 && targetIdx !== -1) {
+            // 要素を入れ替え
+            const [removed] = categories.splice(draggedIdx, 1);
+            categories.splice(targetIdx, 0, removed);
+            
+            saveCategories();
+            loadData();
+        }
+    };
+
+    function loadData() {
+        const bar = document.getElementById('categoryTabs'), 
+              select = document.getElementById('p-category'), 
+              list = document.getElementById('categoryList');
+        bar.innerHTML = ""; select.innerHTML = ""; list.innerHTML = "";
+        
+        categories.forEach((cat, idx) => {
+            const name = cat.name;
+            const id = cat.id || idx;
+            
+            const btn = document.createElement('button');
+            btn.className = "cat-tab"; btn.textContent = name;
+            btn.draggable = true; 
+            btn.dataset.id = id;
+            btn.onclick = () => switchCategory(name);
+
+            // ドラッグ開始
+            btn.ondragstart = (e) => {
+                e.dataTransfer.setData("text/plain", id);
+                btn.classList.add('dragging');
+            };
+    
+            // ドラッグ終了
+            btn.ondragend = () => {
+                btn.classList.remove('dragging');
+            };
+
+            // ドロップを許可
+            btn.ondragover = (e) => {
+                e.preventDefault(); // これがないとdropイベントが動かない
+            };
+
+            // ドロップした時
+            btn.ondrop = (e) => {
+                e.preventDefault();
+                const draggedId = e.dataTransfer.getData("text/plain");
+                const targetId = id;
+        
+                if (draggedId == targetId) return;
+
+                // カテゴリ配列の並び替えロジック
+                const draggedIdx = categories.findIndex((c, i) => (c.id || i) == draggedId);
+                const targetIdx = categories.findIndex((c, i) => (c.id || i) == targetId);
+
+                if (draggedIdx !== -1 && targetIdx !== -1) {
+                    const [removed] = categories.splice(draggedIdx, 1);
+                    categories.splice(targetIdx, 0, removed);
+            
+                    saveCategories();
+                    loadData(); // 再描画
+                }
+            };
+
+            bar.appendChild(btn);
+
+            const opt = document.createElement('option'); 
+            opt.value = name; opt.textContent = name; 
+            select.appendChild(opt);
+
+            const li = document.createElement('div');
+            // 背景色とカーソルを指定して「動かせる感」を出します
+            li.style = "display:flex; gap:10px; padding:8px; border-bottom:1px solid #eee; align-items:center; cursor:move; background:#fff;";
+            li.draggable = true;
+
+            // ドラッグイベントの紐付け
+            li.ondragstart = (e) => handleCatDragStart(e, id);
+            li.ondragend = (e) => handleCatDragEnd(e);
+            li.ondragover = (e) => e.preventDefault();
+            li.ondrop = (e) => handleCatDrop(e, id);
+
+            li.innerHTML = `
+                <div style="display:flex; flex-direction:column; gap:2px; cursor:default;">
+                    <button onclick="moveCatUp('${id}')" style="font-size:10px; cursor:pointer; background:var(--black); color:var(--white); border:none; padding:2px; width:22px; height:18px; font-weight:bold;">▲</button>
+                    <button onclick="moveCatDown('${id}')" style="font-size:10px; cursor:pointer; background:var(--black); color:var(--white); border:none; padding:2px; width:22px; height:18px; font-weight:bold;">▼</button>
+                </div>
+                <input type="text" value="${name}" id="cat-edit-${id}" 
+                       style="flex:1;" 
+                       draggable="false" 
+                       onpointerdown="event.stopPropagation();" 
+                       onmousedown="event.stopPropagation();">
+                <button class="btn-black" onclick="updateCat('${id}')" style="width:auto; padding:5px 10px; font-size:0.7rem;">更新</button>
+                ${name !== DEFAULT_CAT ? `<button onclick="delCat('${id}')" style="color:red; cursor:pointer; background:none; border:none; font-size:0.7rem;">削除</button>` : '<span></span>'}
+            `;
+            list.appendChild(li);
+        });
+
+        // loadData関数の最後の方、switchCategoryを呼んでいる部分を以下に差し替え
+        if (currentCategory && categories.some(c => c.name === currentCategory)) {
+            switchCategory(currentCategory); // 現在のカテゴリを維持して色を付ける
+        } else {
+            switchCategory(categories[0].name); // なければ最初のカテゴリへ
+        }
+        renderGrid();
+    }
+
+    function switchCategory(name) {
+        currentCategory = name;
+        document.querySelectorAll('.cat-tab').forEach(t => t.classList.toggle('active', t.textContent === name));
+        renderGrid();
+    }
+
+    function renderGrid() {
+        const grid = document.getElementById('productGrid'); grid.innerHTML = "";
+        const filtered = allProducts.filter(p => p.category === currentCategory && p.isActive !== false);
+        
+        for (let i = 0; i < 50; i++) {
+            const p = filtered.find(item => item.index === i);
+            const div = document.createElement('div');
+            
+            const isOutOfStock = isStockEnabled && p && p.stock !== undefined && Number(p.stock) <= 0;
+            div.className = p ? (isOutOfStock ? "product-item out-of-stock" : "product-item") : "product-item empty-slot";
+            
+            div.draggable = !!p;
+            
+            if (p) {
+                // 税込価格を計算（税抜価格 * (1 + 税率/100)）
+                const taxRate = p.taxRate ?? 0;
+                const priceInclTax = Math.floor(Number(p.price) * (1 + taxRate / 100));
+                const stockBadge = isStockEnabled ? `<span class="product-stock-badge">残:${p.stock || 0}</span>` : "";
+
+                // まるごとHTMLを構築する
+                div.innerHTML = `
+                    ${isOutOfStock ? '<div class="out-of-stock-label">終了</div>' : ''}
+                    <img src="${p.imageUrl || ''}" class="product-image" onerror="this.style.visibility='hidden'">
+                    <div class="product-info">
+                        <strong>${p.name}</strong>
+                        <span>¥${priceInclTax.toLocaleString()}</span>
+                        ${stockBadge}
+                    </div>`;
+
+                div.onclick = () => openModal(p, i);
+
+                div.ondragstart = (e) => {
+                    e.dataTransfer.setData("text/plain", p.id);
+                    div.classList.add('dragging');
+                };
+                div.ondragend = () => div.classList.remove('dragging');
+            } else {
+                div.innerHTML = "＋"; div.onclick = () => openModal(null, i);
+            }
+
+            div.ondragover = (e) => e.preventDefault();
+            div.ondrop = (e) => {
+                e.preventDefault();
+                const draggedId = e.dataTransfer.getData("text/plain");
+                if (!draggedId) return;
+
+                const isOccupied = allProducts.some(item => 
+                    item.category === currentCategory && item.index === i && item.id != draggedId && item.isActive !== false
+                );
+
+                if (isOccupied) {
+                    alert("移動先にはすでに商品があります。");
+                    return;
+                }
+
+                const productIdx = allProducts.findIndex(item => item.id == draggedId);
+                if (productIdx !== -1) {
+                    allProducts[productIdx].index = i;
+                    saveProducts();
+                    renderGrid();
+                }
+            };
+
+            grid.appendChild(div);
+        }
+    }
+
+    // --- 以下、管理用ロジック（変更なし） ---
+    function openModal(p, index) {
+        editingProductId = p ? p.id : null; targetIndex = index;
+        document.getElementById('modalTitle').innerText = p ? "商品編集" : "新規登録";
+        document.getElementById('p-name').value = p ? p.name : "";
+        document.getElementById('p-price').value = p ? p.price : "";
+        document.getElementById('p-tax-rate').value = p ? (p.taxRate ?? 0) : 0; 
+        document.getElementById('p-jan').value = p ? (p.jan || "") : "";
+        document.getElementById('p-category').value = p ? p.category : (currentCategory || DEFAULT_CAT);
+        
+        const stockInputGroup = document.getElementById('stock-input-group');
+        if (isStockEnabled) {
+            stockInputGroup.classList.remove('hidden');
+            document.getElementById('p-stock').value = p ? (p.stock || 0) : 0;
+        } else {
+            stockInputGroup.classList.add('hidden');
+        }
+
+        document.getElementById('p-tag').value = p ? (p.tag || "") : "";
+        document.getElementById('p-image-url').value = p ? (p.imageUrl || "") : "";
+        document.getElementById('p-purchase-url').value = p ? (p.purchaseUrl || "") : "";
+        
+        const url = p ? p.imageUrl : "";
+        document.getElementById('image-preview-container').style.display = url ? 'block' : 'none';
+        document.getElementById('p-preview').src = url;
+        
+        document.getElementById('delete-product-btn').classList.toggle('hidden', !p);
+        document.getElementById('productModal').classList.remove('hidden');
+    }
+
+    document.getElementById('p-image-url').oninput = (e) => {
+        const url = e.target.value;
+        document.getElementById('image-preview-container').style.display = url ? 'block' : 'none';
+        document.getElementById('p-preview').src = url;
+    };
+
+    document.getElementById('save-product-btn').onclick = () => {
+        const name = document.getElementById('p-name').value;
+        const price = Number(document.getElementById('p-price').value);
+        const taxRate = Number(document.getElementById('p-tax-rate').value || 0);
+        const jan = document.getElementById('p-jan').value || "";
+        let newCategory = document.getElementById('p-category').value || DEFAULT_CAT;
+              
+        if (!name || isNaN(price)) return alert("正しく入力してください");
+
+        let finalIndex = targetIndex;
+        const oldProduct = editingProductId ? allProducts.find(p => p.id === editingProductId) : null;
+
+        if (!oldProduct || oldProduct.category !== newCategory) {
+            const isOccupied = allProducts.some(p => p.category === newCategory && p.index === finalIndex && p.isActive !== false);
+            if (isOccupied) {
+                let foundEmpty = false;
+                for (let i = 0; i < 50; i++) {
+                    if (!allProducts.some(p => p.category === newCategory && p.index === i && p.isActive !== false)) {
+                        finalIndex = i;
+                        foundEmpty = true;
+                        break;
+                    }
+                }
+                if (!foundEmpty) return alert("遷移先のカテゴリが満杯です");
+            }
+        }
+
+        const data = {
+            id: editingProductId || Date.now(),
+            name, price, taxRate, jan, category: newCategory,
+            stock: isStockEnabled ? Number(document.getElementById('p-stock').value) : (editingProductId ? (oldProduct?.stock || 0) : 0),
+            tag: document.getElementById('p-tag').value,
+            imageUrl: document.getElementById('p-image-url').value,
+            purchaseUrl: document.getElementById('p-purchase-url').value,
+            index: finalIndex,
+            isActive: true,
+            updatedAt: new Date().toISOString()
+        };
+
+        if (editingProductId) {
+            const idx = allProducts.findIndex(p => p.id === editingProductId);
+            allProducts[idx] = data;
+        } else {
+            allProducts.push(data);
+        }
+
+        saveProducts();
+        document.getElementById('productModal').classList.add('hidden');
+        loadData();
+    };
+
+    document.getElementById('delete-product-btn').onclick = () => {
+        if(confirm("削除しますか？")) { 
+            const idx = allProducts.findIndex(p => p.id === editingProductId);
+            if (idx !== -1) {
+                allProducts.splice(idx, 1);
+                saveProducts();
+            }
+            document.getElementById('productModal').classList.add('hidden'); 
+            renderGrid();
+        }
+    };
+
+    window.updateCat = (id) => {
+        const newVal = document.getElementById(`cat-edit-${id}`).value.trim();
+        if (!newVal) return;
+        const catIdx = categories.findIndex((c, i) => (c.id || i) == id);
+        const oldName = categories[catIdx].name;
+        categories[catIdx].name = newVal;
+        allProducts.forEach(p => { if (p.category === oldName) p.category = newVal; });
+        saveCategories(); saveProducts();
+        if (currentCategory === oldName) currentCategory = newVal;
+        loadData();
+    };
+
+    window.delCat = (id) => {
+        const cat = categories.find((c, i) => (c.id || i) == id);
+        if (cat.name === DEFAULT_CAT) return alert("未分類カテゴリは削除できません");
+        if (confirm("カテゴリを削除しますか？(このカテゴリ内の商品も削除されます）)")) {
+            const catIdx = categories.findIndex((c, i) => (c.id || i) == id);
+            categories.splice(catIdx, 1);
+            saveCategories(); 
+            loadData();
+        }
+    };
+
+    document.getElementById('add-cat-btn').onclick = () => {
+        const name = document.getElementById('new-cat-name').value.trim();
+        if(!name) return;
+        categories.push({ id: Date.now(), name: name });
+        saveCategories();
+        document.getElementById('new-cat-name').value = ""; 
+        loadData();
+    };
+
+    function saveProducts() { localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(allProducts)); }
+    function saveCategories() { localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(categories)); }
+
+    document.getElementById('close-product-modal-btn').onclick = () => document.getElementById('productModal').classList.add('hidden');   
+    // スクリプトの一番下の方にあるイベントリスナーを修正
+    document.getElementById('close-cat-modal-btn').onclick = () => {
+        document.getElementById('categoryModal').classList.add('hidden');
+        loadData(); // 閉じるときに再読み込みしてハイライトを確実に適用
+    };
+    document.getElementById('open-cat-modal-btn').onclick = () => document.getElementById('categoryModal').classList.remove('hidden');
+
+    const menuBtn = document.getElementById('menu-btn');
+    menuBtn.onclick = () => { 
+        menuBtn.classList.toggle('open'); 
+        document.getElementById('side-menu').classList.toggle('hidden'); 
+    };
+
+    // --- 現在のページをメニューで強調表示する処理 ---
+    document.addEventListener('DOMContentLoaded', () => {
+        const currentPath = window.location.pathname.split("/").pop();
+        const menuLinks = document.querySelectorAll('.menu-link');
+
+        menuLinks.forEach(link => {
+            const linkPath = link.getAttribute('href');
+            // 現在のファイル名と href が一致したら 'active' クラスをつける
+            if (currentPath === linkPath) {
+                link.classList.add('active');
+            }
+        });
+    });
+
+    // --- スキャンからの戻り判定と自動復元ロジック ---
+    window.addEventListener('pageshow', () => {
+        const scannedCode = localStorage.getItem('last_scanned_barcode');
+        const returnFromScan = sessionStorage.getItem('is_scanning_mode');
+
+        if (scannedCode && returnFromScan) {
+            sessionStorage.removeItem('is_scanning_mode');
+            
+            const tempState = JSON.parse(sessionStorage.getItem('temp_product_state') || '{}');
+            
+            // 1. まずモーダルを開く（IDの有無で編集/新規を判定）
+            const p = tempState.id ? allProducts.find(item => item.id == tempState.id) : null;
+            openModal(p, tempState.index || 0);
+
+            // 2. 保存されていたフォームの値を復元する
+            if (tempState.form) {
+                document.getElementById('p-name').value = tempState.form.name || "";
+                document.getElementById('p-price').value = tempState.form.price || "";
+                document.getElementById('p-tax-rate').value = tempState.form.taxRate || 0;
+                document.getElementById('p-category').value = tempState.form.category || "";
+                document.getElementById('p-stock').value = tempState.form.stock || 0;
+                document.getElementById('p-tag').value = tempState.form.tag || "";
+                document.getElementById('p-image-url').value = tempState.form.imageUrl || "";
+                document.getElementById('p-purchase-url').value = tempState.form.purchaseUrl || "";
+                
+                // 画像プレビューも再表示
+                if (tempState.form.imageUrl) {
+                    document.getElementById('image-preview-container').style.display = 'block';
+                    document.getElementById('p-preview').src = tempState.form.imageUrl;
+                }
+            }
+
+            // 3. スキャンしたコードをJAN欄に上書き
+            document.getElementById('p-jan').value = scannedCode;
+
+            // 使い終わったデータを削除
+            localStorage.removeItem('last_scanned_barcode');
+            sessionStorage.removeItem('temp_product_state');
+        }
+    });
+
+    // JANコード横の「スキャン」リンク（またはボタン）が押された時の処理
+    function goToScan() {
+        // 現在入力中の全項目を一時保存
+        const tempState = {
+            id: editingProductId,
+            index: targetIndex,
+            // 入力フォームの内容をすべて保存
+            form: {
+                name: document.getElementById('p-name').value,
+                price: document.getElementById('p-price').value,
+                taxRate: document.getElementById('p-tax-rate').value,
+                category: document.getElementById('p-category').value,
+                stock: document.getElementById('p-stock').value,
+                tag: document.getElementById('p-tag').value,
+                imageUrl: document.getElementById('p-image-url').value,
+                purchaseUrl: document.getElementById('p-purchase-url').value
+            }
+        };
+    
+        sessionStorage.setItem('temp_product_state', JSON.stringify(tempState));
+        sessionStorage.setItem('is_scanning_mode', 'true');
+        
+        // スキャン画面へ遷移
+        location.href = 'scan.html?mode=add';
+    }
+
+    // --- 検索機能のロジック ---
+    const openSearch = document.getElementById('openSearch');
+    const closeSearch = document.getElementById('closeSearch');
+    const searchWrapper = document.getElementById('searchWrapper');
+    const searchInput = document.getElementById('searchInput');
+    const searchResults = document.getElementById('searchResults');
+
+    openSearch.onclick = () => {
+        searchWrapper.classList.add('open');
+        searchInput.focus();
+    };
+
+    closeSearch.onclick = () => {
+        searchWrapper.classList.remove('open');
+        searchResults.classList.add('hidden');
+        searchInput.value = "";
+    };
+
+    searchInput.oninput = (e) => {
+        const val = e.target.value.toLowerCase();
+        if (!val) {
+            searchResults.classList.add('hidden');
+            return;
+        }
+
+        // 全商品から検索（名前またはJAN）
+        const matches = allProducts.filter(p => 
+            (p.name && p.name.toLowerCase().includes(val)) || 
+            (p.jan && p.jan.includes(val))
+        ).slice(0, 10);
+
+        if (matches.length > 0) {
+            searchResults.innerHTML = matches.map(p => `
+                <div class="search-result-item" onclick="jumpToProduct('${p.category}', ${p.index})">
+                 ${p.name} <small style="color:#666;">(${p.category})</small>
+                </div>
+            `).join('');
+            searchResults.classList.remove('hidden');
+        } else {
+            searchResults.classList.add('hidden');
+        }
+    };
+
+    // 該当商品へジャンプする関数
+    window.jumpToProduct = (catName, index) => {
+        // 1. カテゴリを切り替え
+        switchCategory(catName);
+    
+        // 2. 検索窓を閉じる
+        closeSearch.onclick();
+
+        // 3. 描画を待ってからスクロール
+        setTimeout(() => {
+            const grid = document.getElementById('productGrid');
+            const items = grid.querySelectorAll('.product-item');
+            if (items[index]) {
+                items[index].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                // 強調演出
+                items[index].style.outline = "4px solid #ff0000";
+                items[index].style.zIndex = "10";
+                setTimeout(() => {
+                    items[index].style.outline = "none";
+                    items[index].style.zIndex = "1";
+                }, 2000);
+            }
+        }, 150);
+    };
+</script>
+</body>
+</html><!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>商品管理 | らぴレジ</title>
+    <style>
+        :root {
+            --black: #000000; --white: #ffffff; --gray-bg: #f8f9fa;
+            --gray-light: #e9ecef; --danger: #ff0000; --header-h: 60px;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; touch-action: manipulation; }
+        
+        body { background-color: var(--white); overflow: hidden; display: flex; flex-direction: column; height: 100vh; }
+        
+        header {
+            height: calc(var(--header-h) + env(safe-area-inset-top)); 
+            border-bottom: 3px solid var(--black);
+            display: flex; 
+            align-items: center; 
+            padding: env(safe-area-inset-top) 20px 0 20px; 
+            background: var(--white);
+            position: sticky; 
+            top: 0; 
+            z-index: 1100;
+            justify-content: space-between;
+        }
+        .header-left { display: flex; align-items: center; }
+        header h1 { font-size: 1.2rem; font-weight: 900; margin-left: 20px; white-space: nowrap; }
+        
+        .header-ad-space {
+            flex: 1; margin-left: 20px; height: 45px; background: #fff;
+            display: flex; align-items: center; justify-content: center;
+            overflow: hidden; border: 1px dashed #ccc;
+        }
+
+        .menu-trigger { width: 30px; height: 22px; cursor: pointer; position: relative; }
+        .menu-trigger span { display: block; width: 100%; height: 4px; background: var(--black); position: absolute; left: 0; transition: all 0.3s; }
+        .menu-trigger span:nth-child(1) { top: 0; }
+        .menu-trigger span:nth-child(2) { top: 9px; }
+        .menu-trigger span:nth-child(3) { top: 18px; }
+        .menu-trigger.open span:nth-child(1) { transform: translateY(9px) rotate(45deg); }
+        .menu-trigger.open span:nth-child(2) { opacity: 0; }
+        .menu-trigger.open span:nth-child(3) { transform: translateY(-9px) rotate(-45deg); }
+        .menu-link.active { background-color: transparent; color: var(--black); font-weight: 900; font-size: 1.1rem; border-left: 8px solid var(--black); padding-left: 7px; }
+        
+        .side-nav { 
+            position: fixed; 
+            top: var(--header-h); 
+            left: 0; 
+            width: 250px; 
+            height: calc(100% - var(--header-h)); 
+            padding-bottom: env(safe-area-inset-bottom); 
+            background: var(--white); 
+            border-right: 3px solid var(--black); 
+            z-index: 1050; 
+            transition: transform 0.3s; 
+            padding-left: 20px;
+            padding-right: 20px;
+            padding-top: 20px;
+        }
+        .side-nav.hidden { transform: translateX(-100%); }
+        .menu-link { display: block; padding: 15px; color: var(--black); font-weight: 800; text-decoration: none; border-bottom: 1px solid var(--gray-light); }
+
+        .container { flex: 1; overflow-y: auto; padding: 10px; background: var(--gray-bg); }
+        .category-bar { 
+            display: flex; gap: 8px; margin-bottom: 10px; overflow-x: auto; padding-bottom: 10px; 
+            position: relative; align-items: center; 
+        }
+        .cat-tab {
+            padding: 8px 16px; background: var(--white); border: 2px solid var(--black);
+            font-weight: 800; font-size: 0.8rem; cursor: pointer; white-space: nowrap; box-shadow: 2px 2px 0px var(--black);
+            border-radius: 0;
+        }
+        .cat-tab.active { background: var(--black); color: var(--white); transform: translate(1px, 1px); box-shadow: none; }
+        .cat-tab.dragging {
+            opacity: 0.5;
+            border: 2px dashed var(--black);
+        }
+
+        /* 検索バーのレイアウト調整 */
+        .search-btn { 
+            background: none; border: none; font-size: 1.2rem; cursor: pointer; 
+            flex-shrink: 0; padding: 0 10px; box-shadow: none;
+        }
+        .search-btn:active { transform: none; }
+        .search-container { 
+            display: none; position: absolute; left: 0; right: 0; top: 0; bottom: 10px; 
+            background: var(--gray-bg); z-index: 100; align-items: center; gap: 5px;
+        }
+        .search-container.open { display: flex; }
+        .search-input { 
+            flex: 1; height: 35px; border: 2px solid var(--black); padding: 0 10px; 
+            font-weight: 800; font-size: 0.9rem; outline: none; border-radius: 0;
+        }
+        .search-close { cursor: pointer; font-weight: 900; padding: 0 10px; }
+
+        /* 検索候補リスト */
+        .search-results {
+            position: absolute; top: 40px; left: 0; right: 0; 
+            background: white; border: 2px solid var(--black); 
+            z-index: 2000; max-height: 200px; overflow-y: auto; box-shadow: 4px 4px 0px rgba(0,0,0,0.2);
+        }
+        .search-result-item {
+            padding: 10px; border-bottom: 1px solid var(--gray-light); 
+            cursor: pointer; font-weight: 800; font-size: 0.85rem; color: var(--black);
+        }
+        .search-result-item:hover { background: var(--gray-light); }
+
+        /* 商品グリッドをレジ画面に合わせる */
+        .productGrid { 
+            display: grid; 
+            grid-template-columns: repeat(6, 1fr); 
+            gap: 8px; 
+            padding-bottom: 50px; 
+        }
+
+        .product-item {
+            min-height: 110px; background: var(--white); border: 2px solid var(--black);
+            display: flex; flex-direction: column; cursor: pointer; position: relative;
+            box-shadow: 2px 2px 0px var(--black); overflow: hidden;
+        }
+        .product-item:active { transform: translate(1px, 1px); box-shadow: none; }
+        
+        .product-item.out-of-stock { opacity: 0.5; background-color: #eee; }
+        .out-of-stock-label { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: red; color: white; padding: 2px 5px; font-size: 0.7rem; font-weight: 900; z-index: 10; pointer-events: none; }
+
+        .product-image { width: 100%; height: 55px; object-fit: cover; border-bottom: 1px solid var(--black); }
+        .product-info { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 800; font-size: 0.7rem; padding: 4px 2px; text-align: center; line-height: 1.2; }
+        .product-stock-badge { font-size: 0.6rem; color: #666; margin-top: 1px; }
+        
+        .empty-slot { min-height: 110px; border: 1px solid transparent; color: #ccc; justify-content: center; align-items: center; font-size: 1.5rem; display: flex; cursor: pointer; }
+
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 9999; }
+        .modal-content { 
+            background: var(--white); padding: 20px; border: 4px solid var(--black); 
+            width: 95%; max-width: 700px; max-height: 95vh; overflow-y: auto;
+            box-shadow: 10px 10px 0px var(--black);
+        }
+
+        .form-row { display: flex; gap: 15px; margin-bottom: 15px; flex-wrap: wrap; }
+        .form-group { flex: 1; min-width: 200px; }
+        .form-group.full { flex: 1 1 100%; }
+        label { display: block; font-weight: 900; font-size: 0.8rem; margin-bottom: 5px; }
+        
+        input, select { 
+            width: 100%; padding: 10px; border: 2px solid var(--black); font-size: 1rem; 
+            border-radius: 0;
+        }
+
+        .btn-black { background: var(--black); color: var(--white); border: none; padding: 15px; font-weight: 900; cursor: pointer; width: 100%; border-radius: 0; }
+        .btn-outline { background: var(--white); border: 2px solid var(--black); padding: 15px; font-weight: 900; cursor: pointer; width: 100%; border-radius: 0; }
+        .btn-danger { background: var(--white); color: var(--danger); border: 2px solid var(--danger); padding: 15px; font-weight: 900; cursor: pointer; width: 100%; border-radius: 0; }
+        .hidden { display: none !important; }
+
+        /* スマホレスポンシブ（レジ画面と統一） */
+        @media screen and (max-width: 768px) {
+            header { padding: 0 10px; }
+            header h1 { font-size: 0.9rem; margin-left: 10px; }
+            .header-ad-space { margin-left: 10px; height: 35px; min-width: 80px; font-size: 8px; }
+            
+            .productGrid { grid-template-columns: repeat(4, 1fr); }
+            .product-item { min-height: 95px; }
+            .product-image { height: 40px; }
+            .empty-slot { min-height: 95px; }
+        }
+        
+        .dragging { opacity: 0.5; border: 2px dashed #000; }
+
+        #categoryList input {
+            padding: 5px;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-left">
+        <div class="menu-trigger" id="menu-btn"><span></span><span></span><span></span></div>
+        <h1>商品管理</h1>
+    </div>
+    <div class="header-ad-space" id="ad-top">
+        <span style="color:#ccc; font-size: 8px; font-weight: 900;">AD</span>
+    </div>
+</header>
+
+<nav class="side-nav hidden" id="side-menu">
+    <a href="register.html" class="menu-link">レジ操作</a>
+    <a href="product.html" class="menu-link">商品管理</a>
+    <a href="stock.html" class="menu-link">在庫管理</a>
+    <a href="history.html" class="menu-link">販売履歴</a>
+    <a href="settings.html" class="menu-link">設定</a>
+</nav>
+
+<main class="container">
+    <div style="margin-bottom: 20px;">
+        <button id="open-cat-modal-btn" class="btn-outline" style="width: auto; padding: 10px 25px;">カテゴリ管理</button>
+        <button class="search-btn" id="openSearch">🔍</button>
+    </div>
+    <div style="position: relative;">
+        <div class="category-bar" id="categoryTabs"></div>
+        <div class="search-container" id="searchWrapper">
+            <input type="text" class="search-input" id="searchInput" placeholder="商品名またはJANコードで検索...">
+            <div class="search-close" id="closeSearch">✕</div>
+            <div class="search-results hidden" id="searchResults"></div>
+        </div>
+    </div>
+    <div class="category-bar" id="categoryTabs"></div>
+    <div class="productGrid" id="productGrid"></div>
+</main>
+
+<div id="productModal" class="modal hidden">
+    <div class="modal-content">
+        <h2 id="modalTitle" style="margin-bottom: 15px; font-weight: 900;">商品詳細設定</h2>
+        <div class="form-row">
+            <div class="form-group full">
+                <label>商品名</label>
+                <input type="text" id="p-name">
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>価格 (税抜き)</label>
+                <input type="number" id="p-price">
+            </div>
+            <div class="form-group">
+                <label>税率 (%)</label>
+                <input type="number" id="p-tax-rate" placeholder="0" min="0">
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group full">
+                <label style="display: flex; justify-content: space-between; align-items: center;">
+                    JANコード 
+                    <span onclick="goToScan()" style="color: blue; text-decoration: underline; font-size: 0.7rem; cursor: pointer;">[スキャンして入力]</span>
                 </label>
                 <input type="text" id="p-jan" placeholder="バーコード数値を入力">
             </div>
