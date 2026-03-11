@@ -62,7 +62,7 @@
         .side-nav.hidden { transform: translateX(-100%); }
         .menu-link { display: block; padding: 15px; color: var(--black); font-weight: 800; text-decoration: none; border-bottom: 1px solid var(--gray-light); }
 
-        .container { flex: 1; overflow-y: auto; padding: 10px; background: var(--gray-bg); }
+        .container { flex: 1; overflow-y: auto; padding: 10px; background: var(--gray-bg); display: flex; flex-direction: column; }
         .category-bar { 
             display: flex; gap: 8px; margin-bottom: 10px; overflow-x: auto; padding-bottom: 10px; 
             position: relative; align-items: center; 
@@ -171,6 +171,16 @@
             padding: 5px;
             font-size: 0.9rem;
         }
+
+        .action-controls {
+            position: sticky;
+            top: -10px; /* containerのpadding分を相殺 */
+            background: var(--gray-bg);
+            z-index: 900;
+            padding-bottom: 10px;
+            margin-bottom: 10px;
+            border-bottom: 1px solid var(--gray-light);
+        }
     </style>
 </head>
 <body>
@@ -194,19 +204,22 @@
 </nav>
 
 <main class="container">
-    <div style="margin-bottom: 20px;">
-        <button id="open-cat-modal-btn" class="btn-outline" style="width: auto; padding: 10px 25px;">カテゴリ管理</button>
-        <button class="search-btn" id="openSearch">🔍</button>
-    </div>
-    <div style="position: relative;">
-        <div class="category-bar" id="categoryTabs"></div>
-        <div class="search-container" id="searchWrapper">
-            <input type="text" class="search-input" id="searchInput" placeholder="商品名またはJANコードで検索...">
-            <div class="search-close" id="closeSearch">✕</div>
-            <div class="search-results hidden" id="searchResults"></div>
+    <div class="action-controls">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+            <button id="open-cat-modal-btn" class="btn-outline" style="width: auto; padding: 10px 25px; margin: 0;">カテゴリ管理</button>
+            <button class="search-btn" id="openSearch">🔍</button>
+        </div>
+        
+        <div style="position: relative;">
+            <div class="category-bar" id="categoryTabs" style="margin-bottom: 0;"></div>
+            <div class="search-container" id="searchWrapper">
+                <input type="text" class="search-input" id="searchInput" placeholder="商品名またはJANコードで検索...">
+                <div class="search-close" id="closeSearch">✕</div>
+                <div class="search-results hidden" id="searchResults"></div>
+            </div>
         </div>
     </div>
-    <div class="category-bar" id="categoryTabs"></div>
+
     <div class="productGrid" id="productGrid"></div>
 </main>
 
@@ -233,7 +246,7 @@
             <div class="form-group full">
                 <label style="display: flex; justify-content: space-between; align-items: center;">
                     JANコード 
-                    <span onclick="goToScan()" style="color: blue; text-decoration: underline; font-size: 0.7rem; cursor: pointer;">[スキャンして入力]</span>
+                    <span onclick="goToScan()" style="color: var(--black); text-decoration: underline; font-size: 0.7rem; cursor: pointer;">[スキャンして入力]</span>
                 </label>
                 <input type="text" id="p-jan" placeholder="バーコード数値を入力">
             </div>
