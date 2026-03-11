@@ -196,6 +196,46 @@
         #categoryTabs::-webkit-scrollbar {
             display: none; /* Chrome, Safari用：スクロールバーを隠す */
         }
+
+        /* 払い戻し警告アラート（上部固定） */
+.refund-alert-top {
+    position: fixed;
+    top: calc(var(--header-h) + env(safe-area-inset-top) + 10px); /* ヘッダーの下 */
+    left: 50%;
+    transform: translateX(-50%);
+    width: auto;
+    max-width: 90%;
+    padding: 10px 20px;
+    background-color: rgba(255, 0, 0, 0.95); /* 濃い赤 */
+    color: white;
+    font-weight: 900;
+    font-size: 1.1rem;
+    border: 2px solid white;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    z-index: 10000; /* 最前面 */
+    text-align: center;
+    pointer-events: none; /* 操作を邪魔しない */
+    animation: fadeOutTop 1.5s forwards; /* 1.5秒かけて消える */
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.refund-alert-top span { font-size: 1.3rem; }
+
+@keyframes fadeOutTop {
+    0% { opacity: 0; transform: translate(-50%, -20px); } /* 上から登場 */
+    15% { opacity: 1; transform: translate(-50%, 0); } /* 定位置 */
+    80% { opacity: 1; transform: translate(-50%, 0); } /* 保持 */
+    100% { opacity: 0; transform: translate(-50%, -10px); visibility: hidden; } /* フェードアウト */
+}
+
+@media screen and (max-width: 768px) {
+    .refund-alert-top {
+        font-size: 0.9rem;
+        padding: 8px 15px;
+    }
+}
     </style>
 </head>
 <body>
@@ -219,6 +259,10 @@
     <a href="history.html" class="menu-link">販売履歴</a>
     <a href="settings.html" class="menu-link">設定</a>
 </nav>
+
+<div class="refund-alert-top" id="refundAlertTop">
+    払い戻しモード
+</div>
 
 <div id="tagConfirmModal" class="confirm-modal hidden">
     <div class="confirm-content">
@@ -563,6 +607,14 @@
     document.addEventListener('DOMContentLoaded', () => {
         const currentPath = window.location.pathname.split("/").pop();
         const menuLinks = document.querySelectorAll('.menu-link');
+
+        const alertOverlay = document.getElementById('refundAlert');
+        if (alertOverlay) {
+            // アニメーション終了後に要素を完全に削除してメモリを解放
+            alertOverlay.addEventListener('animationend', () => {
+                alertOverlay.remove();
+            });
+        }
 
         menuLinks.forEach(link => {
             const linkPath = link.getAttribute('href');
