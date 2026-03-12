@@ -18,7 +18,8 @@ const ASSETS_TO_CACHE = [
 
 // インストール時にファイルをキャッシュ
 self.addEventListener('install', (event) => {
-  event.waitUntil(
+    self.skipWaiting();
+    event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(ASSETS_TO_CACHE);
     })
