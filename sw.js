@@ -1,4 +1,4 @@
-const CACHE_NAME = 'rapireji-cache-v2';
+const CACHE_NAME = 'rapireji-cache-v3';
 const ASSETS_TO_CACHE = [
     'index.html',
   'history.html',
@@ -30,7 +30,7 @@ self.addEventListener('install', (event) => {
 // オフライン時はキャッシュから応答（広告などは無視される）
 self.addEventListener('fetch', (event) => {
   event.respondWith(
-    caches.match(event.request).then((response) => {
+    caches.match(event.request, { ignoreSearch: true }).then((response) => {
       return response || fetch(event.request);
     })
   );
