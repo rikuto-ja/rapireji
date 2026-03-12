@@ -557,8 +557,14 @@
 
             t += formatLine(` 但 ${d.receiptType || "商品代"} として`, "");
             t += ` 正に領収いたしました\n\n [内訳]\n`;
-            t += formatLine(` 税抜金額:`, `¥${netTotal.toLocaleString()}`);
-            t += formatLine(` 消費税等:`, `¥${totalTax.toLocaleString()}`);
+            const details = data.finalTaxDetails || {};
+            Object.keys(details).map(Number).sort((a, b) => b - a).forEach(rate => {
+                const taxData = details[rate];
+                if (taxData.excl > 0) {
+                    t += formatLine(` ${rate}%対象税抜:`, `¥${taxData.excl.toLocaleString()}`);
+                    t += formatLine(` 内消費税:`, `¥${taxData.tax.toLocaleString()}`);
+                }
+            });
             
             if ((data.totalAmount || 0) >= 50000 && data.paymentMethod.includes('現金')) t += `\n[[STAMP_HERE]]\n`;
             t += `\n${line}[発行者]\n`;
@@ -569,7 +575,7 @@
             if (regNo) t += formatLine(`登録番号: ${regNo}`, "");
             t += line;
         }
-        receiptPreview.innerHTML = t.replace('[[STAMP_HERE]]', `<div style="border: 1px solid #000; width: 60px; height: 70px; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 10px; margin: 10px auto;">収入印紙<br>貼付枠</div>`);
+        receiptPreview.innerHTML = t.replace('[[STAMP_HERE]]', `<div style="border: 1px solid #000; width: 60px; height: 70px; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 10px; margin: 10px 0 10px 50px;">収入印紙<br>貼付枠</div>`);
     }
 
     // --- ボタンのイベント登録 ---
