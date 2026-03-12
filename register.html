@@ -658,6 +658,16 @@
             }
         }, 100);
     };
+
+    
+    if ('service-worker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js')
+            .then(reg => console.log('Offline ready:', reg.scope))
+            .catch(err => console.log('SW registration failed:', err));
+        });
+    }
+
 </script>
 </body>
 </html>
