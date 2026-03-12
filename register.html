@@ -196,6 +196,21 @@
         #categoryTabs::-webkit-scrollbar {
             display: none; /* Chrome, Safari用：スクロールバーを隠す */
         }
+
+        /* 追加：オフラインバッジのスタイル */
+        .offline-badge {
+            display: none;
+            font-size: 0.7rem;
+            background: var(--accent);
+            color: var(--black);
+            padding: 2px 6px;
+            border-radius: 10px;
+            margin-left: 8px;
+            border: 1px solid var(--black);
+            animation: fadeIn 0.5s;
+            white-space: nowrap;
+        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     </style>
 </head>
 <body>
@@ -205,7 +220,7 @@
 <header>
     <div class="header-left">
         <div class="menu-trigger" id="menu-btn"><span></span><span></span><span></span></div>
-        <h1>らぴレジ</h1>
+        <h1>らぴレジ<span id="offline-status" class="offline-badge">￥</span></h1>
     </div>
     <div class="header-ad-space" id="ad-top">
         <span style="color:#ccc; font-size: 8px; font-weight: 900;">AD</span>
@@ -659,14 +674,24 @@
         }, 100);
     };
 
-    // Service Workerの登録（GitHub Pages / 本番用）
+    // Service Workerの登録（修正版）
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-            // フォルダ名が含まれていても動作するようにパスを指定
             navigator.serviceWorker.register('./sw.js')
             .then(reg => {
-                // 登録成功時のログ（アラートは出さない）
                 console.log('らぴレジ: オフライン準備完了', reg.scope);
+                // 追加：準備ができたらバッジを表示
+                if (reg.active) {
+                    document.getElementById('offline-status').style.display = 'inline-block';
+                }
+                reg.onupdatefound = () => {
+                    const installingWorker = reg.installing;
+                    installingWorker.onstatechange = () => {
+                        if (installingWorker.state === 'activated') {
+                            document.getElementById('offline-status').style.display = 'inline-block';
+                        }
+                    };
+                };
             })
             .catch(err => {
                 console.error('らぴレジ: サービスワーカー登録失敗', err);
