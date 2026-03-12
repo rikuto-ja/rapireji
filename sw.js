@@ -1,4 +1,4 @@
-const CACHE_NAME = 'rapireji-cache-v3';
+const CACHE_NAME = 'rapireji-cache-v1';
 const ASSETS_TO_CACHE = [
     'index.html',
   'history.html',
