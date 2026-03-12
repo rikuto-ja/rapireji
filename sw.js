@@ -1,19 +1,20 @@
-const CACHE_NAME = 'rapireji-cache-v1';
+const CACHE_NAME = 'rapireji-cache-v2';
 const ASSETS_TO_CACHE = [
-  './history.html',
-  './payment.html',
-  './product.html', 
-  './register.html',
-  './return.html',
-  './returnpay.html',
-  './scan.html',
-  './settings.html',
-  './stock.html',
+    'index.html',
+  'history.html',
+  'payment.html',
+  'product.html', 
+  'register.html',
+  'return.html',
+  'returnpay.html',
+  'scan.html',
+  'settings.html',
+  'stock.html',
 
-  './beep1.mp3',
-  './beep2.mp3',
-  './beep3.mp3',
-  './beep4.mp3',
+  'beep1.mp3',
+  'beep2.mp3',
+  'beep3.mp3',
+  'beep4.mp3',
 ];
 
 // インストール時にファイルをキャッシュ
