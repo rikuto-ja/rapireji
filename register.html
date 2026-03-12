@@ -27,7 +27,8 @@
             justify-content: space-between;
         }
         .header-left { display: flex; align-items: center; }
-        header h1 { font-size: 1.2rem; font-weight: 900; margin-left: 20px; white-space: nowrap; }
+        header h1 { font-size: 1.2rem; font-weight: 900; margin-left: 20px; white-space: nowrap; color: #999; transition: color 0.5s ease;}
+        header h1.online-ready {color: var(--black); }
         .header-ad-space { flex: 1; margin-left: 20px; height: 45px; background: #fff; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 1px dashed #ccc; }
 
         .menu-trigger { width: 30px; height: 22px; cursor: pointer; position: relative; }
@@ -197,20 +198,7 @@
             display: none; /* Chrome, Safari用：スクロールバーを隠す */
         }
 
-        /* 追加：オフラインバッジのスタイル */
-        .offline-badge {
-            display: none;
-            font-size: 0.7rem;
-            background: var(--accent);
-            color: var(--black);
-            padding: 2px 6px;
-            border-radius: 10px;
-            margin-left: 8px;
-            border: 1px solid var(--black);
-            animation: fadeIn 0.5s;
-            white-space: nowrap;
-        }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        
     </style>
 </head>
 <body>
@@ -220,7 +208,7 @@
 <header>
     <div class="header-left">
         <div class="menu-trigger" id="menu-btn"><span></span><span></span><span></span></div>
-        <h1>らぴレジ<span id="offline-status" class="offline-badge">￥</span></h1>
+        <h1 id="app-title">らぴレジ</h1>
     </div>
     <div class="header-ad-space" id="ad-top">
         <span style="color:#ccc; font-size: 8px; font-weight: 900;">AD</span>
@@ -674,21 +662,29 @@
         }, 100);
     };
 
-    // Service Workerの登録（修正版）
+    // Service Workerの登録部分を以下に差し替え
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
+            const appTitle = document.getElementById('app-title');
+            const offlineBadge = document.getElementById('offline-status');
+
             navigator.serviceWorker.register('./sw.js')
             .then(reg => {
-                console.log('らぴレジ: オフライン準備完了', reg.scope);
-                // 追加：準備ができたらバッジを表示
+                console.log('らぴレジ: オフライン準備完了');
+
+                // 登録済み・有効なSWがある場合、即座に黒色にする
                 if (reg.active) {
-                    document.getElementById('offline-status').style.display = 'inline-block';
+                    appTitle.classList.add('online-ready');
+                    offlineBadge.style.display = 'inline-block';
                 }
+
+                // 新しくインストールされた場合の検知
                 reg.onupdatefound = () => {
                     const installingWorker = reg.installing;
                     installingWorker.onstatechange = () => {
                         if (installingWorker.state === 'activated') {
-                            document.getElementById('offline-status').style.display = 'inline-block';
+                            appTitle.classList.add('online-ready');
+                            offlineBadge.style.display = 'inline-block';
                         }
                     };
                 };
