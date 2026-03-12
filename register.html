@@ -659,12 +659,18 @@
         }, 100);
     };
 
-    
-    if ('service-worker' in navigator) {
+    // Service Workerの登録（GitHub Pages / 本番用）
+    if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
+            // フォルダ名が含まれていても動作するようにパスを指定
             navigator.serviceWorker.register('./sw.js')
-            .then(reg => console.log('Offline ready:', reg.scope))
-            .catch(err => console.log('SW registration failed:', err));
+            .then(reg => {
+                // 登録成功時のログ（アラートは出さない）
+                console.log('らぴレジ: オフライン準備完了', reg.scope);
+            })
+            .catch(err => {
+                console.error('らぴレジ: サービスワーカー登録失敗', err);
+            });
         });
     }
 
