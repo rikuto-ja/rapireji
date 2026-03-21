@@ -423,7 +423,11 @@
         taxHtml !== "" ? taxArea.classList.remove('hidden') : taxArea.classList.add('hidden');
 
         order.finalCalculated = { total: totalAfterDiscount, details: finalTaxDetails };
-        pendingAmount = totalAfterDiscount; // これを追加
+        const paidAmount = paymentDetails.reduce((sum, p) => sum + p.amount, 0);
+        pendingAmount = totalAfterDiscount - paidAmount;
+
+        // 表示を更新
+        updatePendingDisplay();
     }
 
     function updatePendingDisplay() {
@@ -647,15 +651,23 @@
         localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(history));
 
         window.currentPaymentData = { ...historyEntry, date: now };
+
+        const cashTotalForStamp = paymentDetails.reduce((sum, p) => {
+            return p.method.includes('現金') ? sum + p.amount : sum;
+        }, 0);
         
         // 完了表示（お釣りの表示など）
         const msgArea = document.getElementById('paymentResultMsg');
         const totalChange = historyEntry.change;
         msgArea.innerHTML = "";
+        
         if (totalChange > 0) {
             msgArea.innerHTML += `<div style="color: var(--danger); font-size: 1.5rem; font-weight: 900;">お釣り: ¥${totalChange.toLocaleString()}</div>`;
         }
         
+        if (cashTotalForStamp >= 50000) {
+            msgArea.innerHTML += `<div style="color: var(--danger); font-size: 1.1rem; font-weight: 900; border: 2px solid var(--danger); padding: 5px 15px; margin: 5px; background: white; display: inline-block;">収入印紙が必要です</div>`;
+        }
         sessionStorage.removeItem('currentOrder');
         generateContent('receipt'); 
         openModal('receiptModal');
@@ -667,6 +679,17 @@
         const zip = savedProfile.zipCode ? `〒${savedProfile.zipCode}` : "";
         const regNo = (savedProfile && savedProfile.registrationNumber) ? savedProfile.registrationNumber : null;
         const receiptPreview = document.getElementById('receiptPreview');
+
+        const previewConfig = JSON.parse(localStorage.getItem('rapireji_preview_config') || '{"show": true}');
+        const showPreview = previewConfig.show;
+
+        // 非表示設定なら要素を隠して処理を抜ける
+        if (!showPreview) {
+            receiptPreview.style.display = 'none';
+            return; 
+        } else {
+            receiptPreview.style.display = 'block';
+        }
 
         const MAX_WIDTH = 24; 
         const line = "-".repeat(MAX_WIDTH) + "\n";
@@ -735,6 +758,14 @@
         let t = "";
         const dateStr = info.date.toLocaleString();
 
+        // 1. 現金受領額の合計を計算するロジックを冒頭付近に追加
+const cashTotal = (info.paymentDetails || []).reduce((sum, p) => {
+    return p.method.includes('現金') ? sum + p.amount : sum;
+}, 0);
+
+// 2. 印紙枠の挿入条件を「cashTotal」基準に変更（レシート・領収書共通）
+const needsStamp = cashTotal >= 50000;
+
         if (type === 'receipt') {
             t += `       レ シ ー ト \n\n`;
             t += formatLine(`${d.companyName}`, "");
@@ -746,13 +777,55 @@
             t += `日時: ${dateStr}\n${line}`;
 
             info.items.forEach(item => {
-                const priceVal = `¥${(item.price * item.qty).toLocaleString()}`;
+
+                // --- 商品単体割引の計算ロジック ---
+            const discountAmount = item.appliedDiscount ? item.appliedDiscount.amount : 0;
+            const itemTotalBeforeDiscount = item.price * item.qty;
+            // レシート上の金額は割引適応後の税抜き金額
+            const itemFinalExcl = Math.max(0, itemTotalBeforeDiscount - discountAmount);
+                const priceVal = `¥${itemFinalExcl.toLocaleString()}`;
                 // 商品名の後ろに税率（例: *10 や *8）を付与
                 
                 const rate = (item.taxRate !== undefined) ? item.taxRate : (item.rate !== undefined ? item.rate : null);
                 const taxMarker = (rate !== null) ? ` *${rate}` : ""; 
                 const label = item.name + taxMarker + (item.qty > 1 ? ` (x${item.qty})` : "");
                 t += formatLine(label, priceVal);
+
+ // 2. 商品別の割引表示ロジックの修正
+    if (discountAmount > 0) {
+        let discNames = [];
+        const hasPresets = item.appliedPresets && Object.keys(item.appliedPresets).length > 0;
+
+        // プリセット（学生、水曜日など）の名称と回数を取得
+        if (hasPresets) {
+            for (const [name, count] of Object.entries(item.appliedPresets)) {
+                const isUnit = item.appliedDiscount && item.appliedDiscount.mode === 'unit';
+                const totalCount = isUnit ? (count * item.qty) : count;
+                discNames.push(totalCount > 1 ? `${name}×${totalCount}` : name);
+            }
+        }
+
+        let displayDiscName = "";
+        const presetText = discNames.join('、');
+
+        if (hasPresets) {
+            // プリセットがあり、かつテンキー手入力(hasManualInput)がある場合のみ「含む」を表示
+            if (item.hasManualInput) {
+                displayDiscName = `割引(${presetText}含む)`;
+            } else {
+                displayDiscName = `割引(${presetText})`;
+            }
+        } else {
+            displayDiscName = "特別割引";
+        }
+
+        // 割引行の生成
+        if (displayDiscName) {
+            const discLabel = `  (${displayDiscName} -¥${discountAmount.toLocaleString()})`;
+            t += formatLine(discLabel, "");
+        }
+    }
+
             });
             t += line;
             const details = info.finalTaxDetails || {};
@@ -775,10 +848,10 @@
                 if (data.excl > 0) {
                     t += `${rate}%対象(税抜 ¥${data.excl.toLocaleString()})\n`;
                     t += formatLine("  内消費税", `¥${data.tax.toLocaleString()}`);
+                    t += line;
                 }
             });
 
-            t += line;
             if (info.paymentDetails && info.paymentDetails.length > 1) {
                 // 複数決済の場合の内訳表示
                 info.paymentDetails.forEach(p => {
@@ -792,7 +865,7 @@
                 t += formatLine("お預かり", `¥${info.cashReceived.toLocaleString()}`);
                 t += formatLine("お釣り", `¥${info.change.toLocaleString()}`);
             }
-            if (info.totalAmount >= 50000 && info.paymentMethod.includes('現金')) t += `\n[[STAMP_HERE]]\n`;
+            if (needsStamp) t += `\n[[STAMP_HERE]]\n`;
             t += line;
             t += `※ *の後の数字は税率です\n`;
             t += `ありがとうございました\n`;
@@ -818,7 +891,7 @@
                     t += formatLine(` 内消費税:`, `¥${data.tax.toLocaleString()}`);
                 }
             });
-            if (info.totalAmount >= 50000 && info.paymentMethod.includes('現金')) t += `\n[[STAMP_HERE]]\n`;
+            if (needsStamp) t += `\n[[STAMP_HERE]]\n`;
             t += `\n${line}`;
             t += "[発行者]\n"; // 「発行者:」で改行
             t += formatLine(`${d.companyName}`, "");
@@ -828,7 +901,7 @@
             if (regNo) t += formatLine(`登録番号: ${regNo}`, "");
             t += line;
         }
-        receiptPreview.innerHTML = t.replace('[[STAMP_HERE]]', `<div style="border: 1px solid #000; width: 60px; height: 70px; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 10px; margin: 10px 0 10px 20px;">収入印紙<br>貼付枠</div>`);
+        receiptPreview.innerHTML = t.replace('[[STAMP_HERE]]', `<div style="border: 1px solid #000; width: 60px; height: 70px; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 10px; margin: 10px 0 10px 50px;">収入印紙<br>貼付枠</div>`);
     };
 
     // --- 以下、履歴更新やモーダル制御はそのまま ---
