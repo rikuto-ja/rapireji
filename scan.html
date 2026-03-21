@@ -155,11 +155,14 @@
     font-size: 1.2rem;
     font-weight: 900;
     cursor: pointer;
+    box-shadow: 3px 3px 0 #000;
+    color: #000;
 }
 
 #keypadModal .num-btn:active {
     background: #eee;
     transform: translate(2px, 2px);
+    box-shadow: none;
 }
 
 /* プリセットボタンのデザイン */
@@ -179,6 +182,22 @@
     font-size: 0.8rem;
     cursor: pointer;
 }
+
+#keypadModal .preset-btn:active { background: #fff0f0; }
+
+/* バラ・まとめ切り替えタブ（register.htmlと統一） */
+        .cat-tab {
+            padding: 8px 12px;
+            border: 2px solid #000;
+            background: #fff;
+            font-weight: 900;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+        .cat-tab.active {
+            background: #000;
+            color: #fff;
+        }
 
 /* 確定・キャンセルボタン */
 #keypadModal .btn-black {
@@ -247,7 +266,7 @@
 <div id="keypadModal" class="modal hidden">
     <div class="modal-content">
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-        <h3 id="keypadTitle" style="margin-bottom: 10px; font-weight: 900;">金額入力</h3>
+        <h3 id="keypadTitle" style="color: #000; margin-bottom: 10px; font-weight: 900;">金額入力</h3>
         <div id="discountModeSelector" style="display: none; gap: 5px;">
             <button id="mode-unit" class="cat-tab" onclick="setDiscountMode('unit')" style="padding: 4px 8px; font-size: 0.7rem;">バラ</button>
             <button id="mode-total" class="cat-tab active" onclick="setDiscountMode('total')" style="padding: 4px 8px; font-size: 0.7rem;">まとめ</button>
