@@ -539,7 +539,8 @@ window.setDiscountMode = (mode) => {
         const selector = document.getElementById('discountModeSelector');
         const unitBtn = document.getElementById('discountUnitBtn');
         const presets = document.getElementById('discountPresetArea');
-        const item = cart[index];
+        const currentOrder = JSON.parse(sessionStorage.getItem('currentOrder') || '{"items":[]}');
+        const item = currentOrder.items[index];
         const title = document.getElementById('keypadTitle');
         /*const savedDiscounts = JSON.parse(localStorage.getItem(STORAGE_KEYS.DISCOUNTS) || '[]');*/
 
@@ -560,15 +561,16 @@ window.setDiscountMode = (mode) => {
             unitBtn.innerText = discountUnit;
             presets.style.display = 'grid';
             setDiscountMode('total');
+
             const savedDiscounts = JSON.parse(localStorage.getItem(STORAGE_KEYS.DISCOUNTS) || '[]');
             presets.innerHTML = "";
-            savedDiscounts.forEach(item => {
-                if (item.name) {
+            savedDiscounts.forEach(d => {
+                if (d.name) {
                     const b = document.createElement('button');
                     b.className = 'preset-btn';
-                    const displayVal = item.isPercent ? `${item.value}%` : `¥${Number(item.value).toLocaleString()}`;
-                    b.innerText = `${item.name}\n${displayVal}`;
-                    b.onclick = () => applyPreset(item.value, item.isPercent ? "%" : "¥", item.name);
+                    const displayVal = d.isPercent ? `${d.value}%` : `¥${Number(d.value).toLocaleString()}`;
+                    b.innerText = `${d.name}\n${displayVal}`;
+                    b.onclick = () => applyPreset(d.value, d.isPercent ? "%" : "¥", d.name);
                     presets.appendChild(b);
                 }
             });
@@ -580,16 +582,13 @@ window.setDiscountMode = (mode) => {
 
     window.applyPreset = (val, unit, presetName) => {
         playRegisterSound();
-        // 現在編集中のアイテムを取得
-    const item = cart[editingItemIndex];
-    if (!item) return;
+        const currentOrder = JSON.parse(sessionStorage.getItem('currentOrder') || '{"items":[]}');
+        const item = currentOrder.items[editingItemIndex];
+        if (!item) return;
 
-    // 回数記録用のオブジェクトがなければ作成
-    if (!item.appliedPresets) item.appliedPresets = {};
-    
-    // プリセット名ごとにカウントアップ
-    const name = presetName || "割引";
-    item.appliedPresets[name] = (item.appliedPresets[name] || 0) + 1;
+        if (!item.appliedPresets) item.appliedPresets = {};
+        const name = presetName || "割引";
+        item.appliedPresets[name] = (item.appliedPresets[name] || 0) + 1;
         if (discountUnit !== unit) {
             discountUnit = unit;
             keypadBuffer = "0"; 
@@ -598,6 +597,7 @@ window.setDiscountMode = (mode) => {
         }
 
         keypadBuffer = String(Number(keypadBuffer) + Number(val));
+        sessionStorage.setItem('currentOrder', JSON.stringify(currentOrder));
         updateKeypadDisplay();
     };
 
@@ -656,10 +656,12 @@ window.confirmKeypad = () => {
         item.discountUnit = discountUnit;
         item.discountMode = currentDiscountMode; 
     }
+    const products = JSON.parse(localStorage.getItem(STORAGE_KEYS.PRODUCTS) || '[]');
+    saveOrderWithCalculation(currentOrder, products);
 
     closeKeypad();
-    updateCartUI();
-    renderProducts();
+    const product = products.find(p => String(p.id) === String(item.id));
+    updateScannedUI(item, product);
 };
 
     window.closeModal = (id) => {
@@ -669,18 +671,15 @@ window.confirmKeypad = () => {
 // --- キー入力処理の統合（pressNumに統一） ---
 window.pressNum = (key) => {
     playRegisterSound();
-    if (editingItemIndex !== null && cart[editingItemIndex]) {
-        cart[editingItemIndex].hasManualInput = true;
+    const currentOrder = JSON.parse(sessionStorage.getItem('currentOrder') || '{"items":[]}');
+    const item = currentOrder.items[editingItemIndex];
+    if (item) {
+        item.hasManualInput = true;
+        sessionStorage.setItem('currentOrder', JSON.stringify(currentOrder));
     }
     if (keypadBuffer === "0") {
-        // 最初の入力が 0 または 00 の場合は 0 のまま維持、それ以外は上書き
-        if (key === '0' || key === '00') {
-            keypadBuffer = "0";
-        } else {
-            keypadBuffer = String(key);
-        }
+        keypadBuffer = (key === '0' || key === '00') ? "0" : String(key);
     } else {
-        // 既に数字がある場合は末尾に追加
         keypadBuffer += String(key);
     }
     updateKeypadDisplay();
