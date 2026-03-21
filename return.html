@@ -167,6 +167,114 @@
         }
         .search-result-item:hover { background: var(--gray-light); }
 
+        /* CSS: 割引ボタンのスタイル追加 */
+        .discount-btn {
+            margin-left: 10px;
+            background: #fff;
+            border: 1px solid var(--black);
+            padding: 2px 8px;
+            font-size: 0.7rem;
+            font-weight: 900;
+            cursor: pointer;
+        }
+        /* キーパッド用のモーダル（未実装だった場合のための基本構造） */
+        /* --- テンキー（keypadModal）のデザイン修正 --- */
+#keypadModal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center; /* 垂直中央 */
+    justify-content: center; /* 水平中央 */
+    z-index: 30000;
+}
+
+#keypadModal .modal-content {
+    background: #fff;
+    padding: 20px;
+    border: 4px solid #000;
+    width: 90%;
+    max-width: 320px; /* サイズを少しコンパクトに調整 */
+    box-shadow: 10px 10px 0 #000;
+    position: relative;
+}
+
+#keypadModal .numpad-display {
+    width: 100%;
+    padding: 10px;
+    font-size: 1.5rem;
+    border: 3px solid #000;
+    text-align: right;
+    font-weight: 900;
+    margin-bottom: 10px;
+    background: #eee;
+    box-sizing: border-box;
+}
+
+#keypadModal .numpad-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+
+#keypadModal .num-btn {
+    padding: 10px;
+    border: 2px solid #000;
+    background: #fff;
+    font-size: 1.2rem;
+    font-weight: 900;
+    cursor: pointer;
+}
+
+#keypadModal .num-btn:active {
+    background: #eee;
+    transform: translate(2px, 2px);
+}
+
+/* プリセットボタンのデザイン */
+#keypadModal .discount-presets {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 5px;
+    margin-top: 10px;
+}
+
+#keypadModal .preset-btn {
+    background: #fff;
+    border: 2px solid #ff0000; /* --danger相当 */
+    color: #ff0000;
+    padding: 8px 5px;
+    font-weight: 800;
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+
+/* 確定・キャンセルボタン */
+#keypadModal .btn-black {
+    width: 100%;
+    background: #000;
+    color: #fff;
+    padding: 12px;
+    border: none;
+    font-weight: 900;
+    cursor: pointer;
+    font-size: 1rem;
+    margin-top: 8px;
+}
+
+#keypadModal .btn-outline {
+    width: 100%;
+    background: #fff;
+    color: #000;
+    padding: 12px;
+    border: 2px solid #000;
+    font-weight: 900;
+    cursor: pointer;
+    margin-top: 8px;
+}
         @media screen and (max-width: 768px) {
             header { padding: 0 10px; }
             header h1 { font-size: 0.9rem; margin-left: 10px; }
@@ -178,7 +286,7 @@
             .p-img { height: 40px; } 
             .p-info { padding: 4px 2px; }
             .empty-slot { height: 95px; border:1px solid transparent; display: block; }
-            .cart-section { flex: 1; border-left: none; border-top: 3px solid var(--black); }
+            .cart-section { flex: 1; border-left: none; border-top: 3px solid var(--black); z-index: 1000; background: var(--white); }
             .drag-handle { cursor: row-resize; touch-action: none; padding: 5px 10px 10px 10px; }
             .handle-bar { display: block; }
             .total-row { font-size: 1.1rem; }
@@ -309,22 +417,54 @@
     </section>
 </main>
 
+<div id="keypadModal" class="modal hidden">
+    <div class="modal-content">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+        <h3 id="keypadTitle" style="margin-bottom: 10px; font-weight: 900;">金額入力</h3>
+        <div id="discountModeSelector" style="display: none; gap: 5px;">
+            <button id="mode-unit" class="cat-tab" onclick="setDiscountMode('unit')" style="padding: 4px 8px; font-size: 0.7rem;">バラ</button>
+            <button id="mode-total" class="cat-tab active" onclick="setDiscountMode('total')" style="padding: 4px 8px; font-size: 0.7rem;">まとめ</button>
+        </div>
+        </div>
+        <div id="keypadDisplay" class="numpad-display">0</div>
+        <div class="numpad-grid">
+            <button class="num-btn" onclick="pressNum('7')">7</button>
+            <button class="num-btn" onclick="pressNum('8')">8</button>
+            <button class="num-btn" onclick="pressNum('9')">9</button>
+            <button class="num-btn" onclick="pressNum('4')">4</button>
+            <button class="num-btn" onclick="pressNum('5')">5</button>
+            <button class="num-btn" onclick="pressNum('6')">6</button>
+            <button class="num-btn" onclick="pressNum('1')">1</button>
+            <button class="num-btn" onclick="pressNum('2')">2</button>
+            <button class="num-btn" onclick="pressNum('3')">3</button>
+            <button class="num-btn" onclick="pressNum('0')">0</button>
+            <button class="num-btn" onclick="pressNum('00')">00</button>
+            <button id="discountUnitBtn" class="num-btn" onclick="toggleDiscountUnit()" style="background: #eee; border-color: #000;">¥</button>
+        </div>
+        <div id="discountPresetArea" class="discount-presets"></div>
+        <button id="keypadConfirmBtn" class="btn-black">確定</button>
+        <button onclick="closeModal('keypadModal')" class="btn-outline">キャンセル</button>
+    </div>
+</div>
+
 <script>
     const STORAGE_KEYS = {
         PRODUCTS: 'rapireji_products',
         CATEGORIES: 'rapireji_categories',
-        STOCK_CONFIG: 'rapireji_stock_config'
+        STOCK_CONFIG: 'rapireji_stock_config',
+        DISCOUNTS: 'rapireji_discounts'
     };
 
     let allProducts = [], cart = [], currentCategory = "", pendingItem = null;
     let isStockEnabled = false, alertThreshold = 0;
     let alertedStatus = {};
+    let keypadBuffer = "0", keypadMode = "";
+    let editingItemIndex = null;
+    let currentDiscountMode = 'total';
 
     function playRegisterSound() {
-        // 設定を読み込む（未設定の場合はデフォルトでONにする）
         const sounds = JSON.parse(localStorage.getItem('rapireji_sounds') || '{"btn": true, "pay": true}');
         
-        // 操作音（btn）がONの場合のみ再生
         if (sounds.btn) {
             const sound = document.getElementById('reg-sound');
             sound.currentTime = 0; 
@@ -352,7 +492,7 @@
             const touchY = e.touches ? e.touches[0].clientY : e.clientY;
             const headerH = 60;
             let newHeight = touchY - headerH;
-            if (newHeight < 50) newHeight = 50; 
+            if (newHeight < 0) newHeight = 0; 
             const minCartHeight = 150; 
             if (newHeight > window.innerHeight - headerH - minCartHeight) {
                 newHeight = window.innerHeight - headerH - minCartHeight;
@@ -406,7 +546,7 @@
         grid.innerHTML = "";
         const filtered = allProducts.filter(p => p.category === currentCategory && p.isActive !== false);
         
-        for (let i = 0; i < 50; i++) {
+        for (let i = 0; i < 48; i++) {
             const p = filtered.find(item => item.index === i);
             if (p) {
                 const inCart = cart.find(c => c.id === p.id);
@@ -482,76 +622,303 @@
         renderProducts();
     }
 
+    //ここから追加済み
+    let discountUnit = "¥";
+
+    // openKeypad 関数の中、もしくは割引入力モードの初期化処理に追加してください
+const discArea = document.getElementById('discountPresetArea');
+if (discArea) {
+    discArea.innerHTML = "";
+    const savedDiscounts = JSON.parse(localStorage.getItem('rapireji_discounts')) || [];
+
+    savedDiscounts.forEach(item => {
+        if (item.name) {
+            const b = document.createElement('button');
+            b.className = 'preset-btn';
+            const displayVal = item.isPercent ? `${item.value}%` : `¥${item.value}`;
+            b.innerText = `${item.name}\n${displayVal}`;
+
+            b.onclick = () => {
+                playRegisterSound();
+                const item = cart[editingItemIndex];
+    if (item) {
+        if (!item.appliedPresets) item.appliedPresets = {};
+        // プリセットの名前（例: "学割"）をキーにして回数を加算
+        const pName = preset.name || "割引";
+        item.appliedPresets[pName] = (item.appliedPresets[pName] || 0) + 1;
+    }
+                const newUnit = item.isPercent ? "%" : "¥";
+                if (discountUnit !== newUnit) {
+                    discountUnit = newUnit;
+                    keypadBuffer = "0";
+                    const unitBtn = document.getElementById('discountUnitBtn');
+                    if (unitBtn) unitBtn.innerText = discountUnit;
+                }
+                keypadBuffer = String(Number(keypadBuffer) + Number(item.value));
+                updateKeypadDisplay();
+            };
+            discArea.appendChild(b);
+        }
+    });
+}
+
+window.setDiscountMode = (mode) => {
+    playRegisterSound();
+    currentDiscountMode = mode;
+    document.getElementById('mode-unit').classList.toggle('active', mode === 'unit');
+    document.getElementById('mode-total').classList.toggle('active', mode === 'total');
+};
+
+    window.openKeypad = (mode, index = null) => {
+        playRegisterSound();
+        keypadMode = mode;
+        keypadBuffer = "0";
+        editingItemIndex = index;
+
+        const selector = document.getElementById('discountModeSelector');
+        const unitBtn = document.getElementById('discountUnitBtn');
+        const presets = document.getElementById('discountPresetArea');
+        const item = cart[index];
+        const title = document.getElementById('keypadTitle');
+        /*const savedDiscounts = JSON.parse(localStorage.getItem(STORAGE_KEYS.DISCOUNTS) || '[]');*/
+
+        if (mode === 'qty') {
+            title.innerText = "数量入力";
+            selector.style.display = 'none';
+            unitBtn.style.visibility = 'hidden'; 
+            presets.style.display = 'none';
+        } else {
+            title.innerText = "調整額入力";
+            if (item) {
+            item.appliedPresets = {}; 
+            item.discountValue = 0; // 金額も一旦0に
+        }
+            selector.style.display = 'flex';
+            unitBtn.style.visibility = 'visible';
+            discountUnit = "¥";
+            unitBtn.innerText = discountUnit;
+            presets.style.display = 'grid';
+            setDiscountMode('total');
+            const savedDiscounts = JSON.parse(localStorage.getItem(STORAGE_KEYS.DISCOUNTS) || '[]');
+            presets.innerHTML = "";
+            savedDiscounts.forEach(item => {
+                if (item.name) {
+                    const b = document.createElement('button');
+                    b.className = 'preset-btn';
+                    const displayVal = item.isPercent ? `${item.value}%` : `¥${Number(item.value).toLocaleString()}`;
+                    b.innerText = `${item.name}\n${displayVal}`;
+                    b.onclick = () => applyPreset(item.value, item.isPercent ? "%" : "¥", item.name);
+                    presets.appendChild(b);
+                }
+            });
+        }
+    
+        updateKeypadDisplay(); 
+        document.getElementById('keypadModal').classList.remove('hidden');
+    };
+
+    window.applyPreset = (val, unit, presetName) => {
+        playRegisterSound();
+        // 現在編集中のアイテムを取得
+    const item = cart[editingItemIndex];
+    if (!item) return;
+
+    // 回数記録用のオブジェクトがなければ作成
+    if (!item.appliedPresets) item.appliedPresets = {};
+    
+    // プリセット名ごとにカウントアップ
+    const name = presetName || "割引";
+    item.appliedPresets[name] = (item.appliedPresets[name] || 0) + 1;
+        if (discountUnit !== unit) {
+            discountUnit = unit;
+            keypadBuffer = "0"; 
+            const unitBtn = document.getElementById('discountUnitBtn');
+            if (unitBtn) unitBtn.innerText = discountUnit;
+        }
+
+        keypadBuffer = String(Number(keypadBuffer) + Number(val));
+        updateKeypadDisplay();
+    };
+
+    window.toggleDiscountUnit = () => {
+        playRegisterSound();
+        discountUnit = (discountUnit === "¥") ? "%" : "¥";
+        document.getElementById('discountUnitBtn').innerText = discountUnit;
+        updateKeypadDisplay();
+    };
+
+    function updateKeypadDisplay() {
+        const display = document.getElementById('keypadDisplay');
+        if (keypadMode === 'qty') {
+            display.innerText = keypadBuffer;
+        } else {
+            display.innerText = (discountUnit === "%") ? keypadBuffer + "%" : "¥" + Number(keypadBuffer).toLocaleString();
+        }
+    }  
+
+window.confirmKeypad = () => {
+    playRegisterSound();
+    const val = Number(keypadBuffer);
+    const item = cart[editingItemIndex];
+
+    if (keypadMode === 'qty') {
+        if (val > 0) {
+            item.qty = val;
+        } else {
+            alert("1以上の数値を入力してください。"); 
+            return;
+        }
+    } else {
+        const currentSubtotalExclTax = item.price * item.qty; 
+        
+        if (discountUnit === "%") {
+            if (val > 100) {
+                alert("金額調整率が100%を超えています。");
+                return;
+            }
+        } else {
+            let totalDiscountCheck = 0;
+            if (currentDiscountMode === 'unit') {
+                totalDiscountCheck = val * item.qty; 
+            } else {
+                totalDiscountCheck = val; 
+            }
+
+            if (totalDiscountCheck > currentSubtotalExclTax) {
+                alert("調整額が商品の合計金額を超えています。");
+                return;
+            }
+        }
+
+        item.discountValue = val;
+        item.discountUnit = discountUnit;
+        item.discountMode = currentDiscountMode; 
+    }
+
+    closeKeypad();
+    updateCartUI();
+    renderProducts();
+};
+
+    window.closeModal = (id) => {
+    if (id === 'keypadModal') window.closeKeypad();
+};
+
+// --- キー入力処理の統合（pressNumに統一） ---
+window.pressNum = (key) => {
+    playRegisterSound();
+    if (editingItemIndex !== null && cart[editingItemIndex]) {
+        cart[editingItemIndex].hasManualInput = true;
+    }
+    if (keypadBuffer === "0") {
+        // 最初の入力が 0 または 00 の場合は 0 のまま維持、それ以外は上書き
+        if (key === '0' || key === '00') {
+            keypadBuffer = "0";
+        } else {
+            keypadBuffer = String(key);
+        }
+    } else {
+        // 既に数字がある場合は末尾に追加
+        keypadBuffer += String(key);
+    }
+    updateKeypadDisplay();
+};
+
+// --- テンキーを閉じる処理 ---
+window.closeKeypad = () => {
+    playRegisterSound();
+    document.getElementById('keypadModal').classList.add('hidden');
+    keypadBuffer = "0";
+};
+
+// --- モーダルを閉じる汎用関数（closeKeypadを呼び出すよう統合） ---
+window.closeModal = (id) => {
+    if (id === 'keypadModal') {
+        window.closeKeypad();
+    } else {
+        const modal = document.getElementById(id);
+        if (modal) modal.classList.add('hidden');
+    }
+};
+
+// --- 確定ボタンのイベント紐付け ---
+document.getElementById('keypadConfirmBtn').onclick = () => {
+    window.confirmKeypad();
+};
+
+//ここまで追加済み
+
     function updateCartUI() {
         const list = document.getElementById('cartList'), totalDisp = document.getElementById('totalAmount');
         list.innerHTML = "";
-        
-        // 税率ごとの税抜合計額を保持するオブジェクト
+
+        let finalRefundTotal = 0;
         const subtotalByRate = {}; 
-        let simpleVisualTotal = 0; 
 
         cart.forEach((item, index) => {
             const pInfo = allProducts.find(p => p.id === item.id);
-            // 税率を取得（設定がない場合は0とする）
             const rate = pInfo ? Number(pInfo.taxRate || 0) : 0;
-            const priceInclTax = Math.floor(item.price * (1 + rate / 100));
-            const rowTotal = -(priceInclTax * item.qty);
             
-            simpleVisualTotal += rowTotal;
+            let itemTotalBeforeTax = item.price * item.qty;
+            let discountAmount = 0;
 
-            // 税率ごとのグループに税抜合計を加算
-            if (!subtotalByRate[rate]) {
-                subtotalByRate[rate] = 0;
+            if (item.discountValue) {
+                if (item.discountUnit === "%") {
+                    discountAmount = Math.floor(itemTotalBeforeTax * (item.discountValue / 100));
+                } else {
+                    discountAmount = (item.discountMode === 'unit') ? (item.discountValue * item.qty) : item.discountValue;
+                }
             }
-            subtotalByRate[rate] += (item.price * item.qty);
+        
+            const subtotalAfterDiscount = Math.max(0, itemTotalBeforeTax - discountAmount);
+            const tax = Math.floor(subtotalAfterDiscount * (rate / 100));
+            const rowTotalInclTax = Math.floor(subtotalAfterDiscount * (1 + rate / 100));
+
+            finalRefundTotal += rowTotalInclTax;
+
+            if (!subtotalByRate[rate]) subtotalByRate[rate] = 0;
+            subtotalByRate[rate] += subtotalAfterDiscount;
 
             const div = document.createElement('div');
             div.className = "cart-item";
             div.innerHTML = `
                 <div class="cart-item-top">
                     <span>${item.name} <small>(${rate}%)</small></span>
-                    <span>¥${rowTotal.toLocaleString()}</span>
+                    <span>¥-${rowTotalInclTax.toLocaleString()}</span>
                 </div>
                 <div class="cart-item-controls">
                     <button class="qty-btn" onclick="changeQty(${index}, -1)">-</button>
-                    <span style="margin:0 10px;">× ${item.qty}</span>
+                    <span style="margin:0 10px; cursor:pointer;" onclick="openKeypad('qty', ${index})">× ${item.qty}</span>
                     <button class="qty-btn" onclick="changeQty(${index}, 1)">+</button>
+                    <button class="discount-btn" onclick="openKeypad('discount', ${index})">金額調整</button>
+                    ${item.discountValue ? `<small style="color:red; margin-left:5px;">調整額:${discountAmount}円</small>` : ''}
                     <button onclick="removeItem(${index})" style="margin-left:auto; background:none; border:none; color:red; font-weight:bold; cursor:pointer;">削除</button>
                 </div>`;
             list.appendChild(div);
         });
 
-        // 最終計算
-        let finalTaxTotal = 0;
-        let finalSubtotal = 0;
-
-        console.group("--- 決済計算詳細 (汎用税率対応) ---");
+        totalDisp.innerText = `返金: ¥${finalRefundTotal.toLocaleString()}`;
         
-        Object.keys(subtotalByRate).forEach(rate => {
-            const r = Number(rate);
-            const subtotal = subtotalByRate[r];
-            const tax = Math.floor(subtotal * (r / 100)); // 税率ごとの税金（切り捨て）
-            
-            finalSubtotal += subtotal;
-            finalTaxTotal += tax;
-            
-            console.log(`税率 ${r}% 対象(税抜): ${subtotal}円 => 税額: ${tax}円`);
-        });
-
-        const finalTotal = -(finalSubtotal + finalTaxTotal);
-
-        console.log(`表示用単純合計(参考): ${simpleVisualTotal}円`);
-        console.log(`総合計(税抜計 ${finalSubtotal}円 + 税計 ${finalTaxTotal}円): ${finalTotal}円`);
-        console.groupEnd();
-
-        totalDisp.innerText = `返金: ¥${Math.abs(finalTotal).toLocaleString()}`;
-        
-        // セッションストレージに保存
         sessionStorage.setItem('currentOrder', JSON.stringify({ 
-            items: cart, 
-            totalAmount: finalTotal,
-            taxDetails: subtotalByRate,
-            isRefund: true,
+            items: cart.map(item => {
+            const dAmt = (item.discountUnit === "%") 
+                ? Math.floor((item.price * item.qty) * (item.discountValue / 100))
+                : (item.discountMode === 'unit' ? item.discountValue * item.qty : item.discountValue);
+
+            return {
+                ...item,
+                // レシート側が期待する構造に変換
+                appliedDiscount: {
+                    amount: dAmt || 0,
+                    mode: item.discountMode || 'total'
+                },
+                appliedPresets: item.appliedPresets || {},
+                hasManualInput: item.hasManualInput || false
+            };
+        }),
+        totalAmount: finalRefundTotal, // 負数にする必要があれば -finalRefundTotal
+        taxDetails: subtotalByRate,
+        isRefund: true,
         }));
         
         list.scrollTop = list.scrollHeight;
@@ -692,14 +1059,13 @@
         // 3. 描画を待ってからスクロール
         setTimeout(() => {
             const grid = document.getElementById('productGrid');
-            const cards = grid.querySelectorAll('.product-card, .empty-slot');
-            if (cards[index]) {
-                cards[index].scrollIntoView({ behavior: 'smooth', block: 'center' });
-                // 強調演出（一瞬光らせる）
-                cards[index].style.outline = "4px solid var(--accent)";
-                setTimeout(() => cards[index].style.outline = "none", 1500);
+            const target = grid.children[index];
+            if (target) {
+                target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                target.style.outline = "4px solid var(--accent)";
+                setTimeout(() => target.style.outline = "none", 1500);
             }
-        }, 100);
+        }, 150);
     };
 </script>
 </body>
