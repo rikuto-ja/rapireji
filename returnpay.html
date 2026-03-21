@@ -603,12 +603,56 @@
         if (regNo) t += formatLine(`登録番号: ${regNo}`, "");
         t += `日時: ${dateStr}\n${line}`;
 
+        /* --- generateContent 関数内の info.items.forEach ループ内を以下に差し替え --- */
+
         info.items.forEach(item => {
-            const priceVal = `¥${(item.price * item.qty).toLocaleString()}`;
+            // --- 商品単体割引の計算ロジック ---
+            const discountAmount = item.appliedDiscount ? item.appliedDiscount.amount : 0;
+            const itemTotalBeforeDiscount = item.price * item.qty;
+            // レシート上の金額は割引適応後の税抜き金額
+            const itemFinalExcl = Math.max(0, itemTotalBeforeDiscount - discountAmount);
+            const priceVal = `¥${itemFinalExcl.toLocaleString()}`;
+            
+            // 商品名の後ろに税率（例: *10 や *8）を付与
             const rate = (item.taxRate !== undefined) ? item.taxRate : (item.rate !== undefined ? item.rate : null);
             const taxMarker = (rate !== null) ? ` *${rate}` : ""; 
             const label = item.name + taxMarker + (item.qty > 1 ? ` (x${item.qty})` : "");
             t += formatLine(label, priceVal);
+
+            // 商品別の割引表示ロジック
+            if (discountAmount > 0) {
+                let discNames = [];
+                const hasPresets = item.appliedPresets && Object.keys(item.appliedPresets).length > 0;
+
+                // プリセット（学生、水曜日など）の名称と回数を取得
+                if (hasPresets) {
+                    for (const [name, count] of Object.entries(item.appliedPresets)) {
+                        const isUnit = item.appliedDiscount && item.appliedDiscount.mode === 'unit';
+                        const totalCount = isUnit ? (count * item.qty) : count;
+                        discNames.push(totalCount > 1 ? `${name}×${totalCount}` : name);
+                    }
+                }
+
+                let displayDiscName = "";
+                const presetText = discNames.join('、');
+
+                if (hasPresets) {
+                    // プリセットがあり、かつテンキー手入力(hasManualInput)がある場合のみ「含む」を表示
+                    if (item.hasManualInput) {
+                        displayDiscName = `割引(${presetText}含む)`;
+                    } else {
+                        displayDiscName = `割引(${presetText})`;
+                    }
+                } else {
+                    displayDiscName = "特別割引";
+                }
+
+                // 割引行の生成
+                if (displayDiscName) {
+                    const discLabel = `  (${displayDiscName} -¥${discountAmount.toLocaleString()})`;
+                    t += formatLine(discLabel, "");
+                }
+            }
         });
 
         t += line;
@@ -632,10 +676,10 @@
             if (data.excl > 0) {
                 t += `${rate}%対象(税抜 ¥${data.excl.toLocaleString()})\n`;
                 t += formatLine("  内消費税", `¥${data.tax.toLocaleString()}`);
+                t += line;
             }
         });
 
-        t += line;
         t += `処理方法: ${info.paymentMethod}\n`;
         // お預かり・お釣りの表示は返金時は不要なためカット
         t += line + `返品・返金を承りました\n`;
