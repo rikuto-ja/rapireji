@@ -221,25 +221,37 @@
     </div>
 
     <div class="settings-card">
-        <h3 style="font-weight: 900; margin-bottom: 20px; border-left: 8px solid #000; padding-left: 10px;">割引設定（金額は半角で入力）</h3>
+        <h3 style="font-weight: 900; margin-bottom: 20px; border-left: 8px solid #000; padding-left: 10px;">割引設定</h3>
         <div id="discountContainer">
             <div class="flex-row">
                 <input type="text" class="discount-name" placeholder="名称1">
-                <input type="text" class="discount-value" placeholder="金額（％も可）">
+                <input type="number" class="discount-num-value" placeholder="数値">
+                <select class="discount-unit" style="border: 3px solid #000; font-weight: 800;">
+                    <option value="yen">円</option>
+                    <option value="percent">％</option>
+                </select>
             </div>
             <div class="flex-row">
                 <input type="text" class="discount-name" placeholder="名称2">
-                <input type="text" class="discount-value" placeholder="金額（％も可）">
+                <input type="number" class="discount-num-value" placeholder="数値">
+                <select class="discount-unit" style="border: 3px solid #000; font-weight: 800;">
+                    <option value="yen">円</option>
+                    <option value="percent">％</option>
+                </select>
             </div>
             <div class="flex-row">
                 <input type="text" class="discount-name" placeholder="名称3">
-                <input type="text" class="discount-value" placeholder="金額（％も可）">
+                <input type="number" class="discount-num-value" placeholder="数値">
+                <select class="discount-unit" style="border: 3px solid #000; font-weight: 800;">
+                    <option value="yen">円</option>
+                    <option value="percent">％</option>
+                </select>
             </div>
         </div>
     </div>
 
     <div class="settings-card">
-        <h3 style="font-weight: 900; margin-bottom: 20px; border-left: 8px solid #000; padding-left: 10px;">通知音設定</h3>
+        <h3 style="font-weight: 900; margin-bottom: 20px; border-left: 8px solid #000; padding-left: 10px;">通知音・プレビュー設定</h3>
         <div class="sound-setting-item">
             <label style="margin-bottom: 0;">操作音</label>
             <label class="switch">
@@ -265,6 +277,13 @@
             <label style="margin-bottom: 0;">エラー音</label>
             <label class="switch">
                 <input type="checkbox" id="soundErrorEnabled" onchange="autoSaveSounds()" checked>
+                <span class="slider"></span>
+            </label>
+        </div>
+        <div class="sound-setting-item" style="margin-top: 10px; border-top: 1px dashed #ccc; padding-top: 15px;">
+            <label style="margin-bottom: 0;">決済完了時のプレビュー</label>
+            <label class="switch">
+                <input type="checkbox" id="receiptPreviewEnabled" onchange="autoSavePreviewSettings()" checked>
                 <span class="slider"></span>
             </label>
         </div>
@@ -339,21 +358,25 @@
         // 割引設定の読み込み（%表示の復元）
         const discounts = JSON.parse(localStorage.getItem('rapireji_discounts') || '[]');
         const nameInputs = document.querySelectorAll('.discount-name');
-        const valueInputs = document.querySelectorAll('.discount-value');
+        const numInputs = document.querySelectorAll('.discount-num-value');
+        const unitSelects = document.querySelectorAll('.discount-unit');
         nameInputs.forEach((el, i) => {
             const item = discounts[i];
             if (item) {
                 el.value = item.name || "";
-                valueInputs[i].value = item.isPercent ? `${item.value}%` : (item.value || "");
+                numInputs[i].value = item.value || "";
+                unitSelects[i].value = item.isPercent ? "percent" : "yen";
             }
         });
 
         // 既存のsounds読み込み部分を下記に差し替え
         const sounds = JSON.parse(localStorage.getItem('rapireji_sounds') || '{"btn": true, "pay": true, "scan": true, "error": true}');
+        const previewSetting = JSON.parse(localStorage.getItem('rapireji_preview_config') || '{"show": true}');
         document.getElementById('soundBtnEnabled').checked = sounds.btn;
         document.getElementById('soundPayEnabled').checked = sounds.pay;
         document.getElementById('soundScanEnabled').checked = sounds.scan;
         document.getElementById('soundErrorEnabled').checked = sounds.error; // 追加
+        document.getElementById('receiptPreviewEnabled').checked = previewSetting.show;
     }
 
     function initBackupSystem() {
@@ -457,16 +480,21 @@
     function autoSaveDiscounts() {
         const items = [];
         const nameInputs = document.querySelectorAll('.discount-name');
-        const valueInputs = document.querySelectorAll('.discount-value');
+        const numInputs = document.querySelectorAll('.discount-num-value');
+        const unitSelects = document.querySelectorAll('.discount-unit');
         nameInputs.forEach((el, i) => {
-            // 入力値を半角に変換してから処理
-            let rawValue = toHalfWidth(valueInputs[i].value.trim());
+            const name = el.value.trim();
+            const val = numInputs[i].value.trim();
+            const unit = unitSelects[i].value;
             
-            if (el.value && rawValue !== "") {
-                const isPercent = rawValue.includes('%');
-                const numValue = parseFloat(rawValue.replace('%', ''));
+            if (name && val !== "") {
+                const numValue = parseFloat(val);
                 if (!isNaN(numValue)) {
-                    items.push({ name: el.value, value: numValue, isPercent: isPercent });
+                    items.push({ 
+                        name: name, 
+                        value: numValue, 
+                        isPercent: (unit === "percent") 
+                    });
                 }
             }
         });
@@ -483,12 +511,23 @@
         localStorage.setItem('rapireji_sounds', JSON.stringify(data));
     }
 
+    function autoSavePreviewSettings() {
+        const data = {
+            show: document.getElementById('receiptPreviewEnabled').checked
+        };
+        localStorage.setItem('rapireji_preview_config', JSON.stringify(data));
+    }
+
+    document.addEventListener('change', (e) => {
+        if (e.target.classList.contains('discount-unit')) autoSaveDiscounts();
+    });
+
     // 入力イベントの紐付け（DOM読み込み完了後に追加）
     document.addEventListener('input', (e) => {
         if (e.target.closest('.settings-card')) {
-            if (e.target.id === 'soundBtnEnabled' || e.target.id === 'soundPayEnabled') return; // スイッチは別途処理
+            if (e.target.id === 'soundBtnEnabled' || e.target.id === 'soundPayEnabled' || e.target.id === 'soundScanEnabled' || e.target.id === 'soundErrorEnabled' || e.target.id === 'receiptPreviewEnabled') return;
             if (e.target.classList.contains('payment-input')) autoSavePayments();
-            else if (e.target.classList.contains('discount-name') || e.target.classList.contains('discount-value')) autoSaveDiscounts();
+            else if (e.target.classList.contains('discount-name') || e.target.classList.contains('discount-num-value')) autoSaveDiscounts(); // クラス名変更に対応
             else autoSaveProfile();
         }
     });
