@@ -476,7 +476,7 @@
         const grid = document.getElementById('productGrid'); grid.innerHTML = "";
         const filtered = allProducts.filter(p => p.category === currentCategory && p.isActive !== false);
         
-        for (let i = 0; i < 50; i++) {
+        for (let i = 0; i < 48; i++) {
             const p = filtered.find(item => item.index === i);
             const div = document.createElement('div');
             
@@ -591,7 +591,7 @@
             const isOccupied = allProducts.some(p => p.category === newCategory && p.index === finalIndex && p.isActive !== false);
             if (isOccupied) {
                 let foundEmpty = false;
-                for (let i = 0; i < 50; i++) {
+                for (let i = 0; i < 48; i++) {
                     if (!allProducts.some(p => p.category === newCategory && p.index === i && p.isActive !== false)) {
                         finalIndex = i;
                         foundEmpty = true;
@@ -822,7 +822,7 @@
         // 3. 描画を待ってからスクロール
         setTimeout(() => {
             const grid = document.getElementById('productGrid');
-            const items = grid.querySelectorAll('.product-item');
+            const items = grid.children;
             if (items[index]) {
                 items[index].scrollIntoView({ behavior: 'smooth', block: 'center' });
                 // 強調演出
