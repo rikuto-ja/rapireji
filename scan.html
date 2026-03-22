@@ -436,6 +436,13 @@ function updateScannedUI(item, originalProduct) {
     const adjustLabel = isRefund ? "金額調整" : "割引";
     const sign = isRefund ? "-" : "";
 
+    // 割引・調整額の表示テキストを出し分け
+    const discountDisplay = discountAmount > 0 
+        ? (isRefund 
+            ? `<small style="color:red; margin-left:5px;">調整額:${discountAmount.toLocaleString()}円</small>` 
+            : `<small style="color:red; margin-left:5px;">-${discountAmount.toLocaleString()}円</small>`)
+        : '';
+
     // 4. UIの更新
     area.innerHTML = `
         <div class="cart-item">
@@ -447,11 +454,8 @@ function updateScannedUI(item, originalProduct) {
                 <button class="qty-btn" onclick="window.changeQtyScan('${item.id}', -1)">-</button>
                 <span style="margin:0 10px; cursor:pointer;" onclick="openKeypad('qty', ${index})">× ${item.qty}</span>
                 <button class="qty-btn" onclick="window.changeQtyScan('${item.id}', 1)">+</button>
-                
                 <button class="discount-btn" onclick="openKeypad('discount', ${index})">${adjustLabel}</button>
-                
-                ${discountAmount > 0 ? `<small style="color:red; margin-left:5px;">-${discountAmount.toLocaleString()}円</small>` : ''}
-                
+                ${discountDisplay}
                 <button onclick="window.removeItemScan('${item.id}')" style="margin-left:auto; background:none; border:none; color:red; font-weight:bold; cursor:pointer;">削除</button>
             </div>
         </div>
