@@ -94,6 +94,8 @@
         .qty-btn { width: 32px; height: 32px; background: #fff; border: 2px solid #000; font-weight: 900; cursor: pointer; display: flex; align-items: center; justify-content: center; }
         #last-code { font-size: 1.5rem; font-weight: 900; margin-bottom: 10px; }
 
+        .cat-tab { padding: 8px 16px; background: var(--white); border: 2px solid var(--black); font-weight: 800; font-size: 0.8rem; cursor: pointer; white-space: nowrap; box-shadow: 2px 2px 0px var(--black); border-radius: 0; }
+        .cat-tab.active { background: var(--black); color: var(--white); transform: translate(1px, 1px); box-shadow: none; }
 
         /* CSS: 割引ボタンのスタイル追加 */
         .discount-btn {
@@ -178,6 +180,7 @@
     font-weight: 800;
     font-size: 0.8rem;
     cursor: pointer;
+    box-shadow: none;
 }
 
 /* 確定・キャンセルボタン */
