@@ -310,6 +310,16 @@
         <input type="file" id="fileInput" style="display: none;" accept=".json">
     </div>
 
+    <div class="settings-card" id="storage-status-card">
+        <h3 style="font-weight: 900; margin-bottom: 10px; border-left: 8px solid #000; padding-left: 10px;">ストレージ使用量</h3>
+        <p style="font-size: 0.8rem; font-weight: 800; margin-bottom: 15px;">
+            ブラウザの保存容量のうち、現在 <span id="storage-usage-text">0.00%</span> を使用中
+        </p>
+        <div style="width: 100%; height: 30px; border: 3px solid #000; background: #fff; position: relative; overflow: hidden;">
+            <div id="storage-bar" style="width: 0%; height: 100%; background: var(--accent); border-right: 3px solid #000; transition: width 0.5s ease-in-out;"></div>
+        </div>
+    </div>
+
     <div class="settings-card" style="border-color: #000; background: #fff;">
         <h3 style="font-weight: 900; margin-bottom: 10px; border-left: 8px solid #000; padding-left: 10px;">💡 サービス改善</h3>
         <p style="font-size: 0.8rem; font-weight: 800; margin-bottom: 15px;">不具合報告や新機能のリクエストはこちらからお送りください。</p>
@@ -450,6 +460,38 @@
         reader.readAsText(file);
     }
 
+    // 追加：ストレージ使用量を計算して表示を更新する関数
+    function updateStorageIndicator() {
+        let total = 0;
+        for (let key in localStorage) {
+            if (localStorage.hasOwnProperty(key)) {
+                // UTF-16は1文字2バイトなので文字数×2で計算
+                total += (localStorage[key].length + key.length) * 2;
+            }
+        }
+    
+        const LIMIT = 5 * 1024 * 1024; // 5MB = 5,242,880バイト
+        const usagePercent = (total / LIMIT * 100).toFixed(2);
+        const barPercent = Math.min(usagePercent, 100); // 100%を超えないように
+
+        // 表示を更新
+        const bar = document.getElementById('storage-bar');
+        const text = document.getElementById('storage-usage-text');
+    
+        if (bar && text) {
+            bar.style.width = barPercent + "%";
+            text.innerText = usagePercent + "%";
+
+            // 容量が80%を超えたらバーの色を警告色に変更
+            if (usagePercent > 80) {
+                bar.style.background = "#ffcc00"; // 黄色
+            }
+            if (usagePercent > 95) {
+                bar.style.background = "var(--danger)"; // 赤色
+            }
+        }
+    }
+
     // 保存ボタン・リセットボタン
     // 自動保存用の関数
 
@@ -470,11 +512,13 @@
             memo: document.getElementById('memo').value
         };
         localStorage.setItem('rapireji_profile', JSON.stringify(data));
+        updateStorageIndicator();
     }
 
     function autoSavePayments() {
         const methods = Array.from(document.querySelectorAll('.payment-input')).map(el => el.value).filter(v => v !== "");
         localStorage.setItem('rapireji_payments', JSON.stringify(methods));
+        updateStorageIndicator();
     }
 
     function autoSaveDiscounts() {
@@ -499,6 +543,7 @@
             }
         });
         localStorage.setItem('rapireji_discounts', JSON.stringify(items));
+        updateStorageIndicator();
     }
 
     function autoSaveSounds() {
@@ -509,6 +554,7 @@
             error: document.getElementById('soundErrorEnabled').checked // 追加
         };
         localStorage.setItem('rapireji_sounds', JSON.stringify(data));
+        updateStorageIndicator();
     }
 
     function autoSavePreviewSettings() {
@@ -516,6 +562,7 @@
             show: document.getElementById('receiptPreviewEnabled').checked
         };
         localStorage.setItem('rapireji_preview_config', JSON.stringify(data));
+        updateStorageIndicator();
     }
 
     document.addEventListener('change', (e) => {
@@ -552,6 +599,9 @@
                 link.classList.add('active');
             }
         });
+        loadLocalSettings();
+        initBackupSystem();
+        updateStorageIndicator();
     });
 </script>
 </body>
