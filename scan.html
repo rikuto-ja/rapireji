@@ -608,7 +608,7 @@ window.setDiscountMode = (mode) => {
             presets.style.display = 'grid';
             setDiscountMode('total');
 
-            const savedDiscounts = JSON.parse(localStorage.getItem(STORAGE_KEYS.DISCOUNTS) || '[]');
+            const savedDiscounts = JSON.parse(localStorage.getItem('rapireji_discounts') || '[]');
             presets.innerHTML = "";
             savedDiscounts.forEach(d => {
                 if (d.name) {
