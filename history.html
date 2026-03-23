@@ -412,11 +412,43 @@
             t += `日時: ${dateStr}\n${line}`;
 
             data.items.forEach(item => {
-                const priceVal = `¥${(item.price * item.qty).toLocaleString()}`;
+                const discountAmount = item.appliedDiscount ? item.appliedDiscount.amount : 0;
+                const itemTotalBeforeDiscount = item.price * item.qty;
+                const itemFinalExcl = Math.max(0, itemTotalBeforeDiscount - discountAmount);
+                const priceVal = `¥${itemFinalExcl.toLocaleString()}`;
+
                 const rate = (item.taxRate !== undefined) ? item.taxRate : (item.rate !== undefined ? item.rate : null);
                 const taxMarker = (rate !== null) ? ` *${rate}` : ""; 
                 const label = item.name + taxMarker + (item.qty > 1 ? ` (x${item.qty})` : "");
                 t += formatLine(label, priceVal);
+
+                // --- 商品別割引の表示ロジックを追加 ---
+                if (discountAmount > 0) {
+                    let discNames = [];
+                    const hasPresets = item.appliedPresets && Object.keys(item.appliedPresets).length > 0;
+
+                    if (hasPresets) {
+                        for (const [name, count] of Object.entries(item.appliedPresets)) {
+                            const isUnit = item.appliedDiscount && item.appliedDiscount.mode === 'unit';
+                            const totalCount = isUnit ? (count * item.qty) : count;
+                            discNames.push(totalCount > 1 ? `${name}×${totalCount}` : name);
+                        }
+                    }
+
+                    let displayDiscName = "";
+                    const presetText = discNames.join('、');
+
+                    if (hasPresets) {
+                        displayDiscName = item.hasManualInput ? `割引(${presetText}含む)` : `割引(${presetText})`;
+                    } else {
+                        displayDiscName = "特別割引";
+                    }
+
+                    if (displayDiscName) {
+                        const discLabel = `  (${displayDiscName} -¥${discountAmount.toLocaleString()})`;
+                        t += formatLine(discLabel, "");
+                    }
+                }
             });
 
             t += line;
@@ -461,11 +493,48 @@
             t += `日時: ${dateStr}\n${line}`;
 
             data.items.forEach(item => {
-                const priceVal = `¥${(item.price * item.qty).toLocaleString()}`;
-                const rate = item.taxRate !== undefined ? item.taxRate : (item.rate !== undefined ? item.rate : null);
-                const taxMarker = (rate !== null) ? ` *${rate}` : "";
+                const discountAmount = item.appliedDiscount ? item.appliedDiscount.amount : 0;
+                const itemTotalBeforeDiscount = item.price * item.qty;
+                // レシート上の金額は割引適応後の税抜き金額
+                const itemFinalExcl = Math.max(0, itemTotalBeforeDiscount - discountAmount);
+                const priceVal = `¥${itemFinalExcl.toLocaleString()}`;
+                const rate = (item.taxRate !== undefined) ? item.taxRate : (item.rate !== undefined ? item.rate : null);
+                const taxMarker = (rate !== null) ? ` *${rate}` : ""; 
                 const label = item.name + taxMarker + (item.qty > 1 ? ` (x${item.qty})` : "");
                 t += formatLine(label, priceVal);
+
+                if (discountAmount > 0) {
+                    let discNames = [];
+                    const hasPresets = item.appliedPresets && Object.keys(item.appliedPresets).length > 0;
+
+                    // プリセットの名称と回数を取得
+                    if (hasPresets) {
+                        for (const [name, count] of Object.entries(item.appliedPresets)) {
+                            const isUnit = item.appliedDiscount && item.appliedDiscount.mode === 'unit';
+                            const totalCount = isUnit ? (count * item.qty) : count;
+                            discNames.push(totalCount > 1 ? `${name}×${totalCount}` : name);
+                        }
+                    }
+
+                    let displayDiscName = "";
+                    const presetText = discNames.join('、');
+
+                    if (hasPresets) {
+                        if (item.hasManualInput) {
+                            displayDiscName = `割引(${presetText}含む)`;
+                        } else {
+                            displayDiscName = `割引(${presetText})`;
+                        }
+                    } else {
+                        displayDiscName = "特別割引";
+                    }
+
+                    // 割引行の生成 (参考例通りのフォーマット)
+                    if (displayDiscName) {
+                        const discLabel = `  (${displayDiscName} -¥${discountAmount.toLocaleString()})`;
+                        t += formatLine(discLabel, "");
+                    }
+                }
             });
             t += line;
             
@@ -687,7 +756,7 @@
 
         // 2. ヘッダーの作成
         // 「割引」の後に「割引名」を追加
-        let header = ["日時", "購入内訳", "小計", "割引", "割引名/金額調整名", "税抜合計", "消費税額"];
+        let header = ["日時", "内訳", "小計", "割引", "割引名/金額調整名", "税抜合計", "消費税額"];
         
         // 存在する税率分だけ列を追加
         sortedRates.forEach(rate => {
