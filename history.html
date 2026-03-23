@@ -775,9 +775,15 @@
             const itemDetail = h.items.map(i => `${i.name}x${i.qty}`).join(' / ');
             
             const itemDiscounts = h.items
-            .filter(i => i.discount && i.discount > 0)
-            .map(i => `${i.name}x${i.qty}(-¥${(i.discount).toLocaleString()})`)
-            .join(' / ') || "--";
+                .map(i => {
+                    // レシート生成時と同様に i.discount を参照
+                    const dVal = Number(i.discount || 0);
+                    if (dVal <= 0) return null;
+                    // 割引額(dVal) × 数量(i.qty) で総額を算出
+                    return `${i.name}x${i.qty}(-¥${(dVal * i.qty).toLocaleString()})`;
+                })
+                .filter(val => val !== null)
+                .join(' / ') || "--";
 
             const details = h.taxDetails || {};
             let calculatedTaxTotal = 0;
