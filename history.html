@@ -340,6 +340,11 @@
         const MAX_WIDTH = 24; 
         const line = "-".repeat(MAX_WIDTH) + "\n";
 
+        const cashTotal = (data.paymentDetails || []).reduce((sum, p) => {
+            return p.method.includes('現金') ? sum + p.amount : sum;
+        }, 0);
+        const needsStamp = cashTotal >= 50000;
+
         const getLen = (str) => {
             let len = 0; if (!str) return 0;
             for (let i = 0; i < str.length; i++) {
@@ -531,12 +536,18 @@
             });
 
             t += line;
+            if (data.paymentDetails && data.paymentDetails.length > 1) {
+            data.paymentDetails.forEach(p => {
+                t += formatLine(`決済方法: ${p.method}`, `¥${p.amount.toLocaleString()}`);
+            });
+        } else {
             t += `決済方法: ${data.paymentMethod}\n`;
+        }
             if (data.cashReceived > 0) {
                 t += formatLine("お預かり", `¥${(data.cashReceived || 0).toLocaleString()}`);
                 t += formatLine("お釣り", `¥${(data.change || 0).toLocaleString()}`);
             }
-            if ((data.totalAmount || 0) >= 50000 && data.paymentMethod.includes('現金')) t += `\n[[STAMP_HERE]]\n`;
+            if (needsStamp) t += `\n[[STAMP_HERE]]\n`;
             t += line;
             t += `※ *の後の数字は税率です\n`;
             t += `ありがとうございました\n`;
@@ -566,7 +577,7 @@
                 }
             });
             
-            if ((data.totalAmount || 0) >= 50000 && data.paymentMethod.includes('現金')) t += `\n[[STAMP_HERE]]\n`;
+            if (needsStamp) t += `\n[[STAMP_HERE]]\n`;
             t += `\n${line}[発行者]\n`;
             t += formatLine(displayStoreName, "");
             if (zip) t += formatLine(zip, "");
