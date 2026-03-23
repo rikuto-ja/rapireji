@@ -181,6 +181,7 @@
             <button class="btn-outline" id="btn-csv-export">取引明細CSV</button>
             <button class="btn-outline" id="btn-csv-items">商品別CSV</button>
             <button class="btn-outline" id="btn-csv-time">時間別分析CSV</button>
+            <button class="btn-outline" id="btn-csv-payment">決済方法別CSV</button>
         </div>
     </section>
 
@@ -763,7 +764,7 @@
             header.push(`${rate}%対象(税抜)`);
             header.push(`${rate}%内消費税`);
         });
-        header.push("最終合計", "支払方法", "取引状態", "レシート発行", "領収書発行", "払戻伝票発行");
+        header.push("最終合計", "支払方法", "分割決済詳細", "取引状態", "レシート発行", "領収書発行", "払戻伝票発行");
 
         let csv = "\uFEFF" + header.map(h => `"${h}"`).join(",") + "\n";
 
@@ -776,7 +777,7 @@
             const itemDiscounts = h.items
             .filter(i => i.discount && i.discount > 0)
             .map(i => `${i.name}x${i.qty}(-¥${(i.discount).toLocaleString()})`)
-            .join(' / ') || "なし";
+            .join(' / ') || "--";
 
             const details = h.taxDetails || {};
             let calculatedTaxTotal = 0;
@@ -810,6 +811,13 @@
                 billTxt = h.billIssued ? "済" : "未";
                 refundTxt = "--";
             }
+
+            let splitPaymentTxt = "--";
+            if (h.paymentDetails && h.paymentDetails.length > 1) {
+                splitPaymentTxt = h.paymentDetails
+                    .map(p => `${p.method} ¥${(p.amount || 0).toLocaleString()}`)
+                    .join(' / ');
+            }
             
             const discName = h.discountName || "";
 
@@ -837,6 +845,7 @@
             row.push(
                 h.totalAmount || 0,
                 `"${h.paymentMethod}"`,
+                `"${splitPaymentTxt}"`,
                 `"${voidTxt}"`,
                 `"${receiptTxt}"`,
                 `"${billTxt}"`,
@@ -879,6 +888,36 @@
             row.push(sum); csv += row.join(",") + "\n";
         }
         downloadCSV(csv, "時間別商品分析.csv");
+    };
+
+    // --- 決済方法別売上CSVの追加 ---
+    document.getElementById('btn-csv-payment').onclick = () => {
+        const paymentMap = {};
+    
+        // 取消分を除外して集計
+        filteredData.filter(h => !h.isVoided).forEach(h => {
+            // 分割決済（paymentDetails）がある場合はそれを優先、なければ paymentMethod を使用
+            if (h.paymentDetails && h.paymentDetails.length > 0) {
+                h.paymentDetails.forEach(p => {
+                    const method = p.method || "不明";
+                    if (!paymentMap[method]) paymentMap[method] = { count: 0, amount: 0 };
+                    paymentMap[method].count += 1;
+                    paymentMap[method].amount += (p.amount || 0);
+                });
+            } else {
+                const method = h.paymentMethod || "不明";
+                if (!paymentMap[method]) paymentMap[method] = { count: 0, amount: 0 };
+                paymentMap[method].count += 1;
+                paymentMap[method].amount += (h.totalAmount || 0);
+            }
+        });
+
+        let csv = "\uFEFF決済方法,取引件数,売上合計\n";
+        Object.keys(paymentMap).sort().forEach(method => {
+            csv += `"${method}",${paymentMap[method].count},${paymentMap[method].amount}\n`;
+        });
+
+        downloadCSV(csv, "決済方法別売上分析.csv");
     };
 
     function downloadCSV(csv, filename) {
