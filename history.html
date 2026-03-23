@@ -756,7 +756,7 @@
 
         // 2. ヘッダーの作成
         // 「割引」の後に「割引名」を追加
-        let header = ["日時", "内訳", "小計", "割引", "割引名/金額調整名", "税抜合計", "消費税額"];
+        let header = ["日時", "内訳", "商品別割引","小計", "割引", "割引名/金額調整名", "税抜合計", "消費税額"];
         
         // 存在する税率分だけ列を追加
         sortedRates.forEach(rate => {
@@ -773,6 +773,11 @@
             const dateStr = `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
             const itemDetail = h.items.map(i => `${i.name}x${i.qty}`).join(' / ');
             
+            const itemDiscounts = h.items
+            .filter(i => i.discount && i.discount > 0)
+            .map(i => `${i.name}x${i.qty}(-¥${(i.discount).toLocaleString()})`)
+            .join(' / ') || "なし";
+
             const details = h.taxDetails || {};
             let calculatedTaxTotal = 0;
             Object.keys(details).forEach(rate => {
@@ -812,6 +817,7 @@
             let row = [
                 `"${dateStr}"`,
                 `"${itemDetail}"`,
+                `"${itemDiscounts}"`,
                 h.subtotal || 0,
                 h.discount || 0,
                 `"${discName}"`, 
