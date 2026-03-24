@@ -622,6 +622,25 @@
         playSnd('snd-beep2');
         const now = new Date();
         lastHistoryId = Date.now();
+
+        const itemsWithDiscount = order.items.map(item => {
+            // 現在の売価(item.price)は、すでに値引き後の場合があるため、
+            // 値引き前の「定価」を算出または保持する
+            const discountAmount = item.appliedDiscount ? item.appliedDiscount.amount : 0;
+        
+            return {
+                ...item,
+                // 【重要】CSV出力側が計算に使用する「定価」を保存
+                // 数量1あたりの定価 = 現在の単価 + (合計割引額 / 数量)
+                originalPrice: item.price + (discountAmount / item.qty),
+                
+                // 既存の保存項目
+                itemDiscountAmount: discountAmount,
+                itemDiscountName: (item.appliedPresets && Object.keys(item.appliedPresets).length > 0) 
+                    ? Object.keys(item.appliedPresets).join('、') 
+                    : (item.appliedDiscount ? "特別割引" : "")
+            };
+        });
     
         // 表示用の決済方法まとめ（例：現金・クレジットカード）
         const methodSummary = paymentDetails.map(p => p.method).join('・');
@@ -629,7 +648,7 @@
         // 既存の必要なデータをすべて含めて履歴を作成
         const historyEntry = {
             id: lastHistoryId,
-            items: order.items,
+            items: itemsWithDiscount,
             subtotal: order.totalAmount,
             taxDetails: order.taxDetails, 
             finalTaxDetails: order.finalCalculated.details,
