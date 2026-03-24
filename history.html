@@ -733,7 +733,7 @@
 
         // 2. ヘッダーの作成
         // 「割引」の後に「割引名」を追加
-        let header = ["日時", "内訳", "商品別割引/金額調整","小計", "割引/金額調整", "割引名/金額調整名", "税抜合計", "消費税額"];
+        let header = ["日時", "内訳", "商品別割引/金額調整（合計）","商品別割引/金額調整（詳細）", "小計", "割引/金額調整", "割引名/金額調整名", "税抜合計", "消費税額"];
         
         // 存在する税率分だけ列を追加
         sortedRates.forEach(rate => {
@@ -751,6 +751,7 @@
             const itemDetail = h.items.map(i => `${i.name}x${i.qty}`).join(' / ');
             
             const details = h.finalTaxDetails || h.taxDetails || {};
+            let itemDiscountTotalVal = 0;
         
             const itemDiscounts = h.items
                 .map(i => {
@@ -766,6 +767,7 @@
                     // 元値があり、かつ現在の売価より高い場合のみ割引として計算
                     if ((orgP > curP) || hasAdjustment) {
                         const totalItemDiscount = ((orgP > curP ? orgP - curP : 0) * qty) + adjAmount;
+                        itemDiscountTotalVal += totalItemDiscount;
                         // --- 割引名称を抽出するロジックを追加 ---
                         let discNames = [];
                         if (hasPresets) {
@@ -774,8 +776,8 @@
                             }
                         }
                         
-                        if (hasAdjustment) {
-                            discNames.push(appDisc.name || "金額調整");
+                        if (hasAdjustment && appDisc.name) {
+                            discNames.push(appDisc.name);
                         }
                         const nameText = discNames.length > 0 ? `[${discNames.join('、')}]` : "";
                         // --------------------------------------
@@ -837,6 +839,7 @@
             let row = [
                 `"${dateStr}"`,
                 `"${itemDetail}"`,
+                itemDiscountTotalVal,
                 `"${itemDiscounts}"`,
                 Number(h.subtotal) || 0,
         Number(h.discount) || 0,
