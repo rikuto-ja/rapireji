@@ -160,11 +160,11 @@
     <a href="product.html" class="menu-link">商品管理</a>
     <a href="stock.html" class="menu-link">在庫管理</a>
     <a href="history.html" class="menu-link">販売履歴</a>
+    <a href="return.html" class="menu-link">払い戻し</a>
     <a href="settings.html" class="menu-link">設定</a>
 </nav>
 
 <main class="main-content">
-    <a href="return.html" style="text-decoration: none;"><p style="font-size: 0.7rem; font-weight: 800; color: #666; margin-bottom: 10px; width: 100%; max-width: 500px;">※払い戻しはこちらから</p></a>
     <div class="summary-grid">
         <div class="summary-card"><div class="summary-label">小計累計</div><div class="summary-value" id="sum-subtotal">¥0</div></div>
         <div class="summary-card"><div class="summary-label">割引累計</div><div class="summary-value" id="sum-discount">¥0</div></div>
@@ -402,6 +402,7 @@
         let t = "";
         const dateStr = new Date(data.createdAt).toLocaleString();
         const netTotal = data.taxDetails ? Object.values(data.taxDetails).reduce((a, b) => a + b, 0) : data.totalAmount;
+        const targetDetails = data.finalTaxDetails || data.taxDetails || {};
 
         if (type === 'return') {
             t += `    払 い 戻 し 伝 票 \n\n`;
@@ -548,12 +549,7 @@
             
             // 2. 小計(税抜)の算出：割引前の「税抜金額」をすべて足す
             const originalExclTotal = Object.values(targetDetails).reduce((sum, val) => {
-                if (typeof val === 'object') {
-                    // オブジェクト形式の場合: originalExcl > subtotal > excl の順で探す
-                    return sum + (Number(val.originalExcl) || Number(val.subtotal) || Number(val.excl) || 0);
-                }
-                // 数値形式（旧データ）の場合
-                return sum + (Number(val) || 0);
+                return sum + (Number(val.originalExcl) || Number(val.subtotal) || Number(val.excl) || 0);
             }, 0);
             
             t += formatLine("小計(税抜)", `¥${originalExclTotal.toLocaleString()}`);
@@ -564,18 +560,8 @@
                 
                 // 3. 割引後小計(税抜)の算出：割引適用後の「税抜金額」をすべて足す
                 const afterDiscountExclTotal = Object.values(targetDetails).reduce((sum, val) => {
-                    if (typeof val === 'object') {
-                        // excl が割引後の税抜額
-                        return sum + (Number(val.excl) || Number(val.subtotal) || 0);
-                    }
-                    // 数値形式の場合、discountを引いた値を概算（または記録がないのでそのまま）
-                    return sum + (Number(val) || 0);
+                    return sum + (Number(val.excl) || Number(val.subtotal) || 0);
                 }, 0);
-                
-                // 履歴データにおいて afterDiscountExclTotal が originalExclTotal と同じ（割引適用前）だった場合の補正
-                const finalExcl = (afterDiscountExclTotal === originalExclTotal) 
-                    ? originalExclTotal - (data.discount / 1.1) // 概算で税抜割引を引く
-                    : afterDiscountExclTotal;
 
                 t += formatLine("割引後小計(税抜)", `¥${Math.round(finalExcl).toLocaleString()}`);
             }
@@ -587,19 +573,10 @@
                 const val = targetDetails[rate];
                 if (!val) return;
 
-                let exclAmount = 0;
-
-                // オブジェクト形式 {8: {excl: 90000, tax: 7200}} の場合を処理
-                if (typeof val === 'object') {
-                    // excl があればそれを使用、なければ subtotal を使用
-                    exclAmount = val.excl !== undefined ? val.excl : (val.subtotal || 0);
-                } else {
-                    // 万が一数値で入っていた場合のバックアップ
-                    exclAmount = val;
-                }
+                const exclAmount = val.excl !== undefined ? val.excl : (val.subtotal || 0);
+                const taxAmount = val.tax !== undefined ? val.tax : Math.floor(exclAmount * (rate / 100));
 
                 if (exclAmount > 0) {
-                    const taxAmount = Math.floor(exclAmount * (rate / 100));
                     t += `${rate}%対象(税抜 ¥${exclAmount.toLocaleString()})\n`;
                     t += formatLine("  内消費税", `¥${taxAmount.toLocaleString()}`);
                 }
@@ -749,15 +726,14 @@
         // 1. 存在する税率をすべて抽出する（重複なし・降順）
         const activeRates = new Set();
         filteredData.forEach(h => {
-            if (h.taxDetails) {
-                Object.keys(h.taxDetails).forEach(rate => activeRates.add(Number(rate)));
-            }
+            const details = h.finalTaxDetails || h.taxDetails || {};
+            Object.keys(details).forEach(rate => activeRates.add(Number(rate)));
         });
         const sortedRates = Array.from(activeRates).sort((a, b) => b - a);
 
         // 2. ヘッダーの作成
         // 「割引」の後に「割引名」を追加
-        let header = ["日時", "内訳", "商品別割引","小計", "割引", "割引名/金額調整名", "税抜合計", "消費税額"];
+        let header = ["日時", "内訳", "商品別割引/金額調整","小計", "割引/金額調整", "割引名/金額調整名", "税抜合計", "消費税額"];
         
         // 存在する税率分だけ列を追加
         sortedRates.forEach(rate => {
@@ -774,26 +750,56 @@
             const dateStr = `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
             const itemDetail = h.items.map(i => `${i.name}x${i.qty}`).join(' / ');
             
+            const details = h.finalTaxDetails || h.taxDetails || {};
+        
             const itemDiscounts = h.items
                 .map(i => {
-                    // レシート生成時と同様に i.discount を参照
-                    const dVal = Number(i.discount || 0);
-                    if (dVal <= 0) return null;
-                    // 割引額(dVal) × 数量(i.qty) で総額を算出
-                    return `${i.name}x${i.qty}(-¥${(dVal * i.qty).toLocaleString()})`;
+                    const orgP = Number(i.originalPrice) || 0;
+                    const curP = Number(i.price) || 0;
+                    const qty = Number(i.qty) || 0;
+
+                    const appDisc = i.appliedDiscount || {};
+                    const adjAmount = Number(appDisc.amount) || 0;
+                    const hasAdjustment = adjAmount > 0;
+                    const hasPresets = i.appliedPresets && Object.keys(i.appliedPresets).length > 0;
+                    
+                    // 元値があり、かつ現在の売価より高い場合のみ割引として計算
+                    if ((orgP > curP) || hasAdjustment) {
+                        const totalItemDiscount = ((orgP > curP ? orgP - curP : 0) * qty) + adjAmount;
+                        // --- 割引名称を抽出するロジックを追加 ---
+                        let discNames = [];
+                        if (hasPresets) {
+                            for (const [name, count] of Object.entries(i.appliedPresets)) {
+                                discNames.push(count > 1 ? `${name}×${count}` : name);
+                            }
+                        }
+                        
+                        if (hasAdjustment) {
+                            discNames.push(appDisc.name || "金額調整");
+                        }
+                        const nameText = discNames.length > 0 ? `[${discNames.join('、')}]` : "";
+                        // --------------------------------------
+
+                        return `${i.name}${nameText}x${qty}(¥${totalItemDiscount.toLocaleString()})`;
+                    }
+                    return null;
                 })
                 .filter(val => val !== null)
                 .join(' / ') || "--";
 
-            const details = h.taxDetails || {};
             let calculatedTaxTotal = 0;
+            let netTotalForCsv = 0;
+
             Object.keys(details).forEach(rate => {
-                const sub = details[rate]; 
-                const tax = Math.floor(sub * (Number(rate) / 100)); 
-                calculatedTaxTotal += tax;
+                const val = details[rate];
+                if (!val) return;
+                const exclVal = (typeof val === 'object') ? (Number(val.excl) || Number(val.subtotal) || 0) : (Number(val) || 0);
+                const taxVal = (typeof val === 'object') ? (Number(val.tax) || 0) : Math.floor(exclVal * (Number(rate) / 100));
+                netTotalForCsv += exclVal;
+                calculatedTaxTotal += taxVal;
             });
 
-            const finalNetTotal = (h.totalAmount || 0) - calculatedTaxTotal;
+            const finalNetTotal = netTotalForCsv;
             
             let voidTxt = "有効";
             if (h.isVoided) {
@@ -832,24 +838,26 @@
                 `"${dateStr}"`,
                 `"${itemDetail}"`,
                 `"${itemDiscounts}"`,
-                h.subtotal || 0,
-                h.discount || 0,
-                `"${discName}"`, 
+                Number(h.subtotal) || 0,
+        Number(h.discount) || 0,
+                `"${h.discountName || ""}"`,
                 finalNetTotal,
                 calculatedTaxTotal
             ];
 
             // 動的な税率別の金額を追加
             sortedRates.forEach(rate => {
-                const sub = details[rate] || 0;
-                const tax = sub > 0 ? Math.floor(sub * (Number(rate) / 100)) : 0;
+                const val = details[rate];
+                const sub = (val && typeof val === 'object') ? (Number(val.excl) || Number(val.subtotal) || 0) : (Number(val) || 0);
+                const tax = (val && typeof val === 'object') ? (Number(val.tax) || 0) : Math.floor(sub * (Number(rate) / 100));
+        
                 row.push(sub); 
                 row.push(tax); 
             });
 
             // 残りの情報
             row.push(
-                h.totalAmount || 0,
+                Number(h.totalAmount) || 0,
                 `"${h.paymentMethod}"`,
                 `"${splitPaymentTxt}"`,
                 `"${voidTxt}"`,
