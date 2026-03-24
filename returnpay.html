@@ -190,7 +190,7 @@
         <div id="receiptPreview" class="receipt-area"></div>
         <div style="display: flex; flex-direction: column; gap: 5px;">
             <button id="btnPrintReceipt" class="btn-black" style="background: #808080;">払い戻し伝票を印刷</button>
-            <button onclick="location.href='history.html'" class="btn-outline" style="border-width:3px; background:#eee;">履歴画面へ戻る</button>
+            <button onclick="location.href='return.html'" class="btn-outline" style="border-width:3px; background:#eee;">払い戻し画面へ戻る</button>
         </div>
     </div>
 </div>
@@ -220,6 +220,7 @@
     let discountUnit = "¥";
     let lastHistoryId = null;
     let tempRefundMemo = "";
+    let currentDiscountName = "";
     
     // 状態管理用
     window.discountCounts = {}; 
@@ -376,6 +377,7 @@
         playSnd('snd-beep1');
         window.discountCounts = {}; 
         window.hasManualInput = false;
+        window.currentDiscountName = "";
          
         keypadMode = 'discount'; keypadBuffer = "0";
         discountUnit = "¥";
@@ -471,7 +473,10 @@
         // 2. 履歴にマイナス値として保存（売上集計で引かれるようにする）
         const historyEntry = {
             id: lastHistoryId, 
-            items: order.items, 
+            items: order.items.map(item => ({
+                ...item,
+                price: item.price // 商品単価を明示的に保存
+            })), 
             subtotal: -order.totalAmount,
             taxDetails: order.taxDetails, 
             finalTaxDetails: order.finalCalculated.details,
