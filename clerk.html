@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>店員呼出 | らぴレジ</title>
+    <style>
+        :root {
+            --bg-color: #ffffff;
+            --main-color: #000000;
+            --accent-color: #ffff00;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            font-family: 'Inter', 'Avenir Next', 'Hiragino Kaku Gothic ProN', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--main-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        /* 全領域での選択・長押しメニュー禁止 */
+        * {
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        .call-card {
+            width: 85%;
+            max-width: 500px;
+            padding: 40px 20px;
+            background: var(--bg-color);
+            border: 6px solid var(--main-color);
+            text-align: center;
+            position: relative;
+        }
+
+        .icon-box {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            display: inline-block;
+            animation: ring 0.5s infinite alternate ease-in-out;
+            cursor: pointer;
+        }
+
+        @keyframes ring {
+            from { transform: rotate(-10deg); }
+            to { transform: rotate(10deg); }
+        }
+
+        p {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin: 0 0 40px 0;
+            line-height: 1.6;
+        }
+
+        .back-btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: var(--main-color);
+            color: #ffffff;
+            font-size: 1rem;
+            font-weight: 900;
+            text-decoration: none;
+            border: 3px solid var(--main-color);
+            border-radius: 0;
+            transition: 0.1s;
+            cursor: pointer;
+        }
+
+        .back-btn:active {
+            background-color: #333333;
+            transform: scale(0.98);
+        }
+
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 2000; padding: 15px; }
+        .modal-content { background: #fff; padding: 15px; border: 4px solid #000; width: 100%; max-width: 320px; box-shadow: 10px 10px 0 #000; text-align: left; box-sizing: border-box; }
+        .modal.hidden { display: none !important; }
+
+        .numpad-display {
+            width: 100%;
+            padding: 8px;
+            font-size: 1.5rem;
+            border: 3px solid #000;
+            text-align: right;
+            font-weight: 900;
+            margin-bottom: 10px;
+            background: #eee;
+            height: 3rem; 
+            line-height: 2.2rem;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        .numpad-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+        .num-btn { padding: 10px; border: 2px solid #000; background: #fff; font-size: 1.2rem; font-weight: 900; cursor: pointer; }
+        .btn-black { width: 100%; background: #000; color: #fff; padding: 12px; border: none; font-weight: 900; font-size: 1rem; margin-top: 10px; }
+        .btn-outline { width: 100%; background: #fff; color: #000; padding: 12px; border: 2px solid #000; font-weight: 900; margin-top: 8px; font-size: 1rem; }
+    </style>
+</head>
+<body>
+
+    <div class="call-card">
+        <div class="icon-box">🔔</div>
+        <p>店員を呼んでいます。<br>そのまましばらくお待ちください。</p>
+        <a href="register.html" id="cancelBtn" class="back-btn">呼び出しを取り消す</a>
+    </div>
+
+    <div id="passwordModal" class="modal hidden">
+        <div class="modal-content">
+            <h3 style="margin-top: 0; margin-bottom: 8px; font-weight: 900; font-size: 1.1rem;">パスワード入力</h3>
+            <div id="passDisplay" class="numpad-display"></div>
+            <div class="numpad-grid">
+                <button class="num-btn" onclick="pressPass('7')">7</button>
+                <button class="num-btn" onclick="pressPass('8')">8</button>
+                <button class="num-btn" onclick="pressPass('9')">9</button>
+                <button class="num-btn" onclick="pressPass('4')">4</button>
+                <button class="num-btn" onclick="pressPass('5')">5</button>
+                <button class="num-btn" onclick="pressPass('6')">6</button>
+                <button class="num-btn" onclick="pressPass('1')">1</button>
+                <button class="num-btn" onclick="pressPass('2')">2</button>
+                <button class="num-btn" onclick="pressPass('3')">3</button>
+                <button class="num-btn" style="visibility:hidden;"></button>
+                <button class="num-btn" onclick="pressPass('0')">0</button>
+                <button class="num-btn" onclick="pressPass('CLR')" style="font-size: 0.9rem; background: #eee; padding: 10px 0;">CLR</button>
+            </div>
+            <button onclick="checkPassword()" class="btn-black">解除</button>
+            <button onclick="closePassModal()" class="btn-outline">キャンセル</button>
+        </div>
+    </div>
+
+    <div id="staffMenuModal" class="modal hidden">
+        <div class="modal-content" style="max-width: 400px;">
+            <h3 style="margin-top: 0; margin-bottom: 15px; font-weight: 900; border-bottom: 2px solid #000; padding-bottom: 5px;">店員メニュー</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <button class="num-btn" onclick="backToPrevious()">戻る</button>
+                <button class="num-btn" onclick="exitSelfModeAndBack()">セルフレジ解除</button>
+                <button class="num-btn" onclick="goTo('register.html')">レジ操作</button>
+                <button class="num-btn" onclick="goTo('payment.html')">決済</button>
+                <button class="num-btn" onclick="goTo('scan.html')">スキャン</button>
+                <button class="num-btn" onclick="goTo('product.html')">商品管理</button>
+                <button class="num-btn" onclick="goTo('stock.html')">在庫管理</button>
+                <button class="num-btn" onclick="goTo('history.html')">販売履歴</button>
+                <button class="num-btn" onclick="goTo('return.html')">払い戻し</button>
+                <button class="num-btn" onclick="goTo('settings.html')">設定</button>
+            </div>
+            <button onclick="closeStaffMenu()" class="btn-outline" style="margin-top: 15px;">閉じる</button>
+        </div>
+    </div>
+
+<script>
+    // --- 戻り先の自動判定ロジック ---
+const urlParams = new URLSearchParams(window.location.search);
+const fromPage = urlParams.get('from');
+const cancelBtn = document.getElementById('cancelBtn');
+
+if (fromPage === 'scan') {
+    // スキャン画面から来た場合（レジモードを維持）
+    cancelBtn.href = 'scan.html?mode=reg';
+} else if (fromPage === 'pay') {
+    // 支払い画面から来た場合
+    cancelBtn.href = 'payment.html';
+} else {
+    // registerから来た場合、またはパラメータがない時のデフォルト
+    cancelBtn.href = 'register.html';
+}
+
+    // 全領域での右クリック・長押しメニュー禁止
+    document.addEventListener('contextmenu', (e) => e.preventDefault());
+
+    let passBuffer = "";
+    function getStoredPassword() {
+        const selfConfig = JSON.parse(localStorage.getItem('rapireji_self_config') || '{"enabled": false, "pass": "2525"}');
+        return selfConfig.pass || "2525";
+    }
+
+    const bellIcon = document.querySelector('.icon-box');
+    let bellTimer;
+    let isTouch = false;
+
+    bellIcon.addEventListener('touchstart', (e) => {
+        isTouch = true;
+        bellTimer = setTimeout(() => openPassModal(), 1000);
+    }, {passive: true});
+    bellIcon.addEventListener('touchend', () => clearTimeout(bellTimer));
+    bellIcon.addEventListener('mousedown', () => {
+        if (isTouch) return;
+        bellTimer = setTimeout(() => openPassModal(), 1000);
+    });
+    bellIcon.addEventListener('mouseup', () => {
+        if (isTouch) return;
+        clearTimeout(bellTimer);
+    });
+    bellIcon.addEventListener('mouseleave', () => clearTimeout(bellTimer));
+
+    function openPassModal() {
+        passBuffer = "";
+        updatePassDisplay();
+        document.getElementById('passwordModal').classList.remove('hidden');
+    }
+    function closePassModal() { document.getElementById('passwordModal').classList.add('hidden'); }
+    function pressPass(val) {
+        if (val === 'CLR') { passBuffer = ""; } 
+        else { if (passBuffer.length < 4) passBuffer += val; }
+        updatePassDisplay();
+    }
+    function updatePassDisplay() {
+        document.getElementById('passDisplay').innerText = passBuffer.length > 0 ? "*".repeat(passBuffer.length) : "";
+    }
+    // パスワードチェック後の処理を書き換え
+    function checkPassword() {
+        const correctPass = getStoredPassword();
+        if (passBuffer === correctPass) {
+            // パスワードモーダルを閉じ、店員メニューを開く
+            closePassModal();
+            document.getElementById('staffMenuModal').classList.remove('hidden');
+        } else {
+            alert("パスワードが違います");
+            passBuffer = "";
+            updatePassDisplay();
+        }
+    }
+
+    // 追加：呼び出し元の画面（cancelBtnと同じ遷移先）に戻る
+function backToPrevious() {
+    const targetUrl = cancelBtn.href;
+    // URLにすでにパラメータがあるか判定して selfCheckout=false を付与
+    location.href = targetUrl + (targetUrl.includes('?') ? '&' : '?') + 'selfCheckout=false';
+}
+
+// 追加：セルフレジモードをオフに設定してから、呼び出し元の画面に戻る
+function exitSelfModeAndBack() {
+    // 1. localStorageの設定を「enabled: false」に書き換える
+    const config = JSON.parse(localStorage.getItem('rapireji_self_config') || '{"enabled": false}');
+    config.enabled = false;
+    localStorage.setItem('rapireji_self_config', JSON.stringify(config));
+    
+    sessionStorage.removeItem('staff_override');
+    location.href = 'register.html?reset=true';
+}
+
+    // 店員メニューを閉じる
+    function closeStaffMenu() {
+        document.getElementById('staffMenuModal').classList.add('hidden');
+    }
+
+  function goTo(page) {
+    // 他の画面へ行くときも、念のためセッション状態を同期
+    sessionStorage.setItem('staff_override', 'true');
+    const targetBase = page.split('?')[0];
+    location.href = targetBase + '?selfCheckout=false';
+}
+</script>
+</body>
+</html>
