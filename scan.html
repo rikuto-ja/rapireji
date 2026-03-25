@@ -230,11 +230,12 @@
 
 <header>
     <div class="header-left">
-        <button class="btn-back" onclick="history.back()">← 戻る</button>
+        <button class="btn-back" onclick="goBack()">← 戻る</button>
     </div>
     <div class="header-ad-space" id="ad-top">
         <span style="color:#ccc; font-size: 8px; font-weight: 900;">AD</span>
     </div>
+    <button id="clerk-call-btn" class="cat-tab" style="display: none; margin-left: 10px; padding: 6px 12px; font-size: 0.9rem; background-color: red; color: #ffffff; border: 4px solid #ffffff; border-radius: 10px; box-shadow: none; font-weight: 900; outline: none;">店員呼出</button>
 </header>
 
 <div id="interactive" class="viewport">
@@ -294,6 +295,7 @@ const modeLabel = document.getElementById('mode-label');
 const btnAudio = new Audio('beep1.mp3');
 const scanAudio3 = new Audio('beep3.mp3');
 const scanAudio4 = new Audio('beep4.mp3');
+const scanAudio5 = new Audio('beep5.mp3');
 let audioUnlocked = false;
 
 // <script> 内の冒頭付近に追加
@@ -308,7 +310,7 @@ document.addEventListener('touchstart', () => {
     if (!audioUnlocked) {
         const b1 = new Audio('beep1.mp3'); 
         // btnAudio を含めてアンロック
-        [scanAudio3, scanAudio4, btnAudio].forEach(audio => {
+        [scanAudio3, scanAudio4, scanAudio5, btnAudio].forEach(audio => {
             audio.play().then(() => {
                 audio.pause();
                 audio.currentTime = 0;
@@ -381,6 +383,7 @@ async function handleScannedCode(code) {
     if (mode === 'reg') {
         const products = JSON.parse(localStorage.getItem(STORAGE_KEYS.PRODUCTS) || '[]');
         const product = products.find(p => (String(p.jan) === String(code) || String(p.id) === String(code)));
+        setTimeout(() => { isPaused = false; }, 1500);
 
         if (product) {
             playBeep('beep3');
@@ -404,7 +407,7 @@ async function handleScannedCode(code) {
         playBeep('beep3');
         localStorage.setItem('last_scanned_barcode', code);
         showPopup(`コード保存: ${code}`);
-        setTimeout(() => history.back(), 1000);
+        setTimeout(() => goBack(), 1000);
     }
 }
 
@@ -443,23 +446,36 @@ function updateScannedUI(item, originalProduct) {
             : `<small style="color:red; margin-left:5px;">-${discountAmount.toLocaleString()}円</small>`)
         : '';
 
-    // 4. UIの更新
-    area.innerHTML = `
-        <div class="cart-item">
-            <div class="cart-item-top">
-                <span>${item.name} <small>(${taxRate}%)</small></span>
-                <span>¥${sign}${rowTotal.toLocaleString()}</span>
-            </div>
-            <div class="cart-item-controls">
-                <button class="qty-btn" onclick="window.changeQtyScan('${item.id}', -1)">-</button>
-                <span style="margin:0 10px; cursor:pointer;" onclick="openKeypad('qty', ${index})">× ${item.qty}</span>
-                <button class="qty-btn" onclick="window.changeQtyScan('${item.id}', 1)">+</button>
-                <button class="discount-btn" onclick="openKeypad('discount', ${index})">${adjustLabel}</button>
-                ${discountDisplay}
-                <button onclick="window.removeItemScan('${item.id}')" style="margin-left:auto; background:none; border:none; color:red; font-weight:bold; cursor:pointer;">削除</button>
-            </div>
+    // --- 4. UIの更新 (割引ボタンの表示判定を修正) ---
+const isStaff = sessionStorage.getItem('staff_override') === 'true';
+const selfConfig = JSON.parse(localStorage.getItem('rapireji_self_config') || '{"enabled": false}');
+
+let showDiscountBtn = true;
+if (selfConfig.enabled && !isStaff) {
+    showDiscountBtn = false;
+}
+if (isRefund) {
+    showDiscountBtn = true; // 返金（金額調整）の場合は常に表示
+}
+
+area.innerHTML = `
+    <div class="cart-item">
+        <div class="cart-item-top">
+            <span>${item.name} <small>(${taxRate}%)</small></span>
+            <span>¥${sign}${rowTotal.toLocaleString()}</span>
         </div>
-    `;
+        <div class="cart-item-controls">
+            <button class="qty-btn" onclick="window.changeQtyScan('${item.id}', -1)">-</button>
+            <span style="margin:0 10px; cursor:pointer;" onclick="openKeypad('qty', ${index})">× ${item.qty}</span>
+            <button class="qty-btn" onclick="window.changeQtyScan('${item.id}', 1)">+</button>
+            
+            ${showDiscountBtn ? `<button class="discount-btn" onclick="openKeypad('discount', ${index})">${adjustLabel}</button>` : ''}
+            
+            ${discountDisplay}
+            <button onclick="window.removeItemScan('${item.id}')" style="margin-left:auto; background:none; border:none; color:red; font-weight:bold; cursor:pointer;">削除</button>
+        </div>
+    </div>
+`;
 }
 
 window.changeQtyScan = (id, diff) => {
@@ -754,6 +770,66 @@ window.closeModal = (id) => {
 document.getElementById('keypadConfirmBtn').onclick = () => {
     window.confirmKeypad();
 };
+
+document.addEventListener('DOMContentLoaded', () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const fromPage = urlParams.get('from'); 
+    
+    // 1. URLパラメータに selfCheckout=false があれば、即座に店員モードをONにする
+    if (urlParams.get('selfCheckout') === 'false') {
+        sessionStorage.setItem('staff_override', 'true');
+    }
+
+    // 2. 現在の状態を確認
+    const isStaff = sessionStorage.getItem('staff_override') === 'true';
+    const isFromReturn = (fromPage === 'ret' || fromPage === 'return');
+    const selfConfig = JSON.parse(localStorage.getItem('rapireji_self_config') || '{"enabled": false}');
+
+    const clerkBtn = document.getElementById('clerk-call-btn');
+
+    // 3. 表示ロジック
+    if (isFromReturn) {
+        // 返品画面経由なら常に非表示
+        clerkBtn.style.display = "none";
+    } 
+    else if (isStaff) {
+        // 店員モードなら「セルフに戻す」を表示
+        clerkBtn.innerText = "セルフに戻す";
+        clerkBtn.style.backgroundColor = "#000"; 
+        clerkBtn.style.display = "block";
+        clerkBtn.onclick = () => {
+            if(confirm("店員モードを終了し、セルフレジに戻りますか？")) {
+                sessionStorage.removeItem('staff_override');
+                // パラメータを消してリロード
+                location.href = 'scan.html'; 
+            }
+        };
+    } 
+    else if (selfConfig.enabled) {
+        // セルフモードなら「店員呼出」を表示
+        clerkBtn.innerText = "店員呼出";
+        clerkBtn.style.backgroundColor = "red";
+        clerkBtn.style.display = "block";
+        clerkBtn.onclick = () => {
+            scanAudio5.currentTime = 0;
+            scanAudio5.play().catch(e => console.warn("音声再生に失敗:", e));
+            setTimeout(() => { location.href = 'clerk.html?from=scan'; }, 150);
+        };
+    } else {
+        clerkBtn.style.display = "none";
+    }
+
+    // 戻るボタンの挙動
+    window.goBack = () => {
+        playRegisterSound();
+        if (isFromReturn) {
+            location.href = 'return.html';
+        } else {
+            location.href = 'register.html';
+        }
+    };
+});
+   
 </script>
 </body>
 </html>
