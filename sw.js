@@ -16,6 +16,7 @@ const ASSETS_TO_CACHE = [
   'beep2.mp3',
   'beep3.mp3',
   'beep4.mp3',
+  'beep5.mp3'
 ];
 
 // インストール時にファイルをキャッシュ
