@@ -68,6 +68,17 @@
             min-height: 100px;
         }
         .pay-btn:active { transform: translate(3px, 3px); box-shadow: none; }
+        /* 決済選択画面のボタンが無効な時のスタイル */
+.pay-btn:disabled {
+    background-color: #ccc !important;
+    border-color: #999 !important;
+    color: #666 !important;
+    cursor: not-allowed;
+    opacity: 0.6;
+    /* ネオ・ブルータリズムの影を消す、または薄くする */
+    box-shadow: none !important;
+    transform: none !important;
+}
         .pay-btn.discount-trigger { color: var(--danger); border-color: var(--danger); }
 
         .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 2000; padding: 10px; }
@@ -145,6 +156,7 @@
     <div class="header-ad-space" id="ad-top">
         <span style="color:#ccc; font-size: 8px; font-weight: 900;">AD</span>
     </div>
+    <button id="clerk-call-btn" class="cat-tab" style="display: none; margin-left: 10px; padding: 6px 12px; font-size: 1.0rem; background-color: red; color: #ffffff; border: 6px solid #ffffff; border-radius: 15px; box-shadow: none; font-weight: 900; outline: none;">店員呼出</button>
 </header>
 
 <main class="container">
@@ -199,13 +211,12 @@
         <div style="display: flex; flex-direction: column; gap: 5px;">
             <button id="btnPrintReceipt" class="btn-black" style="background: #808080;">レシート印刷</button>
             <button id="btnPrintBill" class="btn-black" style="background: #808080;">領収書印刷</button>
-            <button onclick="location.href='register.html'" class="btn-outline" style="border-width:3px; background:#eee;">次の会計へ</button>
+            <button id="next-checkout-btn" class="btn-outline" style="border-width:3px; background:#eee;">次の会計へ</button>
         </div>
     </div>
 </div>
 
 <script>
-    // --- 既存の定数・初期化部分は維持 ---
     const STORAGE_KEYS = {
         HISTORY: 'rapireji_history',
         PROFILE: 'rapireji_profile',
@@ -225,16 +236,17 @@
     };
 
     let order = JSON.parse(sessionStorage.getItem('currentOrder'));
-    let discountVal = 0, keypadBuffer = "0", keypadMode = "";
+    let keypadBuffer = "0", keypadMode = "";
     let discountUnit = "¥";
     let lastHistoryId = null;
     let tempRecipientName = "";
-    let pendingAmount = 0; // 残りの支払うべき金額
-    let paymentDetails = [];
+    let pendingAmount = 0; 
+    let paymentDetails = JSON.parse(sessionStorage.getItem('rapireji_payment_details')) || [];
+    let discountVal = Number(sessionStorage.getItem('rapireji_discount_val')) || 0;
+    window.currentDiscountName = sessionStorage.getItem('rapireji_discount_name') || "";
     
-    // 状態管理用
     window.discountCounts = {}; 
-    window.hasManualInput = false; // 手入力（キーパッド）があったかどうかのフラグ
+    window.hasManualInput = false; 
 
     function playSnd(id) {
         // 設定を読み込む（未設定の場合はデフォルトでONにする）
@@ -260,31 +272,115 @@
 
     document.addEventListener('DOMContentLoaded', () => {
         if (!order) { location.href = "register.html"; return; }
+        // --- モード判定ロジック ---
+        const urlParams = new URLSearchParams(window.location.search);
+        // URLパラメータ、またはセッションに店員モードが保存されているか確認
+        const isStaffMode = urlParams.get('selfCheckout') === 'false' || sessionStorage.getItem('staff_override') === 'true';
+
+        const menuBtn = document.getElementById('menu-btn');
+        const clerkBtn = document.getElementById('clerk-call-btn');
+        const selfConfig = JSON.parse(localStorage.getItem('rapireji_self_config') || '{"enabled": false}');
+
+        if (isStaffMode) {
+            // 【店員モード】
+            sessionStorage.setItem('staff_override', 'true');
+
+            // ボタンを「セルフに戻る」に切り替え
+            clerkBtn.style.display = 'block';
+            clerkBtn.innerText = "セルフに戻す";
+            clerkBtn.style.backgroundColor = "var(--black)";
+            clerkBtn.style.color = "var(--white)";
+            clerkBtn.style.border = "6px solid var(--white)"; // 白い太枠で浮かせ、店員呼出と構造を統一
+            clerkBtn.style.borderRadius = "15px";            // 角を丸める
+            clerkBtn.style.boxShadow = "none";               // 影を消してスッキリさせる
+            clerkBtn.style.padding = "6px 12px";
+            clerkBtn.style.fontSize = "1.0rem";
+            clerkBtn.style.fontWeight = "900";
+            clerkBtn.style.outline = "none";
+
+            clerkBtn.onclick = () => {
+                if(confirm("店員モードを終了し、セルフレジに戻りますか？")) {
+                    sessionStorage.removeItem('staff_override');
+                    location.href = 'payment.html'; 
+                }
+            };
+        } else {
+            // 【通常（セルフ）モード】
+            if (selfConfig.enabled) {
+                clerkBtn.style.display = 'block';
+                clerkBtn.innerText = "店員呼出"; // 文言を戻す
+                clerkBtn.style.backgroundColor = "red"; // 元のスタイル
+                clerkBtn.style.color = "#ffffff";
+                clerkBtn.style.borderRadius = "15px";
+
+                clerkBtn.onclick = () => {
+                    const sounds = JSON.parse(localStorage.getItem('rapireji_sounds') || '{"call": true}');
+                    if (sounds.call) {
+                        new Audio('beep5.mp3').play().catch(() => {});
+                    }
+                    setTimeout(() => { location.href = 'clerk.html?from=pay'; }, 300);
+                };
+            } else {
+                clerkBtn.style.display = 'none';
+            }
+        }
         document.getElementById('backBtn').onclick = () => location.href = 'register.html';
         initSettings();
         updateDisplay();
-        // 割引計算後の最終合計を残り金額にセット
-        pendingAmount = order.finalCalculated.total;
+        const paidAmount = paymentDetails.reduce((sum, p) => sum + p.amount, 0);
+        pendingAmount = order.finalCalculated.total - paidAmount;
         updatePendingDisplay(); 
+
+        const nextBtn = document.getElementById('next-checkout-btn');
+    if (nextBtn) {
+        nextBtn.addEventListener('click', backToRegister);
+    }
         setupKeypadConfirmLongPress();
     });
 
     function initSettings() {
         const paymentGrid = document.getElementById('paymentGrid');
-        paymentGrid.innerHTML = '<button class="pay-btn discount-trigger" onclick="openKeypad(\'discount\')">割引</button>';
+        paymentGrid.innerHTML = '';
+        const urlParams = new URLSearchParams(window.location.search);
+        const forceStaffMode = urlParams.get('selfCheckout') === 'false';
+
+        const selfConfig = JSON.parse(localStorage.getItem('rapireji_self_config') || '{"enabled": false}');
+        const isSelfMode = forceStaffMode ? false : selfConfig.enabled;
+        
+        const currentOrder = JSON.parse(sessionStorage.getItem('currentOrder') || '{}');
+        const hasExistingDiscount = (currentOrder.discountVal > 0) || (window.discountVal > 0);
+
+        const discBtn = document.createElement('button');
+        discBtn.className = 'pay-btn discount-trigger';
+        discBtn.innerText = '割引';
+        discBtn.onclick = () => openKeypad('discount');
+
+        if (isSelfMode && !hasExistingDiscount) {
+        discBtn.disabled = true;
+        discBtn.classList.add('disabled-for-self');
+    }
+        paymentGrid.appendChild(discBtn);
+        
         const savedPayments = JSON.parse(localStorage.getItem(STORAGE_KEYS.PAYMENTS)) || ["現金", "交通系IC", "クレジットカード", "バーコード決済", "その他"];
         
-        savedPayments.forEach(btnName => {
+        savedPayments.forEach(data => {
+            const btnName = (data && typeof data === 'object') ? data.name : data;
             if(btnName && btnName.trim() !== "") {
                 const btn = document.createElement('button');
                 btn.className = 'pay-btn';
                 btn.innerText = btnName;
+
+               if (isSelfMode && data.selfEnabled === false) {
+                btn.disabled = true;
+                btn.classList.add('disabled-for-self'); // 見た目制御用のクラス（任意）
+            }
 
                 let pTimer;
                 let islong = false;
                 
                 // タッチ開始 / マウスダウン
                 const start = (e) => {
+                    if (btn.disabled) return;
                     // 右クリックメニューやテキスト選択を防止
                     if (e.cancelable) e.preventDefault();
                     isLong = false;
@@ -297,6 +393,7 @@
 
                 // タッチ終了 / マウスアップ
                 const end = (e) => {
+                    if (btn.disabled) return;
                     if (pTimer) {
                         clearTimeout(pTimer);
                         pTimer = null;
@@ -585,6 +682,7 @@
                 return;
             }
             discountVal = calculatedDiscount;
+            savePaymentState();
             updateDisplay(); 
             // 割引適用後、残りの支払い必要額を更新
             pendingAmount = order.finalCalculated.total; 
@@ -606,6 +704,7 @@
             cashReceived: cashReceived,
             change: change
         });
+        savePaymentState();
 
         // 残金を減らす
         pendingAmount -= payAmount;
@@ -687,10 +786,21 @@
         if (cashTotalForStamp >= 50000) {
             msgArea.innerHTML += `<div style="color: var(--danger); font-size: 1.1rem; font-weight: 900; border: 2px solid var(--danger); padding: 5px 15px; margin: 5px; background: white; display: inline-block;">収入印紙が必要です</div>`;
         }
+        sessionStorage.removeItem('rapireji_payment_details');
+        sessionStorage.removeItem('rapireji_discount_val');
+        sessionStorage.removeItem('rapireji_discount_name');
         sessionStorage.removeItem('currentOrder');
         generateContent('receipt'); 
         openModal('receiptModal');
     }
+
+    // --- 追加：状態保存用関数 ---
+function savePaymentState() {
+    sessionStorage.setItem('rapireji_payment_details', JSON.stringify(paymentDetails));
+    sessionStorage.setItem('rapireji_discount_val', discountVal.toString());
+    sessionStorage.setItem('rapireji_discount_name', window.currentDiscountName || "");
+}
+// --------------------------
 
     window.generateContent = (type) => {
         const info = window.currentPaymentData;
@@ -1010,6 +1120,17 @@ const needsStamp = cashTotal >= 50000;
 
     window.openModal = (id) => document.getElementById(id).classList.remove('hidden');
     window.closeModal = (id) => document.getElementById(id).classList.add('hidden');
+
+    function backToRegister() {
+    // 1. 店員モードの記憶（特権）を削除する
+    // これにより、register.html側で「セルフに戻す」ボタンが出なくなります
+    sessionStorage.removeItem('staff_override');
+
+    // 2. 普通に register.html へ戻る
+    // localStorageのセルフレジON設定(enabled:true)は残っているので、
+    // 自動的に「店員呼出ボタンがあるセルフレジ画面」に戻ります
+    location.href = 'register.html';
+}
 </script>
 </body>
 </html>
