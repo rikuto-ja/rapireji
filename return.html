@@ -997,7 +997,7 @@ document.getElementById('keypadConfirmBtn').onclick = () => {
         // 現在のカート状態（中身、合計金額、税計算すべて）をそのまま保持して移動
         const orderData = JSON.parse(sessionStorage.getItem('currentOrder') || '{"items":[]}');
         sessionStorage.setItem('currentOrder', JSON.stringify(orderData));
-        location.href = 'scan.html?mode=reg'; 
+        location.href = 'scan.html?mode=ret&from=ret'; 
     }
 
     // スキャン画面から「戻る」で帰ってきた際や、タブがアクティブになった時に最新のカートを反映する
