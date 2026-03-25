@@ -321,6 +321,7 @@
     <div class="header-ad-space" id="ad-top">
         <span style="color:#ccc; font-size: 8px; font-weight: 900;">AD</span>
     </div>
+    <button id="clerk-call-btn" class="cat-tab" style="display: none; margin-left: 10px; padding: 6px 12px; font-size: 1.0rem; background-color: red; color: #ffffff; border: 6px solid #ffffff; border-radius: 15px; box-shadow: none; font-weight: 900; outline: none;">店員呼出</button>
 </header>
 
 <nav class="side-nav hidden" id="side-menu">
@@ -422,6 +423,8 @@
     let editingItemIndex = null;
     let currentDiscountMode = 'total';
 
+    
+
     function playRegisterSound() {
         const sounds = JSON.parse(localStorage.getItem('rapireji_sounds') || '{"btn": true}');
     
@@ -436,6 +439,68 @@
         initDragResize();
         loadData();
         restoreCart();
+
+        // --- モード判定ロジック ---
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('reset') === 'true') {
+        sessionStorage.removeItem('staff_override');
+        // URLからパラメータを消してスッキリさせる（任意）
+        window.history.replaceState({}, document.title, "register.html");
+    }
+        const isStaffMode = urlParams.get('selfCheckout') === 'false' || sessionStorage.getItem('staff_override') === 'true';
+
+        const menuBtn = document.getElementById('menu-btn');
+        const clerkBtn = document.getElementById('clerk-call-btn');
+        const selfConfig = JSON.parse(localStorage.getItem('rapireji_self_config') || '{"enabled": false}');
+
+        if (isStaffMode) {
+            // 【店員モード】
+            sessionStorage.setItem('staff_override', 'true');
+            
+            // 三本線メニューはセルフレジ設定がONなら隠したままにする
+            menuBtn.style.display = selfConfig.enabled ? 'none' : 'block';
+
+            // ボタンを「セルフに戻る」に切り替え
+            clerkBtn.style.display = 'block';
+            clerkBtn.innerText = "セルフに戻す";
+            clerkBtn.style.backgroundColor = "var(--black)";
+            clerkBtn.style.color = "var(--white)";
+            clerkBtn.style.border = "6px solid var(--white)"; // 白い太枠で浮かせ、店員呼出と構造を統一
+            clerkBtn.style.borderRadius = "15px";            // 角を丸める
+            clerkBtn.style.boxShadow = "none";               // 影を消してスッキリさせる
+            clerkBtn.style.padding = "6px 12px";
+            clerkBtn.style.fontSize = "1.0rem";
+            clerkBtn.style.fontWeight = "900";
+            clerkBtn.style.outline = "none";
+
+            clerkBtn.onclick = () => {
+                if(confirm("店員モードを終了し、セルフレジに戻りますか？")) {
+                    sessionStorage.removeItem('staff_override');
+                    location.href = 'register.html'; 
+                }
+            };
+        } else {
+            // 【通常（セルフ）モード】
+            if (selfConfig.enabled) {
+                menuBtn.style.display = 'none';
+                clerkBtn.style.display = 'block';
+                clerkBtn.innerText = "店員呼出"; // 文言を戻す
+                clerkBtn.style.backgroundColor = "red"; // 元のスタイル
+                clerkBtn.style.color = "#ffffff";
+                clerkBtn.style.borderRadius = "15px";
+
+                clerkBtn.onclick = () => {
+                    const sounds = JSON.parse(localStorage.getItem('rapireji_sounds') || '{"call": true}');
+                    if (sounds.call) {
+                        new Audio('beep5.mp3').play().catch(() => {});
+                    }
+                    setTimeout(() => { location.href = 'clerk.html?from=reg'; }, 300);
+                };
+            } else {
+                menuBtn.style.display = 'block';
+                clerkBtn.style.display = 'none';
+            }
+        }
     });
 
     function initDragResize() {
@@ -838,23 +903,27 @@ document.getElementById('keypadConfirmBtn').onclick = () => {
         if (!subtotalByRate[rate]) subtotalByRate[rate] = 0;
         subtotalByRate[rate] += subtotalAfterDiscount;
 
-        // --- 2. DOM生成 (ここは既存のまま) ---
-        const div = document.createElement('div');
-        div.className = "cart-item";
-        div.innerHTML = `
-            <div class="cart-item-top">
-                <span>${item.name} <small>(${rate}%)</small></span>
-                <span>¥${rowTotalInclTax.toLocaleString()}</span>
-            </div>
-            <div class="cart-item-controls">
-                <button class="qty-btn" onclick="changeQty(${index}, -1)">-</button>
-                <span style="margin:0 10px; cursor:pointer;" onclick="openKeypad('qty', ${index})">× ${item.qty}</span>
-                <button class="qty-btn" onclick="changeQty(${index}, 1)">+</button>
-                <button class="discount-btn" onclick="openKeypad('discount', ${index})">割引</button>
-                ${item.discountValue ? `<small style="color:red; margin-left:5px;">-${discountAmount}円</small>` : ''}
-                <button onclick="removeItem(${index})" style="margin-left:auto; background:none; border:none; color:red; font-weight:bold; cursor:pointer;">削除</button>
-            </div>`;
-        list.appendChild(div);
+        // --- 2. DOM生成 (割引ボタンの表示判定を追加) ---
+        const selfConfig = JSON.parse(localStorage.getItem('rapireji_self_config') || '{"enabled": false}');
+const isStaff = sessionStorage.getItem('staff_override') === 'true'; // 店員モードか判定
+const showDiscount = isStaff || !selfConfig.enabled;
+const div = document.createElement('div');
+div.className = "cart-item";
+div.innerHTML = `
+    <div class="cart-item-top">
+        <span>${item.name} <small>(${rate}%)</small></span>
+        <span>¥${rowTotalInclTax.toLocaleString()}</span>
+    </div>
+    <div class="cart-item-controls">
+        <button class="qty-btn" onclick="changeQty(${index}, -1)">-</button>
+        <span style="margin:0 10px; cursor:pointer;" onclick="openKeypad('qty', ${index})">× ${item.qty}</span>
+        <button class="qty-btn" onclick="changeQty(${index}, 1)">+</button>
+        
+        ${showDiscount ? `<button class="discount-btn" onclick="openKeypad('discount', ${index})">割引</button>` : ''}
+        ${item.discountValue ? `<small style="color:red; margin-left:5px;">-${discountAmount}円</small>` : ''}
+        <button onclick="removeItem(${index})" style="margin-left:auto; background:none; border:none; color:red; font-weight:bold; cursor:pointer;">削除</button>
+    </div>`;
+list.appendChild(div);
     });
 
     // --- 3. 総合計算出 (既存のまま) ---
@@ -933,8 +1002,13 @@ document.getElementById('keypadConfirmBtn').onclick = () => {
     document.getElementById('checkoutBtn').onclick = () => { 
         if (cart.length === 0) return alert("カートが空です"); 
         playRegisterSound();
+        
+        // 店員モードの状態を判定
+        const isStaff = sessionStorage.getItem('staff_override') === 'true';
+        
         setTimeout(() => {
-            location.href = 'payment.html'; 
+            // 店員モードならパラメータを付与して遷移
+            location.href = `payment.html${isStaff ? '?selfCheckout=false' : ''}`; 
         }, 150);
     };
     
