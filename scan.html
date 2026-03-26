@@ -324,17 +324,24 @@ function playBeep(type = 'beep3') {
     let sounds;
     try {
         const raw = localStorage.getItem('rapireji_sounds');
-        sounds = raw ? JSON.parse(raw) : {btn: true, pay: true, scan: true, error: true};
+        sounds = raw ? JSON.parse(raw) : {btn: true, pay: true, scan: true, error: true, call: true};
     } catch (e) {
-        sounds = {btn: true, pay: true, scan: true, error: true};
+        sounds = {btn: true, pay: true, scan: true, error: true, call: true};
     }
 
     if (type === 'beep4' && sounds.error === false) return;
     if (type === 'beep1' && sounds.btn === false) return;
     if (type === 'beep3' && sounds.scan === false) return;
+    if (type === 'beep5' && sounds.call === false) return;
 
-   // targetAudio の割り当てを修正
-    let targetAudio = (type === 'beep4') ? scanAudio4 : (type === 'beep3') ? scanAudio3 : btnAudio;
+    let targetAudio;
+    switch (type) {
+        case 'beep4': targetAudio = scanAudio4; break;
+        case 'beep5': targetAudio = scanAudio5; break;
+        case 'beep1': targetAudio = btnAudio; break;
+        default: targetAudio = scanAudio3; // beep3
+    }
+
     targetAudio.currentTime = 0;
     targetAudio.play().catch(e => console.warn("音声再生に失敗:", e));
 }
@@ -811,10 +818,10 @@ document.addEventListener('DOMContentLoaded', () => {
         clerkBtn.style.backgroundColor = "red";
         clerkBtn.style.display = "block";
         clerkBtn.onclick = () => {
-            scanAudio5.currentTime = 0;
-            scanAudio5.play().catch(e => console.warn("音声再生に失敗:", e));
-            setTimeout(() => { location.href = 'clerk.html?from=scan'; }, 150);
-        };
+        // 直接再生ではなく playBeep を経由させる
+        playBeep('beep5');
+        setTimeout(() => { location.href = 'clerk.html?from=scan'; }, 150);
+    };
     } else {
         clerkBtn.style.display = "none";
     }
