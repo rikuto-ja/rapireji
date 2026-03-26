@@ -226,9 +226,16 @@
                 <input type="number" id="p-price">
             </div>
             <div class="form-group">
-                <label>税率 (%)</label>
-                <input type="number" id="p-tax-rate" placeholder="0" min="0">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px;">
+                <label style="margin-bottom: 0;">税率 (%)</label>
+                <div style="display: flex; gap: 3px;">
+                    <button type="button" class="btn-outline" onclick="document.getElementById('p-tax-rate').value=10" style="font-size:0.65rem; padding:2px 8px; width:auto;">10%</button>
+                    <button type="button" class="btn-outline" onclick="document.getElementById('p-tax-rate').value=8" style="font-size:0.65rem; padding:2px 8px; width:auto;">8%</button>
+                    <button type="button" class="btn-outline" onclick="document.getElementById('p-tax-rate').value=0" style="font-size:0.65rem; padding:2px 8px; width:auto;">0%</button>
+                </div>
             </div>
+            <input type="number" id="p-tax-rate" value="10" min="0">
+        </div>
         </div>
         <div class="form-row">
             <div class="form-group full">
@@ -546,7 +553,7 @@
         document.getElementById('modalTitle').innerText = p ? "商品編集" : "新規登録";
         document.getElementById('p-name').value = p ? p.name : "";
         document.getElementById('p-price').value = p ? p.price : "";
-        document.getElementById('p-tax-rate').value = p ? (p.taxRate ?? 0) : 0; 
+        document.getElementById('p-tax-rate').value = p ? (p.taxRate ?? 10) : 10; 
         document.getElementById('p-jan').value = p ? (p.jan || "") : "";
         document.getElementById('p-category').value = p ? p.category : (currentCategory || DEFAULT_CAT);
         
