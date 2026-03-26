@@ -240,6 +240,18 @@
 
 <div id="interactive" class="viewport">
     <div class="scan-overlay"></div>
+    <div id="start-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 2000; padding: 20px; text-align: center;">
+        <div style="background: white; padding: 20px; border-radius: 15px; max-width: 80%;">
+            <h3 style="margin-top: 0; color: red;">【重要】</h3>
+            <p style="font-size: 0.9rem; line-height: 1.5; font-weight: bold;">
+                スキャナーの特性上、エラーが多いです。<br>
+                角度を変えるなど工夫して読み取ってください
+            </p>
+            <button onclick="unlockAudioAndStart()" style="margin-top: 15px; padding: 12px 30px; background: #000; color: #fff; border: none; border-radius: 8px; font-weight: bold; font-size: 1rem;">
+                確認して開始
+            </button>
+        </div>
+    </div>
 </div>
 
 <div class="result-panel">
@@ -306,11 +318,11 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-document.addEventListener('touchstart', () => {
+window.unlockAudioAndStart = () => {
+    // 1. 音声制限の解除
     if (!audioUnlocked) {
         [scanAudio3, scanAudio4, scanAudio5, btnAudio].forEach(audio => {
-            audio.muted = true; 
-
+            audio.muted = true;
             audio.play().then(() => {
                 audio.pause();
                 audio.currentTime = 0;
@@ -319,7 +331,14 @@ document.addEventListener('touchstart', () => {
         });
         audioUnlocked = true;
     }
-}, { once: true });
+
+    // 2. 注意書きを消してスキャン開始
+    document.getElementById('start-overlay').style.display = 'none';
+    isPaused = false; 
+
+    // 最初の「ピッ」を鳴らして、音が有効になったことを店員/客に知らせる
+    playBeep('beep1'); 
+};
 
 function playBeep(type = 'beep3') {
     let sounds;
