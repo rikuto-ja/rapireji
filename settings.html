@@ -334,6 +334,13 @@
             </label>
         </div>
         <div class="sound-setting-item" style="margin-top: 10px; border-top: 1px dashed #ccc; padding-top: 15px;">
+            <label style="margin-bottom: 0;">スキャン機能</label>
+            <label class="switch">
+                <input type="checkbox" id="scannerEnabled" onchange="autoSaveScannerSetting()" checked>
+                <span class="slider"></span>
+            </label>
+        </div>
+        <div class="sound-setting-item">
             <label style="margin-bottom: 0;">決済完了時のプレビュー</label>
             <label class="switch">
                 <input type="checkbox" id="receiptPreviewEnabled" onchange="autoSavePreviewSettings()" checked>
@@ -464,11 +471,13 @@
         // 既存のsounds読み込み部分を下記に差し替え
         const sounds = JSON.parse(localStorage.getItem('rapireji_sounds') || '{"btn": true, "pay": true, "scan": true, "error": true, "call": true}');
         const previewSetting = JSON.parse(localStorage.getItem('rapireji_preview_config') || '{"show": true}');
+        const scannerSetting = JSON.parse(localStorage.getItem('rapireji_scanner_config') || '{"enabled": true}');
         document.getElementById('soundBtnEnabled').checked = sounds.btn;
         document.getElementById('soundPayEnabled').checked = sounds.pay;
         document.getElementById('soundScanEnabled').checked = sounds.scan;
         document.getElementById('soundErrorEnabled').checked = sounds.error; // 追加
         document.getElementById('soundCallEnabled').checked = sounds.call;
+        document.getElementById('scannerEnabled').checked = scannerSetting.enabled;
         document.getElementById('receiptPreviewEnabled').checked = previewSetting.show;
 
         // セルフレジ設定の読み込み
@@ -580,9 +589,6 @@
         }
     }
 
-    // 保存ボタン・リセットボタン
-    // 自動保存用の関数
-
     function toHalfWidth(str) {
         return str.replace(/[０-９]/g, (s) => {
             return String.fromCharCode(s.charCodeAt(0) - 0xFEE0);
@@ -652,6 +658,14 @@
         updateStorageIndicator();
     }
 
+    function autoSaveScannerSetting() {
+        const data = {
+            enabled: document.getElementById('scannerEnabled').checked
+        };
+        localStorage.setItem('rapireji_scanner_config', JSON.stringify(data));
+        updateStorageIndicator();
+    }
+
     function autoSavePreviewSettings() {
         const data = {
             show: document.getElementById('receiptPreviewEnabled').checked
@@ -685,10 +699,21 @@
     // 入力イベントの紐付け（DOM読み込み完了後に追加）
     document.addEventListener('input', (e) => {
         if (e.target.closest('.settings-card')) {
-            if (e.target.id === 'soundBtnEnabled' || e.target.id === 'soundPayEnabled' || e.target.id === 'soundScanEnabled' || e.target.id === 'soundErrorEnabled' || e.target.id === 'soundCallEnabled' || e.target.id === 'receiptPreviewEnabled') return;
-            if (e.target.classList.contains('payment-input')) autoSavePayments();
-            else if (e.target.classList.contains('discount-name') || e.target.classList.contains('discount-num-value')) autoSaveDiscounts(); // クラス名変更に対応
-            else autoSaveProfile();
+            const skipIds = [
+                'soundBtnEnabled', 'soundPayEnabled', 'soundScanEnabled', 
+                'soundErrorEnabled', 'soundCallEnabled', 'receiptPreviewEnabled',
+                'scannerEnabled', 'selfCheckoutMode' // scannerEnabledを追加
+            ];
+        
+            if (skipIds.includes(e.target.id)) return;
+
+            if (e.target.classList.contains('payment-input')) {
+                autoSavePayments();
+            } else if (e.target.classList.contains('discount-name') || e.target.classList.contains('discount-num-value')) {
+                autoSaveDiscounts();
+            } else {
+                autoSaveProfile();
+            }
         }
     });
     
