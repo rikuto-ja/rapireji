@@ -756,7 +756,6 @@ window.setDiscountMode = (mode) => {
     // 回数記録用のオブジェクトがなければ作成
     if (!item.appliedPresets) item.appliedPresets = {};
     
-    // プリセット名ごとにカウントアップ
     const name = presetName || "割引";
     item.appliedPresets[name] = (item.appliedPresets[name] || 0) + 1;
         if (discountUnit !== unit) {
@@ -766,7 +765,9 @@ window.setDiscountMode = (mode) => {
             if (unitBtn) unitBtn.innerText = discountUnit;
         }
 
-        keypadBuffer = String(Number(keypadBuffer) + Number(val));
+        const currentVal = Number(keypadBuffer);
+    const addedVal = Number(val);
+    keypadBuffer = String(Math.round(currentVal + addedVal));
         updateKeypadDisplay();
     };
 
@@ -892,7 +893,7 @@ document.getElementById('keypadConfirmBtn').onclick = () => {
 
         if (item.discountValue) {
             if (item.discountUnit === "%") {
-                discountAmount = Math.floor(itemTotalBeforeTax * (item.discountValue / 100));
+                discountAmount = Math.round(itemTotalBeforeTax * (item.discountValue / 100));
             } else {
                 if (item.discountMode === 'unit') {
                     discountAmount = item.discountValue * item.qty;
