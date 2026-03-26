@@ -141,6 +141,31 @@
             user-select: none;           /* 標準 */
             touch-action: none;          /* ブラウザのジェスチャーを無効化 */
         }
+
+        /* サイト全体でダブルタップズームを禁止する */
+html, body {
+    touch-action: manipulation;
+}
+
+/* 決済ボタンやテンキーなど、連続して叩く可能性がある要素に適用 */
+.pay-btn, 
+.num-btn, 
+.btn-black, 
+.btn-outline, 
+.preset-btn,
+.btn-back {
+    /* none: すべてのブラウザジェスチャ（ズーム、スクロール）を禁止 
+       manipulation: スクロールは許可し、ダブルタップズームのみを禁止（推奨）
+    */
+    touch-action: manipulation;
+    
+    /* ボタン連打時にテキストが選択されて青くなるのを防ぐ */
+    -webkit-user-select: none;
+    user-select: none;
+    
+    /* iOSでのタップ時のハイライト（グレーの影）を消す */
+    -webkit-tap-highlight-color: transparent;
+}
     </style>
 </head>
 <body>
