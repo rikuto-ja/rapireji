@@ -404,7 +404,7 @@
             <div class="handle-bar"></div>
             <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
                 <span>払い戻しリスト</span>
-                <span onclick="goToScanFromRegister()" style="cursor: pointer; font-size: 0.9rem; color: var(--black)">📷</span>
+                <span id="scan-btn-container" onclick="goToScanFromRegister()" style="cursor: pointer; font-size: 0.9rem; color: var(--black)">📷</span>
             </div>
         </div>
         <div class="cart-list" id="cartList"></div>
@@ -514,6 +514,11 @@
         const config = JSON.parse(localStorage.getItem(STORAGE_KEYS.STOCK_CONFIG) || '{"enabled":false, "threshold":0}');
         isStockEnabled = config.enabled;
         alertThreshold = Number(config.threshold);
+        const scanConfig = JSON.parse(localStorage.getItem('rapireji_scanner_config') || '{"enabled":true}');
+        const scanBtn = document.getElementById('scan-btn-container');
+        if (scanBtn) {
+            scanBtn.style.display = scanConfig.enabled ? 'inline' : 'none';
+        }
         const categories = JSON.parse(localStorage.getItem(STORAGE_KEYS.CATEGORIES) || '[]');
         const bar = document.getElementById('categoryTabs');
         bar.innerHTML = "";
