@@ -308,21 +308,19 @@ window.addEventListener('DOMContentLoaded', () => {
 
 document.addEventListener('touchstart', () => {
     if (!audioUnlocked) {
-        // すべてのオーディオオブジェクトに対して、音量0で一瞬だけ再生・停止を行う
+        // 全ての音声を対象にする
         [scanAudio3, scanAudio4, scanAudio5, btnAudio].forEach(audio => {
-            const originalVol = audio.volume;
-            audio.volume = 0; // 完全に無音にする
-            
-            // 再生を開始して、即座に停止
+            // 1. 再生前に音量を 0 に固定する（これが最重要）
+            audio.muted = true; 
+
+            // 2. 再生してすぐに停止
             audio.play().then(() => {
                 audio.pause();
                 audio.currentTime = 0;
-                audio.volume = originalVol; // 音量を元に戻す
-            }).catch(e => {
-                // 自動再生制限によるエラーを無視
-            });
+                // 3. 制限が解除されたのでミュートを解く
+                audio.muted = false;
+            }).catch(() => {});
         });
-
         audioUnlocked = true;
     }
 }, { once: true });
