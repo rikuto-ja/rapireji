@@ -308,14 +308,17 @@ window.addEventListener('DOMContentLoaded', () => {
 
 document.addEventListener('touchstart', () => {
     if (!audioUnlocked) {
-        const b1 = new Audio('beep1.mp3'); 
-        // btnAudio を含めてアンロック
-        [scanAudio3, scanAudio4, scanAudio5, btnAudio].forEach(audio => {
-            audio.play().then(() => {
-                audio.pause();
-                audio.currentTime = 0;
-            }).catch(() => {});
-        });
+        // すべてを鳴らすのではなく、どれか1つを「無音」で再生して制限を解除する
+        const unlockAudio = scanAudio3;
+        const originalVolume = unlockAudio.volume;
+        
+        unlockAudio.volume = 0; // 音量を0にする
+        unlockAudio.play().then(() => {
+            unlockAudio.pause();
+            unlockAudio.currentTime = 0;
+            unlockAudio.volume = originalVolume; // 音量を戻す
+        }).catch(() => {});
+
         audioUnlocked = true;
     }
 }, { once: true });
