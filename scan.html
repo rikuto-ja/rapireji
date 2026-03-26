@@ -308,16 +308,12 @@ window.addEventListener('DOMContentLoaded', () => {
 
 document.addEventListener('touchstart', () => {
     if (!audioUnlocked) {
-        // 全ての音声を対象にする
         [scanAudio3, scanAudio4, scanAudio5, btnAudio].forEach(audio => {
-            // 1. 再生前に音量を 0 に固定する（これが最重要）
             audio.muted = true; 
 
-            // 2. 再生してすぐに停止
             audio.play().then(() => {
                 audio.pause();
                 audio.currentTime = 0;
-                // 3. 制限が解除されたのでミュートを解く
                 audio.muted = false;
             }).catch(() => {});
         });
@@ -833,7 +829,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 戻るボタンの挙動
     window.goBack = () => {
-        playRegisterSound();
         if (isFromReturn) {
             location.href = 'return.html';
         } else {
