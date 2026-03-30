@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>払い戻し | らぴレジ</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bignumber.js/9.1.2/bignumber.min.js"></script>
     <style>
         :root {
             --black: #000000; --white: #ffffff; --gray-bg: #f8f9fa;
@@ -366,7 +367,9 @@
     <a href="stock.html" class="menu-link">在庫管理</a>
     <a href="history.html" class="menu-link">販売履歴</a>
     <a href="return.html" class="menu-link">払い戻し</a>
+    <a href="discount.html" class="menu-link">自動割引</a>
     <a href="settings.html" class="menu-link">設定</a>
+    <a href="extend.html" class="menu-link">拡張アプリ</a>
 </nav>
 
 <div class="refund-alert-top" id="refundAlertTop">
@@ -742,10 +745,11 @@ window.setDiscountMode = (mode) => {
             if (unitBtn) unitBtn.innerText = discountUnit;
         }
 
-        const currentVal = Number(keypadBuffer);
-    const addedVal = Number(val);
-    keypadBuffer = String(Math.round(currentVal + addedVal));
-        updateKeypadDisplay();
+        const currentVal = new BigNumber(keypadBuffer);
+    const addedVal = new BigNumber(val);
+    // 加算して整数に丸める
+    keypadBuffer = currentVal.plus(addedVal).integerValue(BigNumber.ROUND_HALF_UP).toString();
+    updateKeypadDisplay();
     };
 
     window.toggleDiscountUnit = () => {
@@ -766,41 +770,41 @@ window.setDiscountMode = (mode) => {
 
 window.confirmKeypad = () => {
     playRegisterSound();
-    const val = Number(keypadBuffer);
+    const val = new BigNumber(keypadBuffer);
     const item = cart[editingItemIndex];
 
     if (keypadMode === 'qty') {
-        if (val > 0) {
-            item.qty = val;
+        if (val.gt(0)) {
+            item.qty = val.toNumber();
         } else {
             alert("1以上の数値を入力してください。"); 
             return;
         }
     } else {
-        const currentSubtotalExclTax = item.price * item.qty; 
+        const currentSubtotalExclTax = new BigNumber(item.price).times(item.qty); 
         
         if (discountUnit === "%") {
-            if (val > 100) {
+            if (val.gt(100)) {
                 alert("金額調整率が100%を超えています。");
                 return;
             }
         } else {
-            let totalDiscountCheck = 0;
+            let totalDiscountCheck = (currentDiscountMode === 'unit') ? val.times(item.qty) : val;
             if (currentDiscountMode === 'unit') {
                 totalDiscountCheck = val * item.qty; 
             } else {
                 totalDiscountCheck = val; 
             }
 
-            if (totalDiscountCheck > currentSubtotalExclTax) {
+            if (totalDiscountCheck.gt(currentSubtotalExclTax)) {
                 alert("調整額が商品の合計金額を超えています。");
                 return;
             }
         }
 
-        item.discountValue = val;
+        item.discountValue = val.toNumber();
         item.discountUnit = discountUnit;
-        item.discountMode = currentDiscountMode; 
+        item.discountMode = currentDiscountMode;
     }
 
     closeKeypad();
@@ -860,62 +864,83 @@ document.getElementById('keypadConfirmBtn').onclick = () => {
         const list = document.getElementById('cartList'), totalDisp = document.getElementById('totalAmount');
         list.innerHTML = "";
 
-        let finalRefundTotal = 0;
-        const subtotalByRate = {}; 
+        let finalRefundTotal = new BigNumber(0);
+    const subtotalByRate = {}; 
 
         cart.forEach((item, index) => {
             const pInfo = allProducts.find(p => p.id === item.id);
-            const rate = pInfo ? Number(pInfo.taxRate || 0) : 0;
-            
-            let itemTotalBeforeTax = item.price * item.qty;
-            let discountAmount = 0;
-
-            if (item.discountValue) {
-                if (item.discountUnit === "%") {
-                    discountAmount = Math.round(itemTotalBeforeTax * (item.discountValue / 100));
-                } else {
-                    discountAmount = (item.discountMode === 'unit') ? (item.discountValue * item.qty) : item.discountValue;
-                }
-            }
+        const rate = new BigNumber(pInfo ? (pInfo.taxRate || 0) : 0);
         
-            const subtotalAfterDiscount = Math.max(0, itemTotalBeforeTax - discountAmount);
-            const tax = Math.floor(subtotalAfterDiscount * (rate / 100));
-            const rowTotalInclTax = Math.floor(subtotalAfterDiscount * (1 + rate / 100));
+        const price = new BigNumber(item.price);
+        const qty = new BigNumber(item.qty);
+        let itemTotalBeforeTax = price.times(qty);
+        let discountAmount = new BigNumber(0);
 
-            finalRefundTotal += rowTotalInclTax;
+        if (item.discountValue) {
+            const dVal = new BigNumber(item.discountValue);
+            if (item.discountUnit === "%") {
+                // 割引額 = 税抜合計 * (割引率 / 100) -> 四捨五入
+                discountAmount = itemTotalBeforeTax.times(dVal.div(100)).integerValue(BigNumber.ROUND_HALF_UP);
+            } else {
+                // 単価調整か合計調整か
+                discountAmount = (item.discountMode === 'unit') ? dVal.times(qty) : dVal;
+            }
+        }
+    
+        // 調整後税抜金額 (0未満にならないよう処理)
+        const subtotalAfterDiscount = BigNumber.max(0, itemTotalBeforeTax.minus(discountAmount));
+        // 消費税計算 (切捨て)
+        const tax = subtotalAfterDiscount.times(rate.div(100)).integerValue(BigNumber.ROUND_FLOOR);
+        // 税込合計
+        const rowTotalInclTax = subtotalAfterDiscount.plus(tax);
 
-            if (!subtotalByRate[rate]) subtotalByRate[rate] = 0;
-            subtotalByRate[rate] += subtotalAfterDiscount;
+        finalRefundTotal = finalRefundTotal.plus(rowTotalInclTax);
 
-            const div = document.createElement('div');
-            div.className = "cart-item";
-            div.innerHTML = `
-                <div class="cart-item-top">
-                    <span>${item.name} <small>(${rate}%)</small></span>
-                    <span>¥-${rowTotalInclTax.toLocaleString()}</span>
-                </div>
-                <div class="cart-item-controls">
-                    <button class="qty-btn" onclick="changeQty(${index}, -1)">-</button>
-                    <span style="margin:0 10px; cursor:pointer;" onclick="openKeypad('qty', ${index})">× ${item.qty}</span>
-                    <button class="qty-btn" onclick="changeQty(${index}, 1)">+</button>
-                    <button class="discount-btn" onclick="openKeypad('discount', ${index})">金額調整</button>
-                    ${item.discountValue ? `<small style="color:red; margin-left:5px;">調整額:${discountAmount}円</small>` : ''}
-                    <button onclick="removeItem(${index})" style="margin-left:auto; background:none; border:none; color:red; font-weight:bold; cursor:pointer;">削除</button>
-                </div>`;
-            list.appendChild(div);
+        const rateStr = rate.toString();
+        if (!subtotalByRate[rateStr]) subtotalByRate[rateStr] = new BigNumber(0);
+        subtotalByRate[rateStr] = subtotalByRate[rateStr].plus(subtotalAfterDiscount);
+
+        const div = document.createElement('div');
+        div.className = "cart-item";
+        div.innerHTML = `
+            <div class="cart-item-top">
+                <span>${item.name} <small>(${rateStr}%)</small></span>
+                <span>¥-${rowTotalInclTax.toNumber().toLocaleString()}</span>
+            </div>
+            <div class="cart-item-controls">
+                <button class="qty-btn" onclick="changeQty(${index}, -1)">-</button>
+                <span style="margin:0 10px; cursor:pointer;" onclick="openKeypad('qty', ${index})">× ${item.qty}</span>
+                <button class="qty-btn" onclick="changeQty(${index}, 1)">+</button>
+                <button class="discount-btn" onclick="openKeypad('discount', ${index})">金額調整</button>
+                ${item.discountValue ? `<small style="color:red; margin-left:5px;">調整額:${discountAmount.toNumber().toLocaleString()}円</small>` : ''}
+                <button onclick="removeItem(${index})" style="margin-left:auto; background:none; border:none; color:red; font-weight:bold; cursor:pointer;">削除</button>
+            </div>`;
+        list.appendChild(div);
         });
 
-        totalDisp.innerText = `返金: ¥${finalRefundTotal.toLocaleString()}`;
-        
-        sessionStorage.setItem('currentOrder', JSON.stringify({ 
-            items: cart.map(item => {
-            const dAmt = (item.discountUnit === "%") 
-                ? Math.floor((item.price * item.qty) * (item.discountValue / 100))
-                : (item.discountMode === 'unit' ? item.discountValue * item.qty : item.discountValue);
+        totalDisp.innerText = `返金: ¥${finalRefundTotal.toNumber().toLocaleString()}`;
+    
+    // sessionStorageへの保存用データ整形（JSON化のため数値に戻す）
+    const taxDetailsForStorage = {};
+    for (const r in subtotalByRate) {
+        taxDetailsForStorage[r] = subtotalByRate[r].toNumber();
+    }
+
+    sessionStorage.setItem('currentOrder', JSON.stringify({ 
+        items: cart.map(item => {
+            const priceBN = new BigNumber(item.price);
+            const qtyBN = new BigNumber(item.qty);
+            const dValBN = new BigNumber(item.discountValue || 0);
+            
+            let dAmt;
+            if (item.discountUnit === "%") {
+                dAmt = priceBN.times(qtyBN).times(dValBN.div(100)).integerValue(BigNumber.ROUND_FLOOR).toNumber();
+            } else {
+                dAmt = (item.discountMode === 'unit' ? dValBN.times(qtyBN) : dValBN).toNumber();
+            }
 
             return {
                 ...item,
-                // レシート側が期待する構造に変換
                 appliedDiscount: {
                     amount: dAmt || 0,
                     mode: item.discountMode || 'total'
@@ -924,12 +949,12 @@ document.getElementById('keypadConfirmBtn').onclick = () => {
                 hasManualInput: item.hasManualInput || false
             };
         }),
-        totalAmount: finalRefundTotal, // 負数にする必要があれば -finalRefundTotal
-        taxDetails: subtotalByRate,
+        totalAmount: finalRefundTotal.toNumber(),
+        taxDetails: taxDetailsForStorage,
         isRefund: true,
-        }));
-        
-        list.scrollTop = list.scrollHeight;
+    }));
+    
+    list.scrollTop = list.scrollHeight;
     }
 
     window.changeQty = (index, diff) => {
