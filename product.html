@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>商品管理 | らぴレジ</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bignumber.js/9.1.2/bignumber.min.js"></script>
     <style>
         :root {
             --black: #000000; --white: #ffffff; --gray-bg: #f8f9fa;
@@ -191,7 +192,9 @@
     <a href="stock.html" class="menu-link">在庫管理</a>
     <a href="history.html" class="menu-link">販売履歴</a>
     <a href="return.html" class="menu-link">払い戻し</a>
+    <a href="discount.html" class="menu-link">自動割引</a>
     <a href="settings.html" class="menu-link">設定</a>
+    <a href="extend.html" class="menu-link">拡張アプリ</a>
 </nav>
 
 <main class="container">
@@ -494,9 +497,12 @@
             div.draggable = !!p;
             
             if (p) {
-                // 税込価格を計算（税抜価格 * (1 + 税率/100)）
-                const taxRate = p.taxRate ?? 0;
-                const priceInclTax = Math.floor(Number(p.price) * (1 + taxRate / 100));
+                // BigNumber を使用して税込価格を計算
+                const bnPrice = new BigNumber(p.price || 0);
+                const bnTaxRate = new BigNumber(p.taxRate ?? 0);
+                // 税込 = 税抜 * (1 + 税率/100) -> 小数点以下切り捨て
+                const priceInclTax = bnPrice.times(bnTaxRate.div(100).plus(1)).integerValue(BigNumber.ROUND_FLOOR);
+
                 const stockBadge = isStockEnabled ? `<span class="product-stock-badge">残:${p.stock || 0}</span>` : "";
 
                 // まるごとHTMLを構築する
@@ -505,10 +511,9 @@
                     <img src="${p.imageUrl || ''}" class="product-image" onerror="this.style.visibility='hidden'">
                     <div class="product-info">
                         <strong>${p.name}</strong>
-                        <span>¥${priceInclTax.toLocaleString()}</span>
+                        <span>¥${priceInclTax.toNumber().toLocaleString()}</span>
                         ${stockBadge}
                     </div>`;
-
                 div.onclick = () => openModal(p, i);
 
                 div.ondragstart = (e) => {
@@ -585,12 +590,13 @@
 
     document.getElementById('save-product-btn').onclick = () => {
         const name = document.getElementById('p-name').value;
-        const price = Number(document.getElementById('p-price').value);
-        const taxRate = Number(document.getElementById('p-tax-rate').value || 0);
+        // BigNumber で入力を受け取る
+        const bnPrice = new BigNumber(document.getElementById('p-price').value || 0);
+        const bnTaxRate = new BigNumber(document.getElementById('p-tax-rate').value || 0);
         const jan = document.getElementById('p-jan').value || "";
         let newCategory = document.getElementById('p-category').value || DEFAULT_CAT;
               
-        if (!name || isNaN(price)) return alert("正しく入力してください");
+        if (!name || bnPrice.isNaN()) return alert("正しく入力してください");
 
         let finalIndex = targetIndex;
         const oldProduct = editingProductId ? allProducts.find(p => p.id === editingProductId) : null;
@@ -612,8 +618,12 @@
 
         const data = {
             id: editingProductId || Date.now(),
-            name, price, taxRate, jan, category: newCategory,
-            stock: isStockEnabled ? Number(document.getElementById('p-stock').value) : (editingProductId ? (oldProduct?.stock || 0) : 0),
+            name, 
+            price: bnPrice.toNumber(),    // 数値として保存
+            taxRate: bnTaxRate.toNumber(), // 数値として保存
+            jan, 
+            category: newCategory,
+            stock: isStockEnabled ? Number(document.getElementById('p-stock').value) : (editingProductId ? (allProducts.find(p => p.id === editingProductId)?.stock || 0) : 0),
             tag: document.getElementById('p-tag').value,
             imageUrl: document.getElementById('p-image-url').value,
             purchaseUrl: document.getElementById('p-purchase-url').value,
