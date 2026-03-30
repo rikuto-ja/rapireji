@@ -161,7 +161,9 @@
     <a href="stock.html" class="menu-link">在庫管理</a>
     <a href="history.html" class="menu-link">販売履歴</a>
     <a href="return.html" class="menu-link">払い戻し</a>
+    <a href="discount.html" class="menu-link">自動割引</a>
     <a href="settings.html" class="menu-link">設定</a>
+    <a href="extend.html" class="menu-link">拡張アプリ</a>
 </nav>
 
 <main class="main-content">
@@ -554,17 +556,20 @@
             
             t += formatLine("小計(税抜)", `¥${originalExclTotal.toLocaleString()}`);
 
-            if (data.discount > 0) {
-                const dName = data.discountName || "割引";
-                t += formatLine(`割引(${dName})`, `-¥${(data.discount || 0).toLocaleString()}`);
-                
-                // 3. 割引後小計(税抜)の算出：割引適用後の「税抜金額」をすべて足す
-                const afterDiscountExclTotal = Object.values(targetDetails).reduce((sum, val) => {
-                    return sum + (Number(val.excl) || Number(val.subtotal) || 0);
-                }, 0);
+            // --- generatePreview 関数内 ---
 
-                t += formatLine("割引後小計(税抜)", `¥${Math.round(finalExcl).toLocaleString()}`);
-            }
+if (data.discount > 0) {
+    const dName = data.discountName || "割引";
+    t += formatLine(`割引(${dName})`, `-¥${(data.discount || 0).toLocaleString()}`);
+    
+    // 3. 割引後小計(税抜)の算出
+    const afterDiscountExclTotal = Object.values(targetDetails).reduce((sum, val) => {
+        return sum + (Number(val.excl) || Number(val.subtotal) || 0);
+    }, 0);
+
+    // 【修正箇所】finalExcl ではなく afterDiscountExclTotal を使用する
+    t += formatLine("割引後小計(税抜)", `¥${Math.round(afterDiscountExclTotal).toLocaleString()}`);
+}
 
             t += formatLine("合計(税込)", `¥${(data.totalAmount || 0).toLocaleString()}`);
             t += line;
