@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>スキャン | らぴレジ</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bignumber.js/9.1.2/bignumber.min.js"></script>
     <style>
         /* --- 以下の内容に差し替え --- */
         :root { 
@@ -444,33 +445,36 @@ function updateScannedUI(item, originalProduct) {
     const index = currentOrder.items.findIndex(i => String(i.id) === String(item.id));
     const isRefund = currentOrder.isRefund || false;
 
-    // 1. 税率の取得
-    const taxRate = Number(originalProduct ? originalProduct.taxRate : (item.taxRate || 0));
+    // 1. 税率・単価・数量の BigNumber 化
+    const taxRate = new BigNumber(originalProduct ? originalProduct.taxRate : (item.taxRate || 0));
+    const price = new BigNumber(item.price);
+    const qty = new BigNumber(item.qty);
     
-    // 2. 計算：(税抜単価 * 数量 - 割引額) * 税率
-    const subtotalExclTax = item.price * item.qty; // 税抜の小計
-    let discountAmount = 0;
+    // 2. 計算
+    const subtotalExclTax = price.times(qty); 
+    let discountAmount = new BigNumber(0);
+    
     if (item.discountValue) {
+        const dVal = new BigNumber(item.discountValue);
         if (item.discountUnit === "%") {
-            discountAmount = Math.floor(subtotalExclTax * (item.discountValue / 100));
+            // 割引額 = floor(税抜小計 * 割引率 / 100)
+            discountAmount = subtotalExclTax.times(dVal).div(100).integerValue(BigNumber.ROUND_FLOOR);
         } else {
-            discountAmount = (item.discountMode === 'unit') ? (item.discountValue * item.qty) : item.discountValue;
+            discountAmount = (item.discountMode === 'unit') ? dVal.times(qty) : dVal;
         }
     }
 
-    // 割引後の税抜金額に税率を掛けて、最終的な1行の税込合計を出す
-    const discountedSubtotal = subtotalExclTax - discountAmount;
-    const rowTotal = Math.floor(discountedSubtotal * (1 + taxRate / 100));
+    const discountedSubtotal = subtotalExclTax.minus(discountAmount);
+    // 税込合計 = floor(割引後税抜 * (1 + 税率/100))
+    const rowTotal = discountedSubtotal.times(taxRate.div(100).plus(1)).integerValue(BigNumber.ROUND_FLOOR);
 
-    // 3. ラベルと記号の設定
     const adjustLabel = isRefund ? "金額調整" : "割引";
     const sign = isRefund ? "-" : "";
 
-    // 割引・調整額の表示テキストを出し分け
-    const discountDisplay = discountAmount > 0 
+    const discountDisplay = discountAmount.gt(0) 
         ? (isRefund 
-            ? `<small style="color:red; margin-left:5px;">調整額:${discountAmount.toLocaleString()}円</small>` 
-            : `<small style="color:red; margin-left:5px;">-${discountAmount.toLocaleString()}円</small>`)
+            ? `<small style="color:red; margin-left:5px;">調整額:${discountAmount.toNumber().toLocaleString()}円</small>` 
+            : `<small style="color:red; margin-left:5px;">-${discountAmount.toNumber().toLocaleString()}円</small>`)
         : '';
 
     // --- 4. UIの更新 (割引ボタンの表示判定を修正) ---
@@ -533,42 +537,47 @@ window.removeItemScan = (id) => {
 };
 
 function saveOrderWithCalculation(order, products) {
-    let finalSubtotal = 0;
-    let finalTaxTotal = 0;
-    let subtotalByRate = {};
+    let finalSubtotal = new BigNumber(0);
+    let finalTaxTotal = new BigNumber(0);
+    let subtotalByRate = {}; // ここは各税率の BigNumber オブジェクトを格納
 
     order.items.forEach(it => {
         const pInfo = products.find(p => String(p.id) === String(it.id));
-        const rate = pInfo ? Number(pInfo.taxRate || 0) : 0;
-        // 1. 税抜の状態での合計を出す
-        let lineSubtotal = it.price * it.qty;
+        const rate = pInfo ? pInfo.taxRate || 0 : 0;
         
-        // 2. 割引・調整を税抜合計から差し引く
-        let discountAmount = 0;
+        const linePrice = new BigNumber(it.price);
+        const lineQty = new BigNumber(it.qty);
+        const lineSubtotal = linePrice.times(lineQty);
+        
+        let discountAmount = new BigNumber(0);
         if (it.discountValue) {
+            const dVal = new BigNumber(it.discountValue);
             if (it.discountUnit === "%") {
-                discountAmount = Math.floor(lineSubtotal * (it.discountValue / 100));
+                discountAmount = lineSubtotal.times(dVal).div(100).integerValue(BigNumber.ROUND_FLOOR);
             } else {
-                discountAmount = (it.discountMode === 'unit') ? (it.discountValue * it.qty) : it.discountValue;
+                discountAmount = (it.discountMode === 'unit') ? dVal.times(lineQty) : dVal;
             }
         }
         
-        const discountedLineTotal = lineSubtotal - discountAmount;
+        const discountedLineTotal = lineSubtotal.minus(discountAmount);
         
-        // 3. 税率ごとに税抜金額（割引後）を集計
-        if (!subtotalByRate[rate]) subtotalByRate[rate] = 0;
-        subtotalByRate[rate] += discountedLineTotal;
+        if (!subtotalByRate[rate]) subtotalByRate[rate] = new BigNumber(0);
+        subtotalByRate[rate] = subtotalByRate[rate].plus(discountedLineTotal);
     });
 
+    const taxDetailsForStorage = {};
     Object.keys(subtotalByRate).forEach(rate => {
-        const r = Number(rate);
-        const sub = subtotalByRate[r];
-        finalTaxTotal += Math.floor(sub * (r / 100));
-        finalSubtotal += sub;
+        const r = new BigNumber(rate);
+        const sub = subtotalByRate[rate];
+        const tax = sub.times(r).div(100).integerValue(BigNumber.ROUND_FLOOR);
+        
+        finalTaxTotal = finalTaxTotal.plus(tax);
+        finalSubtotal = finalSubtotal.plus(sub);
+        taxDetailsForStorage[rate] = sub.toNumber(); // ストレージ保存用に数値に戻す
     });
 
-    order.totalAmount = finalSubtotal + finalTaxTotal;
-    order.taxDetails = subtotalByRate;
+    order.totalAmount = finalSubtotal.plus(finalTaxTotal).toNumber();
+    order.taxDetails = taxDetailsForStorage;
     sessionStorage.setItem('currentOrder', JSON.stringify(order));
 }
 
@@ -671,23 +680,25 @@ window.setDiscountMode = (mode) => {
 
     window.applyPreset = (val, unit, presetName) => {
         playRegisterSound();
-        const currentOrder = JSON.parse(sessionStorage.getItem('currentOrder') || '{"items":[]}');
-        const item = currentOrder.items[editingItemIndex];
-        if (!item) return;
+    const currentOrder = JSON.parse(sessionStorage.getItem('currentOrder') || '{"items":[]}');
+    const item = currentOrder.items[editingItemIndex];
+    if (!item) return;
 
-        if (!item.appliedPresets) item.appliedPresets = {};
-        const name = presetName || "割引";
-        item.appliedPresets[name] = (item.appliedPresets[name] || 0) + 1;
-        if (discountUnit !== unit) {
-            discountUnit = unit;
-            keypadBuffer = "0"; 
-            const unitBtn = document.getElementById('discountUnitBtn');
-            if (unitBtn) unitBtn.innerText = discountUnit;
-        }
+    if (!item.appliedPresets) item.appliedPresets = {};
+    const name = presetName || "割引";
+    item.appliedPresets[name] = (item.appliedPresets[name] || 0) + 1;
 
-        keypadBuffer = String(Number(keypadBuffer) + Number(val));
-        sessionStorage.setItem('currentOrder', JSON.stringify(currentOrder));
-        updateKeypadDisplay();
+    if (discountUnit !== unit) {
+        discountUnit = unit;
+        keypadBuffer = "0"; 
+        const unitBtn = document.getElementById('discountUnitBtn');
+        if (unitBtn) unitBtn.innerText = discountUnit;
+    }
+
+    // プリセット加算を BigNumber で
+    keypadBuffer = new BigNumber(keypadBuffer).plus(val).toString();
+    sessionStorage.setItem('currentOrder', JSON.stringify(currentOrder));
+    updateKeypadDisplay();
     };
 
     window.toggleDiscountUnit = () => {
@@ -698,52 +709,53 @@ window.setDiscountMode = (mode) => {
     };
 
     function updateKeypadDisplay() {
-        const display = document.getElementById('keypadDisplay');
-        if (keypadMode === 'qty') {
-            display.innerText = keypadBuffer;
-        } else {
-            display.innerText = (discountUnit === "%") ? keypadBuffer + "%" : "¥" + Number(keypadBuffer).toLocaleString();
-        }
-    }  
+    const display = document.getElementById('keypadDisplay');
+    const valStr = new BigNumber(keypadBuffer).toNumber().toLocaleString();
+    if (keypadMode === 'qty') {
+        display.innerText = valStr;
+    } else {
+        display.innerText = (discountUnit === "%") ? keypadBuffer + "%" : "¥" + valStr;
+    }
+}
 
 window.confirmKeypad = () => {
     playRegisterSound();
-    const val = Number(keypadBuffer);
+    const val = new BigNumber(keypadBuffer);
     let currentOrder = JSON.parse(sessionStorage.getItem('currentOrder') || '{"items":[]}');
     const item = currentOrder.items[editingItemIndex];
 
     if (keypadMode === 'qty') {
-        if (val > 0) {
-            item.qty = val;
+        if (val.gt(0)) {
+            item.qty = val.toNumber();
         } else {
             alert("1以上の数値を入力してください。"); 
             return;
         }
     } else {
-        const currentSubtotal = item.price * item.qty; 
+        const currentSubtotal = new BigNumber(item.price).times(item.qty); 
         const isRefund = JSON.parse(sessionStorage.getItem('currentOrder') || '{}').isRefund;
         const msgType = isRefund ? "調整" : "割引";
         
         if (discountUnit === "%") {
-            if (val > 100) {
+            if (val.gt(100)) {
                 alert(`${msgType}率が100%を超えています。`);
                 return;
             }
         } else {
-            let totalDiscountCheck = 0;
-            if (currentDiscountMode === 'unit') {
+            let totalDiscountCheck = (currentDiscountMode === 'unit') ? val.times(item.qty) : val;
+            /*if (currentDiscountMode === 'unit') {
                 totalDiscountCheck = val * item.qty; 
             } else {
                 totalDiscountCheck = val; 
-            }
+            }*/
 
-            if (totalDiscountCheck > currentSubtotal) {
+            if (totalDiscountCheck.gt(currentSubtotal)) {
                 alert(`${msgType}額が商品の合計金額を超えています。`);
                 return;
             }
         }
 
-        item.discountValue = val;
+        item.discountValue = val.toNumber();
         item.discountUnit = discountUnit;
         item.discountMode = currentDiscountMode; 
     }
