@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menu - Extend</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            background-color: #ffffff;
+            color: #000000;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .menu-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            width: 100%;
+            max-width: 400px;
+            padding: 20px;
+            overflow-x: hidden;
+            overflow-y: auto;
+            box-sizing: border-box;
+        }
+        .menu-button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 15px 5px; /* 上下15pxで文字が収まる程度の高さに */
+            font-size: 14px;   /* 2列でも文字が入りやすいよう微調整 */
+            font-weight: bold;
+            text-decoration: none;
+            color: #000000;
+            background: #ffffff;
+            border: 2px solid #000000;
+            cursor: pointer;
+            transition: background 0.2s;
+            box-sizing: border-box;
+            min-height: 3em;   /* 最低でも文字が隠れない高さを確保 */
+        }
+        .menu-button:active {
+            background: #eeeeee;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="menu-container" id="menu-container">
+        </div>
+
+    <script>
+        // ボタンを増やしたいときは、この配列に要素を追加するだけです
+        const menuItems = [
+            { name: "レジ", url: "register.html" },
+            { name: "勤務時間管理", url: "worktime.html" },
+            { name: "予約管理", url: "appoint.html" }
+         
+        ];
+
+        const container = document.getElementById('menu-container');
+
+        menuItems.forEach(item => {
+            const btn = document.createElement('a');
+            btn.href = item.url;
+            btn.className = 'menu-button';
+            btn.textContent = item.name;
+            container.appendChild(btn);
+        });
+    </script>
+</body>
+</html>

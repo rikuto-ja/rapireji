@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>割引設定 | らぴレジ</title>
+    <style>
+        :root {
+            --black: #000000; --white: #ffffff; --gray-bg: #f8f9fa;
+            --gray-light: #e9ecef; --danger: #ff0000; --accent: #00ff00; /* アクセントカラー(緑)を追加 */
+            --header-h: 60px;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; touch-action: manipulation; }
+        body { background-color: var(--white); overflow: hidden; display: flex; flex-direction: column; height: 100vh; }
+        
+        header {
+            height: calc(var(--header-h) + env(safe-area-inset-top)); 
+            border-bottom: 3px solid var(--black);
+            display: flex; align-items: center; padding: env(safe-area-inset-top) 20px 0 20px; 
+            background: var(--white); position: sticky; top: 0; z-index: 1100; justify-content: space-between;
+        }
+        .header-left { display: flex; align-items: center; }
+        header h1 { font-size: 1.5rem; font-weight: 900; margin-left: 20px; white-space: nowrap; }
+
+        .header-ad-space {
+            flex: 1; margin-left: 20px; height: 50px; background: #fff;
+            display: flex; align-items: center; justify-content: center;
+            border: 1px dashed #ccc; overflow: hidden;
+        }
+        .menu-trigger { width: 30px; height: 22px; cursor: pointer; position: relative; }
+        .menu-trigger span { display: block; width: 100%; height: 4px; background: var(--black); position: absolute; left: 0; transition: all 0.3s; }
+        .menu-trigger span:nth-child(1) { top: 0; }
+        .menu-trigger span:nth-child(2) { top: 9px; }
+        .menu-trigger span:nth-child(3) { top: 18px; }
+        .menu-trigger.open span:nth-child(1) { transform: translateY(9px) rotate(45deg); }
+        .menu-trigger.open span:nth-child(2) { opacity: 0; }
+        .menu-trigger.open span:nth-child(3) { transform: translateY(-9px) rotate(-45deg); }
+
+        .side-nav { 
+            position: fixed; top: var(--header-h); left: 0; width: 250px; height: calc(100% - var(--header-h)); 
+            background: var(--white); border-right: 3px solid var(--black); z-index: 1050; 
+            transition: transform 0.3s; padding: 20px;
+        }
+        .side-nav.hidden { transform: translateX(-100%); }
+        .menu-link { display: block; padding: 15px; color: var(--black); font-weight: 800; text-decoration: none; border-bottom: 1px solid var(--gray-light); }
+        .menu-link.active { border-left: 8px solid var(--black); padding-left: 7px; font-weight: 900; }
+
+        .container { flex: 1; overflow-y: auto; padding: 20px; background: var(--gray-bg); }
+        
+        /* タイトルエリアのスタイル */
+        .page-header-actions {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px dashed #ccc;
+        }
+
+        /* ★移植：トグルスイッチのCSS */
+        .switch { position: relative; display: inline-block; width: 50px; height: 28px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #ccc; transition: .4s; border-radius: 34px; border: 2px solid var(--black);
+        }
+        .slider:before {
+            position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px;
+            background-color: white; transition: .4s; border-radius: 50%; border: 2px solid var(--black);
+        }
+        input:checked + .slider { background-color: var(--accent); }
+        input:checked + .slider:before { transform: translateX(22px); }
+        
+        .global-setting-item { display: flex; align-items: center; gap: 10px; background: #fff; padding: 10px 15px; border: 2px solid #000; }
+        .global-setting-item label { margin-bottom: 0; font-size: 0.9rem; }
+
+        /* 割引リストのカード表示 */
+        #discount-list { display: flex; flex-direction: column; gap: 12px; }
+        .discount-card {
+            background: var(--white); border: 2px solid var(--black); padding: 15px;
+            box-shadow: 4px 4px 0px var(--black); cursor: pointer; position: relative;
+        }
+        .discount-card:active { transform: translate(2px, 2px); box-shadow: none; }
+        /* 無効化時のスタイル */
+        .discount-card.disabled { opacity: 0.5; border-color: #999; box-shadow: 4px 4px 0px #999; cursor: not-allowed; }
+        .discount-card.disabled:active { transform: none; box-shadow: 4px 4px 0px #999; }
+        .discount-card.disabled .discount-type-badge { background: #999; }
+
+        /* --- styleセクション内の修正 --- */
+/* 条件テキストのスタイルを名称（font-weight:900相当）に合わせる */
+.discount-condition-text {
+    font-size: 0.9rem; /* 名称と同じサイズ感に調整 */
+    font-weight: 900;
+    color: var(--black);
+    margin-top: 5px;
+    /* 以前のボーダーなどの装飾を削除し、テキストを際立たせる */
+}
+
+        /* 割引カード内のレイアウト調整 */
+.discount-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+}
+.discount-info { flex: 1; }
+
+/* 無効時のスタイルを詳細化 */
+.discount-card.item-disabled {
+    background: #f0f0f0;
+    border-color: #ccc;
+    box-shadow: 4px 4px 0px #ccc;
+}
+.discount-card.item-disabled .discount-info {
+    opacity: 0.6;
+}
+
+        .discount-type-badge { 
+            display: inline-block; padding: 2px 8px; background: var(--black); color: var(--white); 
+            font-size: 0.7rem; font-weight: 900; margin-bottom: 8px;
+        }
+
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 9999; }
+        .modal-content { 
+            background: var(--white); padding: 20px; border: 4px solid var(--black); 
+            width: 95%; max-width: 600px; max-height: 90vh; overflow-y: auto; box-shadow: 10px 10px 0px var(--black);
+        }
+
+        .form-row { display: flex; gap: 15px; margin-bottom: 15px; flex-wrap: wrap; }
+        .form-group { flex: 1; min-width: 200px; }
+        .form-group.full { flex: 1 1 100%; }
+        label { display: block; font-weight: 900; font-size: 0.8rem; margin-bottom: 5px; }
+        input, select { width: 100%; padding: 10px; border: 2px solid var(--black); font-size: 1rem; border-radius: 0; }
+        
+        .product-selector-box {
+            border: 2px solid var(--black); height: 150px; overflow-y: auto; background: var(--white); padding: 5px;
+        }
+        .selector-item { display: flex; align-items: center; gap: 10px; padding: 8px; border-bottom: 1px solid var(--gray-light); font-size: 0.85rem; font-weight: 800; }
+
+        .btn-black { background: var(--black); color: var(--white); border: none; padding: 15px; font-weight: 900; cursor: pointer; width: 100%; text-align: center; text-decoration: none; display: inline-block;}
+        .btn-outline { background: var(--white); border: 2px solid var(--black); padding: 15px; font-weight: 900; cursor: pointer; width: 100%; }
+        .btn-danger { background: var(--white); color: var(--danger); border: 2px solid var(--danger); padding: 15px; font-weight: 900; cursor: pointer; width: 100%; }
+        .hidden { display: none !important; }
+
+        @media screen and (max-width: 768px) {
+            header { padding: 0 10px; }
+            header h1 { font-size: 0.9rem; margin-left: 10px; flex-shrink: 0; }
+            .header-ad-space { display: flex !important; flex: 1; margin-left: 10px; height: 35px; min-width: 80px; border: 1px solid #ddd; font-size: 8px; }
+            .page-header-actions { flex-direction: column; gap: 10px; align-items: flex-start; }
+            #add-discount-btn { width: 100%; }
+            .global-setting-item { width: 100%; justify-content: space-between; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-left">
+        <div class="menu-trigger" id="menu-btn"><span></span><span></span><span></span></div>
+        <h1>割引設定</h1>
+    </div>
+    <div class="header-ad-space" id="ad-top">
+        <span style="color:#ccc; font-size: 8px; font-weight: 900;">AD</span>
+    </div>
+</header>
+
+<nav class="side-nav hidden" id="side-menu">
+    <a href="register.html" class="menu-link">レジ操作</a>
+    <a href="product.html" class="menu-link">商品管理</a>
+    <a href="stock.html" class="menu-link">在庫管理</a>
+    <a href="history.html" class="menu-link">販売履歴</a>
+    <a href="return.html" class="menu-link">払い戻し</a>
+    <a href="discount.html" class="menu-link">自動割引</a>
+    <a href="settings.html" class="menu-link">設定</a>
+    <a href="extend.html" class="menu-link">拡張アプリ</a>
+</nav>
+
+<main class="container">
+    <div class="page-header-actions">
+        <button id="add-discount-btn" class="btn-black" style="width: auto; padding: 10px 30px;">＋ 新規割引を追加</button>
+        
+        <div class="global-setting-item">
+            <label style="font-weight: 900;">自動割引機能</label>
+            <label class="switch">
+                <input type="checkbox" id="globalDiscountEnabled" onchange="toggleGlobalDiscount()">
+                <span class="slider"></span>
+            </label>
+        </div>
+    </div>
+
+    <div id="discount-list"></div>
+</main>
+
+<div id="discountModal" class="modal hidden">
+    <div class="modal-content">
+        <h2 id="modalTitle" style="margin-bottom: 15px; font-weight: 900;">割引ルールの編集</h2>
+        
+        <div class="form-row">
+            <div class="form-group full">
+                <label>割引名称 (例: 3個セット割引)</label>
+                <input type="text" id="d-name" placeholder="名称を入力（空欄時は自動生成）">
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group full">
+                <label>割引の種類</label>
+                <select id="d-type" onchange="updateFields()">
+                    <option value="bundle">バンドル販売（特定の商品n個で◯円割引）</option>
+                    <option value="combo">コンボ割引（指定の商品セットで割引）</option>
+                    <option value="time">時間帯割引（◯時〜◯時は割引）</option>
+                    <option value="step">数量スライド（n個以上で値引き）</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group full">
+                <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 5px;">
+                    <label style="margin-bottom: 0;">対象商品を選択</label>
+                    <select id="category-filter" style="width: auto; padding: 2px 5px; font-size: 0.7rem; height: 24px;" onchange="handleCategoryChange()">
+                    </select>
+                </div>
+                <div id="product-selector" class="product-selector-box"></div>
+            </div>
+        </div>
+
+        <div id="fields-container" style="background: var(--gray-light); padding: 15px; border: 2px solid var(--black); margin-bottom: 20px;">
+            <div id="f-bundle" class="cond-field">
+                <div class="form-row">
+                    <div class="form-group"><label>必要個数</label><input type="number" id="v-bundle-qty" placeholder="3"></div>
+                    <div class="form-group">
+                        <label>割引額/率 (税抜から)</label>
+                        <div style="display: flex; gap: 5px;">
+                            <input type="number" id="v-bundle-val" style="flex: 2;" placeholder="1000">
+                            <select id="v-bundle-unit" style="flex: 1;">
+                                <option value="yen">円</option>
+                                <option value="percent">%</option>
+                            </select>
+                            <select id="v-bundle-apply" style="flex: 1.5;">
+                                <option value="each">バラ (1点毎)</option>
+                                <option value="total">まとめ (総額)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="f-combo" class="cond-field hidden">
+    <div class="form-row">
+        <div class="form-group">
+            <label>セット割引額/率 (税抜から)</label>
+            <div style="display: flex; gap: 5px;">
+                <input type="number" id="v-combo-discount" style="flex: 2;" placeholder="200">
+                <select id="v-combo-unit" style="flex: 1;">
+                    <option value="yen">円</option>
+                    <option value="percent">%</option>
+                </select>
+                <select id="v-combo-apply" style="flex: 1.5;">
+                    <option value="each">バラ (1点毎)</option>
+                    <option value="total" selected>まとめ (総額)</option>
+                </select>
+            </div>
+        </div>
+    </div>
+    <p style="font-size: 0.7rem; color: #666;">※選択された商品がすべて揃った場合に割引が適用されます。</p>
+</div>
+
+<div id="f-time" class="cond-field hidden">
+    <div class="form-row">
+        <div class="form-group"><label>開始時間</label><input type="time" id="v-time-start"></div>
+        <div class="form-group"><label>終了時間</label><input type="time" id="v-time-end"></div>
+    </div>
+    <label>割引額/率 (税抜から)</label>
+    <div style="display: flex; gap: 5px;">
+        <input type="number" id="v-time-val" style="flex: 3;">
+        <select id="v-time-unit" style="flex: 1;">
+            <option value="yen">円</option>
+            <option value="percent" selected>%</option>
+        </select>
+        <select id="v-time-apply" style="flex: 1.5;">
+            <option value="each">バラ (1点毎)</option>
+            <option value="total">まとめ (総額)</option>
+        </select>
+    </div>
+</div>
+
+<div id="f-step" class="cond-field hidden">
+    <div class="form-row">
+        <div class="form-group"><label>n個以上購入で</label><input type="number" id="v-step-qty"></div>
+        <div class="form-group">
+            <label>値引き (税抜から)</label>
+            <div style="display: flex; gap: 5px;">
+                <input type="number" id="v-step-val" style="flex: 2;">
+                <select id="v-step-unit" style="flex: 1;">
+                    <option value="yen">円</option>
+                    <option value="percent">%</option>
+                </select>
+                <select id="v-step-apply" style="flex: 1.5;">
+                    <option value="each">バラ (1点毎)</option>
+                    <option value="total">まとめ (総額)</option>
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
+        </div>
+
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <button id="save-discount-btn" class="btn-black" style="flex: 2;">保存する</button>
+            <button id="delete-discount-btn" class="btn-danger hidden" style="flex: 1;">削除</button>
+            <button id="close-modal-btn" class="btn-outline" style="flex: 1;">閉じる</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    alert("現在メンテナンス中のため機能していません。ご注意ください");
+
+    const STORAGE_KEYS = {
+        PRODUCTS: 'rapireji_products',
+        CATEGORIES: 'rapireji_categories',
+        AUTO_DISCOUNTS: 'rapireji_auto_discounts',
+        CONFIG: 'rapireji_config' // ★追加：全体設定用キー
+    };
+
+    let allProducts = JSON.parse(localStorage.getItem(STORAGE_KEYS.PRODUCTS) || '[]');
+    let categories = JSON.parse(localStorage.getItem(STORAGE_KEYS.CATEGORIES) || '[]');
+    let allDiscounts = JSON.parse(localStorage.getItem(STORAGE_KEYS.AUTO_DISCOUNTS) || '[]');
+    // ★追加：全体設定の読み込み
+    let globalConfig = JSON.parse(localStorage.getItem(STORAGE_KEYS.CONFIG) || '{"autoDiscountEnabled": true}');
+    
+    let currentCategory = "";
+    let selectedProductIds = [];
+    let editingId = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        // ★追加：トグルの初期状態を反映
+        document.getElementById('globalDiscountEnabled').checked = globalConfig.autoDiscountEnabled;
+        
+        renderList();
+        setupMenu();
+        highlightMenu();
+    });
+
+    // ★移植＆修正：全体のオンオフ切り替え関数
+    function toggleGlobalDiscount() {
+        const isEnabled = document.getElementById('globalDiscountEnabled').checked;
+        
+        // 設定を保存
+        globalConfig.autoDiscountEnabled = isEnabled;
+        localStorage.setItem(STORAGE_KEYS.CONFIG, JSON.stringify(globalConfig));
+        
+        // リストの見た目を更新（無効時はグレーアウトなど）
+        renderList();
+        
+        // 操作音（もしあれば）などをここに追記可能
+    }
+
+    // メニュー制御（変更なし）
+    function setupMenu() {
+        const menuBtn = document.getElementById('menu-btn');
+        menuBtn.onclick = () => {
+            menuBtn.classList.toggle('open');
+            document.getElementById('side-menu').classList.toggle('hidden');
+        };
+    }
+
+    function highlightMenu() {
+        const currentPath = window.location.pathname.split("/").pop();
+        document.querySelectorAll('.menu-link').forEach(link => {
+            if (link.getAttribute('href') === currentPath) link.classList.add('active');
+        });
+    }
+
+    function toggleItemEnabled(e, id) {
+        e.stopPropagation(); // カード自体のクリックイベント（編集モーダル）を阻止
+        const idx = allDiscounts.findIndex(d => d.id === id);
+        if (idx !== -1) {
+            allDiscounts[idx].enabled = e.target.checked;
+            localStorage.setItem(STORAGE_KEYS.AUTO_DISCOUNTS, JSON.stringify(allDiscounts));
+            renderList();
+        }
+    }
+
+    // 一覧表示（修正：全体設定がオフの場合はグレーアウト＆編集不可に）
+    function renderList() {
+        const list = document.getElementById('discount-list');
+        list.innerHTML = "";
+        
+        const validTypes = ['bundle', 'combo', 'time', 'step'];
+        const isGlobalEnabled = globalConfig.autoDiscountEnabled;
+
+        // グローバル設定がオフの場合のメッセージ
+        if (!isGlobalEnabled && allDiscounts.length > 0) {
+            const msg = document.createElement('p');
+            msg.style = "font-size: 0.8rem; color: var(--danger); font-weight: 800; margin-bottom: 10px; text-align:center;";
+            msg.innerText = "※現在、自動割引機能自体が「オフ」のため、以下のルールは適用されません。";
+            list.appendChild(msg);
+        }
+
+        // --- 変更箇所: renderList 関数内のカード生成部分 ---
+
+        // --- renderList 関数内のカード生成部分の修正 ---
+
+allDiscounts.forEach((d, index) => {
+    if (!validTypes.includes(d.type)) return;
+    if (d.enabled === undefined) d.enabled = true;
+
+    const card = document.createElement('div');
+    card.className = `discount-card ${isGlobalEnabled ? '' : 'disabled'}`;
+    
+    if (isGlobalEnabled) {
+        card.onclick = () => openModal(d);
+    } else {
+        card.onclick = () => alert("自動割引機能が「オフ」のため、編集できません。上のスイッチを「オン」にしてください。");
+    }
+
+    // 名称の優先順位: 1.カスタム名称 2.自動生成された条件名 3.デフォルト
+    const displayName = d.customName || `自動割引${index + 1}`;
+    
+    // 表示用の条件テキスト（名称と重複しないように調整可能ですが、
+    // 「割引の仕方を表示して」との指示に基づき、d.nameをそのまま表示します）
+    const conditionText = d.name || "";
+
+    const typeLabel = { bundle: "バンドル", combo: "コンボ", time: "時間", step: "数量スライド" }[d.type];
+    
+    card.innerHTML = `
+    <div class="discount-card-header">
+        <div class="discount-info">
+            <span class="discount-type-badge">${typeLabel}</span>
+            <div style="font-weight:900; font-size:0.9rem;">${displayName}</div>
+            <div style="font-size:0.75rem; color:#666; margin-top:5px;">対象: ${d.targetNames}</div>
+            <div style="font-size:0.75rem; color:#666; margin-top:5px;">方法: ${conditionText}</div>
+        </div>
+        <div class="discount-item-switch" onclick="event.stopPropagation()">
+            <label class="switch" style="transform: scale(0.8); transform-origin: right top;">
+                <input type="checkbox" ${d.enabled ? 'checked' : ''} 
+                    ${!isGlobalEnabled ? 'disabled' : ''} 
+                    onchange="toggleItemEnabled(event, ${d.id})">
+                <span class="slider"></span>
+            </label>
+        </div>
+    </div>
+    `;
+    list.appendChild(card);
+});
+
+// ----------------------------------------------
+    }
+
+    // モーダル開閉（グローバル設定オフ時は新規追加も不可に）
+    document.getElementById('add-discount-btn').onclick = () => {
+        if (!globalConfig.autoDiscountEnabled) {
+            alert("自動割引機能が「オフ」のため、追加できません。");
+            return;
+        }
+        openModal(null);
+    };
+    
+    document.getElementById('close-modal-btn').onclick = () => document.getElementById('discountModal').classList.add('hidden');
+
+    function openModal(d) {
+        editingId = d ? d.id : null;
+        selectedProductIds = d ? [...d.targetIds] : [];
+        document.getElementById('modalTitle').innerText = d ? "自動割引の編集" : "自動割引の新規追加";
+        document.getElementById('d-type').value = d ? d.type : "bundle";
+        document.getElementById('d-name').value = d ? (d.customName || "") : "";
+
+        renderSelectorTabs();
+        document.getElementById('category-filter').value = "all";
+        switchSelectorCategory("all");
+
+        if (d) {
+            if (d.type === 'bundle') { 
+                document.getElementById('v-bundle-qty').value = d.qty; 
+                document.getElementById('v-bundle-val').value = d.val; 
+                document.getElementById('v-bundle-unit').value = d.unit || 'yen';
+                document.getElementById('v-bundle-apply').value = d.apply || 'each';
+            }
+            if (d.type === 'combo') { 
+                document.getElementById('v-combo-discount').value = d.val; 
+                document.getElementById('v-combo-unit').value = d.unit || 'yen';
+                document.getElementById('v-combo-apply').value = d.apply || 'total'; // 追加
+            }
+            if (d.type === 'time') { 
+                document.getElementById('v-time-start').value = d.start; 
+                document.getElementById('v-time-end').value = d.end; 
+                document.getElementById('v-time-val').value = d.val;
+                document.getElementById('v-time-unit').value = d.unit || 'percent';
+                document.getElementById('v-time-apply').value = d.apply || 'each'; // 追加
+            }
+            if (d.type === 'step') { 
+                document.getElementById('v-step-qty').value = d.qty; 
+                document.getElementById('v-step-val').value = d.val; 
+                document.getElementById('v-step-unit').value = d.unit || 'yen';
+                document.getElementById('v-step-apply').value = d.apply || 'each'; // 追加
+            }
+            document.getElementById('delete-discount-btn').classList.remove('hidden');
+        } else {
+            resetFields();
+            document.getElementById('delete-discount-btn').classList.add('hidden');
+        }
+
+        updateFields();
+        document.getElementById('discountModal').classList.remove('hidden');
+    }
+
+    // カテゴリセレクトボックスの描画（変更なし）
+    function renderSelectorTabs() {
+        const filter = document.getElementById('category-filter');
+        let options = '<option value="all">すべて</option>';
+        options += '<option value="selected">選択済み</option>';
+        categories.forEach(cat => {
+            options += `<option value="${cat.name}">${cat.name}</option>`;
+        });
+        filter.innerHTML = options;
+    }
+
+    function handleCategoryChange() {
+        const catName = document.getElementById('category-filter').value;
+        switchSelectorCategory(catName);
+    }
+
+    // 商品セレクターの描画ロジック（変更なし）
+    function switchSelectorCategory(mode) {
+        const grid = document.getElementById('product-selector'); 
+        grid.innerHTML = "";
+        grid.style = "display:flex; flex-direction:column; gap:2px; padding:0;";
+
+        let filtered = [];
+        if (mode === 'all') {
+            filtered = allProducts.filter(p => p.isActive !== false);
+        } else if (mode === 'selected') {
+            filtered = allProducts.filter(p => selectedProductIds.includes(p.id));
+        } else {
+            filtered = allProducts.filter(p => p.category === mode && p.isActive !== false);
+        }
+        
+        filtered.forEach(p => {
+            const isSelected = selectedProductIds.includes(p.id);
+            const item = document.createElement('div');
+            item.style = `
+                border: 2px solid ${isSelected ? 'var(--black)' : 'var(--gray-light)'};
+                background: ${isSelected ? 'var(--gray-light)' : '#fff'};
+                padding: 10px; font-size: 0.85rem; cursor: pointer;
+                display: flex; align-items: center;
+                margin-bottom: 2px;
+            `;
+
+            item.innerHTML = `
+                <div style="width: 24px; font-weight: 900; font-size: 1.1rem;">
+                    ${isSelected ? '☑' : '☐'}
+                </div>
+                <div style="flex: 1; font-weight: 900; margin-left: 5px;">
+                    ${p.name}
+                </div>
+                <div style="font-family: monospace; font-weight: 800; margin-left: 10px;">
+                    ¥${Number(p.price).toLocaleString()}
+                </div>
+            `;
+            
+            item.onclick = () => {
+                if (selectedProductIds.includes(p.id)) {
+                    selectedProductIds = selectedProductIds.filter(id => id !== p.id);
+                } else {
+                    selectedProductIds.push(p.id);
+                }
+                switchSelectorCategory(mode); 
+            };
+            grid.appendChild(item);
+        });
+    }
+
+    function updateFields() {
+        const type = document.getElementById('d-type').value;
+        document.querySelectorAll('.cond-field').forEach(el => el.classList.add('hidden'));
+        document.getElementById(`f-${type}`).classList.remove('hidden');
+    }
+
+    function resetFields() {
+        document.querySelectorAll('#fields-container input').forEach(i => i.value = "");
+    }
+
+    // 保存処理（変更なし）
+    document.getElementById('save-discount-btn').onclick = () => {
+        const type = document.getElementById('d-type').value;
+        const customName = document.getElementById('d-name').value.trim();
+        if (selectedProductIds.length === 0) return alert("対象商品を選択してください");
+        const targetIds = [...selectedProductIds]; 
+        const targetNames = allProducts
+            .filter(p => targetIds.includes(p.id))
+            .map(p => p.name).join(', ');
+
+        const data = {
+            id: editingId || Date.now(),
+            type,
+            targetIds,
+            targetNames,
+            customName,
+            base: 'excl_tax',
+            updatedAt: new Date().toISOString()
+        };
+
+        const applyLabel = (val) => val === 'total' ? '合計から' : '各';
+
+        if (type === 'bundle') {
+            data.qty = document.getElementById('v-bundle-qty').value;
+            data.val = document.getElementById('v-bundle-val').value;
+            data.unit = document.getElementById('v-bundle-unit').value;
+            data.apply = document.getElementById('v-bundle-apply').value;
+            const unitText = data.unit === 'yen' ? '円' : '%';
+            data.name = `${data.qty}個で${applyLabel(data.apply)}${data.val}${unitText}引`;
+        }
+        if (type === 'combo') {
+            data.val = document.getElementById('v-combo-discount').value;
+            data.unit = document.getElementById('v-combo-unit').value;
+            data.apply = document.getElementById('v-combo-apply').value;
+            const unitText = data.unit === 'yen' ? '円' : '%';
+            data.name = `セットで${applyLabel(data.apply)}${data.val}${unitText}引き`;
+        }
+        if (type === 'time') {
+            data.start = document.getElementById('v-time-start').value;
+            data.end = document.getElementById('v-time-end').value;
+            data.val = document.getElementById('v-time-val').value;
+            data.unit = document.getElementById('v-time-unit').value;
+            data.apply = document.getElementById('v-time-apply').value;
+            const unitText = data.unit === 'yen' ? '円引' : '%OFF';
+            data.name = `${data.start}〜${data.end} (${applyLabel(data.apply)}${data.val}${unitText})`;
+        }
+        if (type === 'step') {
+            data.qty = document.getElementById('v-step-qty').value;
+            data.val = document.getElementById('v-step-val').value;
+            data.unit = document.getElementById('v-step-unit').value;
+            data.apply = document.getElementById('v-step-apply').value;
+            const unitText = data.unit === 'yen' ? '円' : '%';
+            data.name = `${data.qty}個以上で${applyLabel(data.apply)}${data.val}${unitText}引き`;
+        }
+
+        if (customName) {
+    data.customName = customName;
+} else {
+    // 空文字を入れず、プロパティ自体を削除またはnullにすることで、
+    // renderList内の || 演算子が正しくデフォルト値を参照するようにします
+    delete data.customName; 
+}
+
+        if (editingId) {
+            const idx = allDiscounts.findIndex(x => x.id === editingId);
+            allDiscounts[idx] = data;
+        } else {
+            allDiscounts.push(data);
+        }
+
+        localStorage.setItem(STORAGE_KEYS.AUTO_DISCOUNTS, JSON.stringify(allDiscounts));
+        document.getElementById('discountModal').classList.add('hidden');
+        renderList();
+    };
+
+    // 削除処理（変更なし）
+    document.getElementById('delete-discount-btn').onclick = () => {
+        if (!confirm("この割引設定を削除しますか？")) return;
+        allDiscounts = allDiscounts.filter(x => x.id !== editingId);
+        localStorage.setItem(STORAGE_KEYS.AUTO_DISCOUNTS, JSON.stringify(allDiscounts));
+        document.getElementById('discountModal').classList.add('hidden');
+        renderList();
+    };
+</script>
+</body>
+</html>
