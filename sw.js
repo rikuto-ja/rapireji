@@ -2,6 +2,8 @@ const CACHE_NAME = 'rapireji-cache-v1';
 const ASSETS_TO_CACHE = [
   'index.html',
   'clerk.html',
+  'discount.html',
+  'extend.html',
   'history.html',
   'payment.html',
   'product.html', 
