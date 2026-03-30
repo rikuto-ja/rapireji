@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>払い戻し | らぴレジ</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bignumber.js/9.1.2/bignumber.min.js"></script>
     <style>
         :root {
             --black: #000000; --white: #ffffff; --gray-bg: #f8f9fa;
@@ -216,7 +217,8 @@
     };
 
     let order = JSON.parse(sessionStorage.getItem('currentOrder'));
-    let discountVal = 0, keypadBuffer = "0", keypadMode = "";
+    let discountVal = new BigNumber(0); 
+    let keypadBuffer = "0", keypadMode = "";
     let discountUnit = "¥";
     let lastHistoryId = null;
     let tempRefundMemo = "";
@@ -285,9 +287,9 @@
                     }
                     window.discountCounts[item.name]++;
 
-                    let currentVal = Number(keypadBuffer);
-                    currentVal += Number(item.value);
-                    keypadBuffer = String(currentVal); 
+                    // BigNumber で加算
+                    let currentVal = new BigNumber(keypadBuffer);
+                    keypadBuffer = currentVal.plus(item.value).toString(); 
                     updateKeypadDisplay(); 
                 };
                 discArea.appendChild(b);
@@ -297,69 +299,67 @@
 
     function updateDisplay() {
         // 全体の税抜小計（絶対値）
-        const subtotalExcl = Math.abs(Object.values(order.taxDetails || {}).reduce((a, b) => a + b, 0));
+        const subtotalExcl = new BigNumber(Object.values(order.taxDetails || {}).reduce((a, b) => a + b, 0)).abs();
 
-        let remainingDiscount = discountVal; 
+        let remainingDiscount = new BigNumber(discountVal); 
         let workingTaxDetails = JSON.parse(JSON.stringify(order.taxDetails || {}));
         let rates = Object.keys(workingTaxDetails).map(Number).sort((a, b) => b - a); 
         let taxHtml = "";
         let finalTaxDetails = {}; 
-        let totalAfterDiscount = 0;
-        let afterDiscountExclTotal = 0;
+        let totalAfterDiscount = new BigNumber(0);
+        let afterDiscountExclTotal = new BigNumber(0);
 
         rates.forEach(rate => {
-            // 各税率ごとの税抜（絶対値）
-            const originalExcl = Math.abs(workingTaxDetails[rate]);
-            let appliedDiscountForThisRate = 0;
+            const originalExcl = new BigNumber(workingTaxDetails[rate]).abs();
+            let appliedDiscountForThisRate = new BigNumber(0);
 
-            // --- 修正箇所：割引を「払い戻し額を減らす方向」で計算 ---
-            if (remainingDiscount > 0) {
-                if (remainingDiscount >= originalExcl) {
+            if (remainingDiscount.gt(0)) {
+                if (remainingDiscount.gte(originalExcl)) {
                     appliedDiscountForThisRate = originalExcl;
-                    remainingDiscount -= originalExcl;
+                    remainingDiscount = remainingDiscount.minus(originalExcl);
                 } else {
                     appliedDiscountForThisRate = remainingDiscount;
-                    remainingDiscount = 0;
+                    remainingDiscount = new BigNumber(0);
                 }
             }
 
-            // 払い戻し対象の税抜額から割引分を差し引く
-            const finalExcl = originalExcl - appliedDiscountForThisRate;
-            afterDiscountExclTotal += finalExcl;
+            const finalExcl = originalExcl.minus(appliedDiscountForThisRate);
+            afterDiscountExclTotal = afterDiscountExclTotal.plus(finalExcl);
 
-            const finalTax = Math.floor(finalExcl * (rate / 100));
-            const finalIncl = finalExcl + finalTax;
-            totalAfterDiscount += finalIncl;
-            // ----------------------------------------------
+            // 税計算: floor(excl * rate / 100)
+            const finalTax = finalExcl.times(rate).div(100).integerValue(BigNumber.ROUND_FLOOR);
+            const finalIncl = finalExcl.plus(finalTax);
+            totalAfterDiscount = totalAfterDiscount.plus(finalIncl);
 
             finalTaxDetails[rate] = {
-                excl: finalExcl, tax: finalTax, originalExcl: originalExcl,
-                discountApplied: appliedDiscountForThisRate
+                excl: finalExcl.toNumber(), 
+                tax: finalTax.toNumber(), 
+                originalExcl: originalExcl.toNumber(),
+                discountApplied: appliedDiscountForThisRate.toNumber()
             };
 
-            if (originalExcl > 0) {
+            if (originalExcl.gt(0)) {
                 taxHtml += `<div class="tax-line" style="margin-bottom:8px; border-bottom:1px solid #eee; padding-bottom:4px;">
                     <div style="display:flex; justify-content:space-between; width:100%;">
-                        <span>${rate}%対象 (税抜 ¥${originalExcl.toLocaleString()})</span>
-                        <span>内消費税 ¥${Math.floor(originalExcl * (rate/100)).toLocaleString()}</span>
+                        <span>${rate}%対象 (税抜 ¥${originalExcl.toNumber().toLocaleString()})</span>
+                        <span>内消費税 ¥${originalExcl.times(rate).div(100).integerValue(BigNumber.ROUND_FLOOR).toNumber().toLocaleString()}</span>
                     </div>`;
-                if (appliedDiscountForThisRate > 0) {
+                if (appliedDiscountForThisRate.gt(0)) {
                     taxHtml += `<div style="color:var(--danger); font-size:0.75rem; text-align:right;">
-                        金額調整:¥${appliedDiscountForThisRate.toLocaleString()}
+                        金額調整:¥${appliedDiscountForThisRate.toNumber().toLocaleString()}
                     </div>`;
                 }
                 taxHtml += `</div>`;
             }
         });
 
-        document.getElementById('subtotal').innerText = `-¥${subtotalExcl.toLocaleString()}`;
-        // 表示ラベルを分かりやすく「割引（差し引き）」に変更
-        document.getElementById('discountAmount').innerText = `¥${discountVal.toLocaleString()}`;
-        document.getElementById('finalTotal').innerText = `-¥${totalAfterDiscount.toLocaleString()}`;
+        document.getElementById('subtotal').innerText = `-¥${subtotalExcl.toNumber().toLocaleString()}`;
+        document.getElementById('discountAmount').innerText = `¥${discountVal.toNumber().toLocaleString()}`;
+        document.getElementById('finalTotal').innerText = `-¥${totalAfterDiscount.toNumber().toLocaleString()}`;
 
         const afterDiscountLine = document.getElementById('afterDiscountExclLine');
-        if (discountVal > 0) {
-            document.getElementById('afterDiscountExcl').innerText = `-¥${afterDiscountExclTotal.toLocaleString()}`;
+        if (discountVal.gt(0)) {
+            document.getElementById('afterDiscountExcl').innerText = `-¥${afterDiscountExclTotal.toNumber().toLocaleString()}`;
             afterDiscountLine.style.display = 'flex';
         } else {
             afterDiscountLine.style.display = 'none';
@@ -369,7 +369,7 @@
         taxArea.innerHTML = taxHtml;
         taxHtml !== "" ? taxArea.classList.remove('hidden') : taxArea.classList.add('hidden');
 
-        order.finalCalculated = { total: totalAfterDiscount, details: finalTaxDetails };
+        order.finalCalculated = { total: totalAfterDiscount.toNumber(), details: finalTaxDetails };
     }
 
     window.openKeypad = (mode) => {
@@ -411,20 +411,20 @@
     };
 
     function updateKeypadDisplay() { 
-        const valStr = Number(keypadBuffer).toLocaleString();
+        const valStr = new BigNumber(keypadBuffer).toNumber().toLocaleString();
         document.getElementById('keypadDisplay').innerText = (keypadMode === 'discount' && discountUnit === "%") ? `${valStr}%` : `¥${valStr}`;
     }
 
     // 確定ボタンが押された時の処理を一つにまとめます
     function finalizeInput(isLongPress = false) {
-        const val = Number(keypadBuffer);
+        const val = new BigNumber(keypadBuffer);
         playSnd('snd-beep1');
 
-        let calculatedDiscount = 0;
-        const totalExcl = Math.abs(Object.values(order.taxDetails || {}).reduce((a, b) => a + b, 0));
+        let calculatedDiscount = new BigNumber(0);
+        const totalExcl = new BigNumber(Object.values(order.taxDetails || {}).reduce((a, b) => a + b, 0)).abs();
             
         if (discountUnit === "%") {
-            calculatedDiscount = Math.floor(totalExcl * (val / 100));
+            calculatedDiscount = totalExcl.times(val).div(100).integerValue(BigNumber.ROUND_FLOOR);
         } else {
             calculatedDiscount = val;
         }
@@ -444,22 +444,22 @@
         }
         window.currentDiscountName = finalName;
 
-        if (calculatedDiscount > totalExcl) {
+        if (calculatedDiscount.gt(totalExcl)) {
             window.alert("小計を超える調整はできません。");
             return;
         }
         discountVal = calculatedDiscount;
         updateDisplay(); 
-        closeModal('keypadModal'); 
+        closeModal('keypadModal');
     } 
 
     window.processPayment = () => {
-        const finalTotal = order.finalCalculated.total;
+        const finalTotal = new BigNumber(order.finalCalculated.total);
         const now = new Date();
         lastHistoryId = Date.now();
 
         document.getElementById('paymentResultMsg').innerHTML = 
-            `<div style="color: var(--danger); font-size: 1.5rem; font-weight: 900;">返金額: ¥${finalTotal.toLocaleString()}</div>`;
+            `<div style="color: var(--danger); font-size: 1.5rem; font-weight: 900;">返金額: ¥${finalTotal.toNumber().toLocaleString()}</div>`;
         
         const products = JSON.parse(localStorage.getItem(STORAGE_KEYS.PRODUCTS) || '[]');
         order.items.forEach(item => {
@@ -475,16 +475,16 @@
             id: lastHistoryId, 
             items: order.items.map(item => ({
                 ...item,
-                price: item.price // 商品単価を明示的に保存
+                price: item.price
             })), 
-            subtotal: -order.totalAmount,
+            subtotal: new BigNumber(order.totalAmount).negated().toNumber(),
             taxDetails: order.taxDetails, 
             finalTaxDetails: order.finalCalculated.details,
-            discount: discountVal,
+            discount: discountVal.toNumber(),
             discountName: (window.currentDiscountName || ""),
-            totalAmount: -finalTotal, 
+            totalAmount: finalTotal.negated().toNumber(), 
             paymentMethod: "返金", 
-            cashReceived: finalTotal,
+            cashReceived: finalTotal.toNumber(),
             change: 0,
             createdAt: now.toISOString(), 
             isVoided: false, 
@@ -495,7 +495,7 @@
         history.push(historyEntry);
         localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(history));
 
-        window.currentPaymentData = { ...historyEntry, date: now, totalAmount: finalTotal }; 
+        window.currentPaymentData = { ...historyEntry, date: now, totalAmount: finalTotal.toNumber() }; 
         sessionStorage.removeItem('currentOrder');
     
         generateContent('receipt'); 
@@ -611,12 +611,10 @@
         /* --- generateContent 関数内の info.items.forEach ループ内を以下に差し替え --- */
 
         info.items.forEach(item => {
-            // --- 商品単体割引の計算ロジック ---
-            const discountAmount = item.appliedDiscount ? item.appliedDiscount.amount : 0;
-            const itemTotalBeforeDiscount = item.price * item.qty;
-            // レシート上の金額は割引適応後の税抜き金額
-            const itemFinalExcl = Math.max(0, itemTotalBeforeDiscount - discountAmount);
-            const priceVal = `¥${itemFinalExcl.toLocaleString()}`;
+            const discountAmount = new BigNumber(item.appliedDiscount ? item.appliedDiscount.amount : 0);
+            const itemTotalBeforeDiscount = new BigNumber(item.price).times(item.qty);
+            const itemFinalExcl = BigNumber.max(0, itemTotalBeforeDiscount.minus(discountAmount));
+            const priceVal = `¥${itemFinalExcl.toNumber().toLocaleString()}`;
             
             // 商品名の後ろに税率（例: *10 や *8）を付与
             const rate = (item.taxRate !== undefined) ? item.taxRate : (item.rate !== undefined ? item.rate : null);
