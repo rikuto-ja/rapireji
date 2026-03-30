@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>レジ操作 | らぴレジ</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bignumber.js/9.1.2/bignumber.min.js"></script>
     <style>
         :root {
             --black: #000000; --white: #ffffff; --gray-bg: #f8f9fa;
@@ -330,7 +331,9 @@
     <a href="stock.html" class="menu-link">在庫管理</a>
     <a href="history.html" class="menu-link">販売履歴</a>
     <a href="return.html" class="menu-link">払い戻し</a>
+    <a href="discount.html" class="menu-link">自動割引</a>
     <a href="settings.html" class="menu-link">設定</a>
+    <a href="extend.html" class="menu-link">拡張アプリ</a>
 </nav>
 
 <div id="tagConfirmModal" class="confirm-modal hidden">
@@ -586,7 +589,10 @@
                 
                 // 商品ごとの税込価格を計算（表示用）
                 const taxRate = Number(p.taxRate || 0);
-                const priceInclTax = Math.floor(Number(p.price) * (1 + taxRate / 100));
+                const priceInclTax = new BigNumber(p.price)
+    .times(new BigNumber(taxRate).div(100).plus(1))
+    .integerValue(BigNumber.ROUND_DOWN)
+    .toNumber();
 
                 const card = document.createElement('div');
                 card.className = "product-card" + (isOutOfStock ? " out-of-stock" : "");
@@ -756,6 +762,7 @@ window.setDiscountMode = (mode) => {
     // 回数記録用のオブジェクトがなければ作成
     if (!item.appliedPresets) item.appliedPresets = {};
     
+    // プリセット名ごとにカウントアップ
     const name = presetName || "割引";
     item.appliedPresets[name] = (item.appliedPresets[name] || 0) + 1;
         if (discountUnit !== unit) {
@@ -765,9 +772,7 @@ window.setDiscountMode = (mode) => {
             if (unitBtn) unitBtn.innerText = discountUnit;
         }
 
-        const currentVal = Number(keypadBuffer);
-    const addedVal = Number(val);
-    keypadBuffer = String(Math.round(currentVal + addedVal));
+        keypadBuffer = String(Number(keypadBuffer) + Number(val));
         updateKeypadDisplay();
     };
 
@@ -888,26 +893,36 @@ document.getElementById('keypadConfirmBtn').onclick = () => {
         const rate = pInfo ? Number(pInfo.taxRate || 0) : 0;
         
         // --- 1. 割引計算ロジック (ここを差し替え) ---
-        let itemTotalBeforeTax = item.price * item.qty;
-        let discountAmount = 0;
+        const itemPrice = new BigNumber(item.price);
+        const itemQty = new BigNumber(item.qty);
+        let itemTotalBeforeTax = itemPrice.times(itemQty);
+        let discountAmount = new BigNumber(0);
 
         if (item.discountValue) {
+            const discVal = new BigNumber(item.discountValue);
             if (item.discountUnit === "%") {
-                discountAmount = Math.round(itemTotalBeforeTax * (item.discountValue / 100));
+                discountAmount = itemTotalBeforeTax.times(discVal.div(100)).integerValue(BigNumber.ROUND_DOWN);
             } else {
                 if (item.discountMode === 'unit') {
-                    discountAmount = item.discountValue * item.qty;
+                    discountAmount = discVal.times(itemQty);
                 } else {
-                    discountAmount = item.discountValue;
+                    discountAmount = discVal;
                 }
             }
         }
         
-        const subtotalAfterDiscount = Math.max(0, itemTotalBeforeTax - discountAmount);
-        const rowTotalInclTax = Math.floor(subtotalAfterDiscount * (1 + rate / 100));
+        // 割引後価格（0円以下にならないよう制御）
+        const subtotalAfterDiscount = BigNumber.max(0, itemTotalBeforeTax.minus(discountAmount));
+        
+        // 行ごとの税込合計（表示用）: 割引後合計 * (1 + 税率/100)
+        const rowTotalInclTax = subtotalAfterDiscount
+            .times(new BigNumber(rate).div(100).plus(1))
+            .integerValue(BigNumber.ROUND_DOWN)
+            .toNumber();
 
-        if (!subtotalByRate[rate]) subtotalByRate[rate] = 0;
-        subtotalByRate[rate] += subtotalAfterDiscount;
+        // 税率ごとの税抜小計を加算
+        if (!subtotalByRate[rate]) subtotalByRate[rate] = new BigNumber(0);
+        subtotalByRate[rate] = subtotalByRate[rate].plus(subtotalAfterDiscount);
 
         // --- 2. DOM生成 (割引ボタンの表示判定を追加) ---
         const selfConfig = JSON.parse(localStorage.getItem('rapireji_self_config') || '{"enabled": false}');
@@ -926,42 +941,57 @@ div.innerHTML = `
         <button class="qty-btn" onclick="changeQty(${index}, 1)">+</button>
         
         ${showDiscount ? `<button class="discount-btn" onclick="openKeypad('discount', ${index})">割引</button>` : ''}
-        ${item.discountValue ? `<small style="color:red; margin-left:5px;">-${discountAmount}円</small>` : ''}
+        ${item.discountValue ? `<small style="color:red; margin-left:5px;">-${discountAmount.toNumber()}円</small>` : ''}
         <button onclick="removeItem(${index})" style="margin-left:auto; background:none; border:none; color:red; font-weight:bold; cursor:pointer;">削除</button>
     </div>`;
 list.appendChild(div);
     });
 
-    // --- 3. 総合計算出 (既存のまま) ---
-    let finalTaxTotal = 0;
-    let finalSubtotal = 0;
+    // --- 3. 総合計算出 ---
+    let finalTaxTotal = new BigNumber(0);
+    let finalSubtotal = new BigNumber(0);
     Object.keys(subtotalByRate).forEach(rate => {
-        const r = Number(rate);
-        const sub = subtotalByRate[r];
-        const tax = Math.floor(sub * (r / 100));
-        finalSubtotal += sub;
-        finalTaxTotal += tax;
+        const r = new BigNumber(rate);
+        const sub = subtotalByRate[rate]; // これは既にBigNumber
+        // 消費税計算: 税抜合計 * (税率 / 100)
+        const tax = sub.times(r.div(100)).integerValue(BigNumber.ROUND_DOWN);
+        
+        finalSubtotal = finalSubtotal.plus(sub);
+        finalTaxTotal = finalTaxTotal.plus(tax);
     });
-    const finalTotal = finalSubtotal + finalTaxTotal;
+    const finalTotal = finalSubtotal.plus(finalTaxTotal).toNumber();
     totalDisp.innerText = `¥${finalTotal.toLocaleString()}`;
 
-    // --- 4. 保存処理 (ここを詳細データ付きに差し替え) ---
+    // --- 4. 保存処理 ---
+    // 保存データもBigNumberからNumberに戻して保存
     sessionStorage.setItem('currentOrder', JSON.stringify({ 
-        items: cart.map(item => ({
-            ...item,
-            hasManualInput: item.hasManualInput || false,
-            appliedPresets: item.appliedPresets || {},
-            appliedDiscount: item.discountValue ? {
-                amount: (item.discountUnit === "%") ? 
-                        Math.floor((item.price * item.qty) * (item.discountValue / 100)) : 
-                        (item.discountMode === 'unit' ? item.discountValue * item.qty : item.discountValue),
-                mode: item.discountMode,
-                unit: item.discountUnit,
-                value: item.discountValue
-            } : null
-        })), 
+        items: cart.map(item => {
+            // item単位の割引額を再計算して保存用に格納
+            const itemPrice = new BigNumber(item.price);
+            const itemQty = new BigNumber(item.qty);
+            let dAmount = 0;
+            if (item.discountValue) {
+                const dv = new BigNumber(item.discountValue);
+                dAmount = (item.discountUnit === "%") ? 
+                    itemPrice.times(itemQty).times(dv.div(100)).integerValue(BigNumber.ROUND_DOWN).toNumber() : 
+                    (item.discountMode === 'unit' ? dv.times(itemQty).toNumber() : dv.toNumber());
+            }
+
+            return {
+                ...item,
+                hasManualInput: item.hasManualInput || false,
+                appliedPresets: item.appliedPresets || {},
+                appliedDiscount: item.discountValue ? {
+                    amount: dAmount,
+                    mode: item.discountMode,
+                    unit: item.discountUnit,
+                    value: item.discountValue
+                } : null
+            };
+        }), 
         totalAmount: finalTotal,
-        taxDetails: subtotalByRate 
+        // taxDetailsはJSON保存用にNumberへ変換
+        taxDetails: Object.fromEntries(Object.entries(subtotalByRate).map(([k, v]) => [k, v.toNumber()]))
     }));
     list.scrollTop = list.scrollHeight;
 }
