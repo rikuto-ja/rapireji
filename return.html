@@ -918,7 +918,7 @@ document.getElementById('keypadConfirmBtn').onclick = () => {
         list.appendChild(div);
         });
 
-        totalDisp.innerText = `返金: ¥${finalRefundTotal.toNumber().toLocaleString()}`;
+        totalDisp.innerText = `¥${finalRefundTotal.toNumber().toLocaleString()}`;
     
     // sessionStorageへの保存用データ整形（JSON化のため数値に戻す）
     const taxDetailsForStorage = {};
