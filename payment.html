@@ -767,7 +767,7 @@ html, body {
         
         // originalPrice = 単価 + (割引合計 / 数量)
         const originalPrice = bnPrice.plus(bnDiscount.dividedBy(bnQty));
-        
+
         return {
             ...item,
             originalPrice: originalPrice.toNumber(),
@@ -803,6 +803,21 @@ html, body {
     history.push(historyEntry);
     localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(history));
 
+    const stockData = JSON.parse(localStorage.getItem(STORAGE_KEYS.STOCK_CONFIG) || '{}');
+    let stockChanged = false;
+
+    // itemsWithDiscount または historyEntry.items をループ
+    historyEntry.items.forEach(item => {
+        if (stockData[item.name] !== undefined) {
+            stockData[item.name] = Number(stockData[item.name]) - Number(item.qty);
+            stockChanged = true;
+        }
+    });
+
+    if (stockChanged) {
+        localStorage.setItem(STORAGE_KEYS.STOCK_CONFIG, JSON.stringify(stockData));
+    }
+
     window.currentPaymentData = { ...historyEntry, date: now };
 
     const cashTotalForStamp = paymentDetails.reduce((sum, p) => {
@@ -826,6 +841,7 @@ html, body {
         sessionStorage.removeItem('currentOrder');
         generateContent('receipt'); 
         openModal('receiptModal');
+
     }
 
     // --- 追加：状態保存用関数 ---
