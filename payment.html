@@ -803,20 +803,26 @@ html, body {
     history.push(historyEntry);
     localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(history));
 
-    const stockData = JSON.parse(localStorage.getItem(STORAGE_KEYS.STOCK_CONFIG) || '{}');
-    let stockChanged = false;
+    const products = JSON.parse(localStorage.getItem(STORAGE_KEYS.PRODUCTS) || '[]');
+let stockChanged = false;
 
-    // itemsWithDiscount または historyEntry.items をループ
-    historyEntry.items.forEach(item => {
-        if (stockData[item.name] !== undefined) {
-            stockData[item.name] = Number(stockData[item.name]) - Number(item.qty);
-            stockChanged = true;
-        }
-    });
-
-    if (stockChanged) {
-        localStorage.setItem(STORAGE_KEYS.STOCK_CONFIG, JSON.stringify(stockData));
+// 2. 購入されたアイテムごとに在庫を減らす
+historyEntry.items.forEach(item => {
+    // 商品名でマスターから対象を探す
+    const pIdx = products.findIndex(p => p.name === item.name);
+    
+    // 在庫設定が存在する場合のみ減算
+    if (pIdx !== -1 && products[pIdx].stock !== undefined) {
+        // 払い戻しは「足す」でしたが、会計完了時は「引く」
+        products[pIdx].stock = Number(products[pIdx].stock) - Number(item.qty);
+        stockChanged = true;
     }
+});
+
+// 3. 変更があった場合のみPRODUCTSを保存（STOCK_CONFIGではなく）
+if (stockChanged) {
+    localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products));
+}
 
     window.currentPaymentData = { ...historyEntry, date: now };
 
