@@ -560,24 +560,24 @@
             if (p) {
                 const inCart = cart.find(c => c.id === p.id);
                 const cartQty = inCart ? inCart.qty : 0;
-                const displayStock = (Number(p.stock) || 0) - cartQty;
-                const isOutOfStock = isStockEnabled && (displayStock <= 0);
+                const displayStock = (Number(p.stock) || 0) + cartQty;
                 
                 // 商品ごとの税込価格を計算（表示用）
                 const taxRate = Number(p.taxRate || 0);
                 const priceInclTax = Math.floor(Number(p.price) * (1 + taxRate / 100));
 
                 const card = document.createElement('div');
-                card.className = "product-card" + (isOutOfStock ? " out-of-stock" : "");
+                card.className = "product-card";
                 card.innerHTML = `
-                    ${isOutOfStock ? '<div class="out-of-stock-label">終了</div>' : ''}
                     <img src="${p.imageUrl || ''}" class="p-img" onerror="this.style.visibility='hidden'">
                     <div class="p-info">
                         <strong>${p.name}</strong>
                         <span class="p-price">¥${priceInclTax.toLocaleString()} <small style="font-size:0.5rem;">(税込)</small></span>
                         ${isStockEnabled ? `<span class="p-stock">残:${displayStock}</span>` : ""}
                     </div>`;
-                card.onclick = () => { if(!isOutOfStock) { playRegisterSound(); handleProductClick(p); } };
+                card.onclick = () => { playRegisterSound(); handleProductClick(p); };
+
+grid.appendChild(card);
                 grid.appendChild(card);
             } else {
                 grid.appendChild(Object.assign(document.createElement('div'), {className: "empty-slot"}));
@@ -586,9 +586,6 @@
     }
 
     function handleProductClick(p) {
-        const inCart = cart.find(c => c.id === p.id);
-        const currentQty = inCart ? inCart.qty : 0;
-        if (isStockEnabled && (Number(p.stock) - currentQty) <= 0) return;
         if (p.tag) {
             pendingItem = p;
             document.getElementById('tagTitle').innerText = p.name;
