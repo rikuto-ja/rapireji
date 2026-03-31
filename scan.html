@@ -408,20 +408,29 @@ Quagga.onDetected((data) => {
 });
 
 async function handleScannedCode(code) {
-    if (mode === 'reg') {
-        const products = JSON.parse(localStorage.getItem(STORAGE_KEYS.PRODUCTS) || '[]');
-        const product = products.find(p => (String(p.jan) === String(code) || String(p.id) === String(code)));
+    const products = JSON.parse(localStorage.getItem(STORAGE_KEYS.PRODUCTS) || '[]');
+    const product = products.find(p => (String(p.jan) === String(code) || String(p.id) === String(code)));
+
+    let currentOrder = JSON.parse(sessionStorage.getItem('currentOrder') || '{"items":[]}');
+    const isRefundMode = currentOrder.isRefund === true;
+
+    if (mode === 'reg' || isRefundMode) {
         setTimeout(() => { isPaused = false; }, 1500);
 
         if (product) {
             playBeep('beep3');
-            let currentOrder = JSON.parse(sessionStorage.getItem('currentOrder') || '{"items":[]}');
             let existing = currentOrder.items.find(item => String(item.id) === String(product.id));
 
             if (existing) {
                 existing.qty++;
             } else {
-                existing = { id: product.id, name: product.name, price: Number(product.price), qty: 1 };
+                existing = { 
+                    id: product.id, 
+                    name: product.name, 
+                    price: Number(product.price), 
+                    qty: 1,
+                    taxRate: product.taxRate || 0 
+                };
                 currentOrder.items.push(existing);
             }
             saveOrderWithCalculation(currentOrder, products);
@@ -813,7 +822,7 @@ document.getElementById('keypadConfirmBtn').onclick = () => {
 document.addEventListener('DOMContentLoaded', () => {
     const urlParams = new URLSearchParams(window.location.search);
     const fromPage = urlParams.get('from'); 
-    
+
     // 1. URLパラメータに selfCheckout=false があれば、即座に店員モードをONにする
     if (urlParams.get('selfCheckout') === 'false') {
         sessionStorage.setItem('staff_override', 'true');
@@ -860,9 +869,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 戻るボタンの挙動
     window.goBack = () => {
-        if (isFromReturn) {
+        // modeが 'add' の時、または from=product の時は商品管理へ
+        if (mode === 'add' || fromPage === 'product') {
+            location.href = 'product.html';
+        } 
+        // 返品画面から来ている場合
+        else if (fromPage === 'ret' || fromPage === 'return') {
             location.href = 'return.html';
-        } else {
+        } 
+        // それ以外（通常レジなど）
+        else {
             location.href = 'register.html';
         }
     };
