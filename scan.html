@@ -414,6 +414,15 @@ async function handleScannedCode(code) {
     let currentOrder = JSON.parse(sessionStorage.getItem('currentOrder') || '{"items":[]}');
     const isRefundMode = currentOrder.isRefund === true;
 
+    const fromPage = urlParams.get('from');
+    if (mode === 'add' || fromPage === 'product') {
+        playBeep('beep3');
+        localStorage.setItem('last_scanned_barcode', code);
+        showPopup(`コード保存: ${code}`);
+        setTimeout(() => goBack(), 1000);
+        return; // 商品登録処理なので、以下のレジ処理（カート追加）は行わない
+    }
+
     if (mode === 'reg' || isRefundMode) {
         setTimeout(() => { isPaused = false; }, 1500);
 
