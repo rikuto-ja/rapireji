@@ -1,772 +1,1068 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>設定 | らぴレジ</title>
     <script src="https://yubinbango.github.io/yubinbango/yubinbango.js" charset="UTF-8"></script>
     <style>
         :root {
-            --black: #000000; --white: #ffffff; --gray-bg: #f8f9fa;
-            --gray-light: #e9ecef; --accent: #00ff00; --header-h: 60px; --danger: #ff0000;
+            --black: #000000;
+            --white: #ffffff;
+            --gray-bg: #f8f9fa;
+            --gray-light: #e9ecef;
+            --accent: #00ff00;
+            --header-h: 60px;
+            --danger: #ff0000;
         }
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; touch-action: manipulation; }
-        
-        body { 
-            background-color: var(--gray-bg); 
-            min-height: 100vh; 
-            display: flex; 
-            flex-direction: column; 
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: sans-serif;
+            touch-action: manipulation;
         }
-        
+
+        body {
+            background-color: var(--gray-bg);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
         header {
             /* 元の高さ 60px に セーフエリア分をプラスする設定 */
-            height: calc(var(--header-h) + env(safe-area-inset-top)); 
+            height: calc(var(--header-h) + env(safe-area-inset-top));
             border-bottom: 3px solid var(--black);
-            display: flex; 
-            align-items: center; 
+            display: flex;
+            align-items: center;
             /* 下記のように padding-top を調整 */
-            padding: env(safe-area-inset-top) 20px 0 20px; 
+            padding: env(safe-area-inset-top) 20px 0 20px;
             background: var(--white);
-            position: sticky; 
-            top: 0; 
+            position: sticky;
+            top: 0;
             z-index: 1100;
             justify-content: space-between;
         }
 
-        .header-left { display: flex; align-items: center; }
-        header h1 { font-size: 1.5rem; font-weight: 900; margin-left: 20px; white-space: nowrap; }
+        .header-left {
+            display: flex;
+            align-items: center;
+        }
+
+        header h1 {
+            font-size: 1.5rem;
+            font-weight: 900;
+            margin-left: 20px;
+            white-space: nowrap;
+        }
 
         .header-ad-space {
-            flex: 1; margin-left: 20px; height: 50px; background: #fff;
-            display: flex; align-items: center; justify-content: center;
-            border: 1px dashed #ccc; overflow: hidden;
+            flex: 1;
+            margin-left: 20px;
+            height: 50px;
+            background: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px dashed #ccc;
+            overflow: hidden;
         }
-        
-        .menu-trigger { width: 30px; height: 22px; cursor: pointer; position: relative; }
-        .menu-trigger span { display: block; width: 100%; height: 4px; background: var(--black); position: absolute; left: 0; transition: all 0.3s; }
-        .menu-trigger span:nth-child(1) { top: 0; }
-        .menu-trigger span:nth-child(2) { top: 9px; }
-        .menu-trigger span:nth-child(3) { top: 18px; }
-        .menu-trigger.open span:nth-child(1) { transform: translateY(9px) rotate(45deg); }
-        .menu-trigger.open span:nth-child(2) { opacity: 0; }
-        .menu-trigger.open span:nth-child(3) { transform: translateY(-9px) rotate(-45deg); }
-        .menu-link.active { background-color: transparent; color: var(--black); font-weight: 900; font-size: 1.1rem; border-left: 8px solid var(--black); padding-left: 7px; }
-        
-        .side-nav { 
-            position: fixed; 
-            top: var(--header-h); 
-            left: 0; 
-            width: 250px; 
+
+        .menu-trigger {
+            width: 30px;
+            height: 22px;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .menu-trigger span {
+            display: block;
+            width: 100%;
+            height: 4px;
+            background: var(--black);
+            position: absolute;
+            left: 0;
+            transition: all 0.3s;
+        }
+
+        .menu-trigger span:nth-child(1) {
+            top: 0;
+        }
+
+        .menu-trigger span:nth-child(2) {
+            top: 9px;
+        }
+
+        .menu-trigger span:nth-child(3) {
+            top: 18px;
+        }
+
+        .menu-trigger.open span:nth-child(1) {
+            transform: translateY(9px) rotate(45deg);
+        }
+
+        .menu-trigger.open span:nth-child(2) {
+            opacity: 0;
+        }
+
+        .menu-trigger.open span:nth-child(3) {
+            transform: translateY(-9px) rotate(-45deg);
+        }
+
+        .menu-link.active {
+            background-color: transparent;
+            color: var(--black);
+            font-weight: 900;
+            font-size: 1.1rem;
+            border-left: 8px solid var(--black);
+            padding-left: 7px;
+        }
+
+        .side-nav {
+            position: fixed;
+            top: var(--header-h);
+            left: 0;
+            width: 250px;
             /* 修正：ヘッダーの高さ分を引いた100%にし、さらにセーフエリア分を下まで伸ばす */
-            height: calc(100% - var(--header-h)); 
-            padding-bottom: env(safe-area-inset-bottom); 
-            background: var(--white); 
-            border-right: 3px solid var(--black); 
-            z-index: 1050; 
-            transition: transform 0.3s; 
+            height: calc(100% - var(--header-h));
+            padding-bottom: env(safe-area-inset-bottom);
+            background: var(--white);
+            border-right: 3px solid var(--black);
+            z-index: 1050;
+            transition: transform 0.3s;
             padding-left: 20px;
             padding-right: 20px;
             padding-top: 20px;
         }
-        .side-nav.hidden { transform: translateX(-100%); }
-        .menu-link { display: block; padding: 15px; color: var(--black); font-weight: 800; text-decoration: none; border-bottom: 1px solid var(--gray-light); }
 
-        .container { flex: 1; padding: 20px; display: flex; flex-direction: column; align-items: center; overflow-y: auto; }
+        .side-nav.hidden {
+            transform: translateX(-100%);
+        }
+
+        .menu-link {
+            display: block;
+            padding: 15px;
+            color: var(--black);
+            font-weight: 800;
+            text-decoration: none;
+            border-bottom: 1px solid var(--gray-light);
+        }
+
+        .container {
+            flex: 1;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-y: auto;
+        }
+
         .settings-card {
-            width: 100%; max-width: 500px; background: var(--white); border: 4px solid var(--black);
-            padding: 25px; box-shadow: 6px 6px 0 var(--black); height: fit-content; margin-bottom: 30px;
+            width: 100%;
+            max-width: 500px;
+            background: var(--white);
+            border: 4px solid var(--black);
+            padding: 25px;
+            box-shadow: 6px 6px 0 var(--black);
+            height: fit-content;
+            margin-bottom: 30px;
         }
-        
-        label { display: block; font-weight: 900; margin-bottom: 10px; font-size: 1.1rem; }
-        input[type="text"], input[type="number"] {
-            width: 100%; padding: 12px; border: 3px solid var(--black); font-size: 1rem;
-            font-weight: 800; margin-bottom: 25px; outline: none; 
-            border-radius: 0; appearance: none; -webkit-appearance: none;
+
+        label {
+            display: block;
+            font-weight: 900;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
         }
-        
+
+        input[type="text"],
+        input[type="number"] {
+            width: 100%;
+            padding: 12px;
+            border: 3px solid var(--black);
+            font-size: 1rem;
+            font-weight: 800;
+            margin-bottom: 25px;
+            outline: none;
+            border-radius: 0;
+            appearance: none;
+            -webkit-appearance: none;
+        }
+
         .save-btn {
-            width: 100%; background: var(--black); color: var(--white); border: 2px solid var(--black);
-            padding: 18px; font-size: 1.1rem; font-weight: 900; cursor: pointer;
-            transition: 0.2s; text-align: center; text-decoration: none; display: block;
-            border-radius: 0; appearance: none; -webkit-appearance: none;
+            width: 100%;
+            background: var(--black);
+            color: var(--white);
+            border: 2px solid var(--black);
+            padding: 18px;
+            font-size: 1.1rem;
+            font-weight: 900;
+            cursor: pointer;
+            transition: 0.2s;
+            text-align: center;
+            text-decoration: none;
+            display: block;
+            border-radius: 0;
+            appearance: none;
+            -webkit-appearance: none;
         }
-        .save-btn:active { transform: scale(0.98); }
+
+        .save-btn:active {
+            transform: scale(0.98);
+        }
 
         /* データ選択用のスタイル */
         .data-selector {
-            background: #eee; border: 2px solid #000; padding: 15px; margin-bottom: 20px;
+            background: #eee;
+            border: 2px solid #000;
+            padding: 15px;
+            margin-bottom: 20px;
         }
+
         .data-option {
-            display: flex; align-items: center; margin-bottom: 10px; font-weight: 800; cursor: pointer;
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            font-weight: 800;
+            cursor: pointer;
         }
-        .data-option input { width: 20px; height: 20px; margin-right: 10px; accent-color: #000; cursor: pointer; }
+
+        .data-option input {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+            accent-color: #000;
+            cursor: pointer;
+        }
 
         .drop-zone {
-            border: 3px dashed var(--black); padding: 30px; text-align: center;
-            font-weight: 800; background: #f0f0f0; cursor: pointer; margin-bottom: 15px;
+            border: 3px dashed var(--black);
+            padding: 30px;
+            text-align: center;
+            font-weight: 800;
+            background: #f0f0f0;
+            cursor: pointer;
+            margin-bottom: 15px;
             transition: background 0.3s;
         }
-        .drop-zone.dragover { background: var(--accent); }
+
+        .drop-zone.dragover {
+            background: var(--accent);
+        }
 
         .reset-btn {
-            width: 100%; background: var(--white); color: var(--black); border: 3px solid var(--black);
-            padding: 15px; font-weight: 900; cursor: pointer; margin-top: 15px; transition: 0.2s;
-            border-radius: 0; appearance: none; -webkit-appearance: none;
+            width: 100%;
+            background: var(--white);
+            color: var(--black);
+            border: 3px solid var(--black);
+            padding: 15px;
+            font-weight: 900;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: 0.2s;
+            border-radius: 0;
+            appearance: none;
+            -webkit-appearance: none;
         }
-        .reset-btn:active { transform: scale(0.98); }
+
+        .reset-btn:active {
+            transform: scale(0.98);
+        }
+
         .settings-card.danger-zone {
             border-color: var(--danger);
             background: var(--white);
             /* 影を黒から赤に変更 */
             box-shadow: 6px 6px 0 var(--danger) !important;
         }
+
         .settings-card.danger-zone h3 {
             color: var(--danger);
             border-left-color: var(--danger) !important;
         }
+
         /* リセットボタン自体の枠線と文字も赤くする */
         .settings-card.danger-zone .reset-btn {
             color: var(--danger);
             border-color: var(--danger);
         }
 
-        .flex-row { display: flex; gap: 10px; align-items: stretch; margin-bottom: 15px; }
-        .flex-row input { margin-bottom: 0; flex: 1; width: 0; }
+        .flex-row {
+            display: flex;
+            gap: 10px;
+            align-items: stretch;
+            margin-bottom: 15px;
+        }
+
+        .flex-row input {
+            margin-bottom: 0;
+            flex: 1;
+            width: 0;
+        }
 
         /* スマホ風スイッチのスタイル */
-        .switch { position: relative; display: inline-block; width: 50px; height: 28px; }
-        .switch input { opacity: 0; width: 0; height: 0; }
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 28px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
         .slider {
-            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
-            background-color: #ccc; transition: .4s; border-radius: 34px; border: 2px solid var(--black);
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+            border: 2px solid var(--black);
         }
+
         .slider:before {
-            position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px;
-            background-color: white; transition: .4s; border-radius: 50%; border: 2px solid var(--black);
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+            border: 2px solid var(--black);
         }
-        input:checked + .slider { background-color: var(--accent); }
-        input:checked + .slider:before { transform: translateX(22px); }
-        .sound-setting-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+
+        input:checked+.slider {
+            background-color: var(--accent);
+        }
+
+        input:checked+.slider:before {
+            transform: translateX(22px);
+        }
+
+        .sound-setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
 
         @media screen and (max-width: 768px) {
-            header { padding: 0 10px; }
-            header h1 { font-size: 0.9rem; margin-left: 10px; flex-shrink: 0; }
-            .header-ad-space { display: flex !important; flex: 1; margin-left: 10px; height: 35px; min-width: 80px; border: 1px solid #ddd; font-size: 8px; }
+            header {
+                padding: 0 10px;
+            }
+
+            header h1 {
+                font-size: 0.9rem;
+                margin-left: 10px;
+                flex-shrink: 0;
+            }
+
+            .header-ad-space {
+                display: flex !important;
+                flex: 1;
+                margin-left: 10px;
+                height: 35px;
+                min-width: 80px;
+                border: 1px solid #ddd;
+                font-size: 8px;
+            }
         }
     </style>
 </head>
+
 <body>
 
-<header>
-    <div class="header-left">
-        <div class="menu-trigger" id="menu-btn"><span></span><span></span><span></span></div>
-        <h1>設定</h1>
-    </div>
-    <div class="header-ad-space" id="ad-top">
-        <span style="color:#ccc; font-size: 8px; font-weight: 900;">AD</span>
-    </div>
-</header>
+    <header>
+        <div class="header-left">
+            <div class="menu-trigger" id="menu-btn"><span></span><span></span><span></span></div>
+            <h1>設定</h1>
+        </div>
+        <div class="header-ad-space" id="ad-top">
+            <span style="color:#ccc; font-size: 8px; font-weight: 900;">AD</span>
+        </div>
+    </header>
 
-<nav class="side-nav hidden" id="side-menu">
-    <a href="register.html" class="menu-link">レジ操作</a>
-    <a href="product.html" class="menu-link">商品管理</a>
-    <a href="stock.html" class="menu-link">在庫管理</a>
-    <a href="history.html" class="menu-link">販売履歴</a>
-    <a href="return.html" class="menu-link">払い戻し</a>
-    <a href="discount.html" class="menu-link">自動割引</a>
-    <a href="settings.html" class="menu-link">設定</a>
-    <a href="extend.html" class="menu-link">拡張アプリ</a>
-</nav>
+    <nav class="side-nav hidden" id="side-menu">
+        <a href="register.html" class="menu-link">レジ操作</a>
+        <a href="product.html" class="menu-link">商品管理</a>
+        <a href="stock.html" class="menu-link">在庫管理</a>
+        <a href="history.html" class="menu-link">販売履歴</a>
+        <a href="return.html" class="menu-link">払い戻し</a>
+        <a href="discount.html" class="menu-link">自動割引</a>
+        <a href="settings.html" class="menu-link">設定</a>
+        <a href="qrcard.html" class="menu-link">QRカード</a>
+        <a href="extend.html" class="menu-link">拡張アプリ</a>
+    </nav>
 
-<main class="container">
-    <p style="font-size: 0.7rem; font-weight: 800; color: #666; margin-bottom: 10px; width: 100%; max-width: 500px;">※入力したデータは自動で保存されます</p>
-    <div class="settings-card">
-        <h3 style="font-weight: 900; border-left: 8px solid #000; padding-left: 10px; margin-bottom: 20px;">店舗情報設定</h3>
-        
-        <label>店舗名 / 会社名</label>
-        <input type="text" id="companyName" placeholder="例：らぴレジ カフェ">
+    <main class="container">
+        <p
+            style="font-size: 0.7rem; font-weight: 800; color: #666; margin-bottom: 10px; width: 100%; max-width: 500px;">
+            ※入力したデータは自動で保存されます</p>
+        <div class="settings-card">
+            <h3 style="font-weight: 900; border-left: 8px solid #000; padding-left: 10px; margin-bottom: 20px;">店舗情報設定
+            </h3>
 
-        <div class="h-adr">
-            <span class="p-country-name" style="display:none;">Japan</span>
-        
-            <label>郵便番号</label>
-            <input type="text" id="zipCode" class="p-postal-code" placeholder="例：1000001">
-        
-            <label>住所</label>
-            <input type="text" id="address" class="p-region p-locality p-street-address p-extended-address" placeholder="東京都〇〇区1-2-3">
+            <label>店舗名 / 会社名</label>
+            <input type="text" id="companyName" placeholder="例：らぴレジ カフェ">
+
+            <div class="h-adr">
+                <span class="p-country-name" style="display:none;">Japan</span>
+
+                <label>郵便番号</label>
+                <input type="text" id="zipCode" class="p-postal-code" placeholder="例：1000001">
+
+                <label>住所</label>
+                <input type="text" id="address" class="p-region p-locality p-street-address p-extended-address"
+                    placeholder="東京都〇〇区1-2-3">
+            </div>
+
+            <label>電話番号</label>
+            <input type="text" id="tel" placeholder="03-1234-5678">
+
+            <label>インボイス登録番号（T+13桁の数字）</label>
+            <input type="text" id="registrationNumber" placeholder="例：T1234567890123" maxlength="14">
+
+
+            <label>領収書用 但し書き（〇〇代として）</label>
+            <input type="text" id="receiptType" placeholder="例：お食事代">
+
+            <label>レシート用 一言メモ</label>
+            <input type="text" id="memo" placeholder="またのお越しをお待ちしております！">
         </div>
 
-        <label>電話番号</label>
-        <input type="text" id="tel" placeholder="03-1234-5678">
-
-        <label>インボイス登録番号（T+13桁の数字）</label>
-        <input type="text" id="registrationNumber" placeholder="例：T1234567890123" maxlength="14">
-        
-
-        <label>領収書用 但し書き（〇〇代として）</label>
-        <input type="text" id="receiptType" placeholder="例：お食事代">
-        
-        <label>レシート用 一言メモ</label>
-        <input type="text" id="memo" placeholder="またのお越しをお待ちしております！">
-    </div>
-
-    <div class="settings-card">
-        <h3 style="font-weight: 900; margin-bottom: 10px; border-left: 8px solid #000; padding-left: 10px;">決済方法（最大5つ）</h3>
-        <p style="font-size: 0.8rem; font-weight: 800; margin-bottom: 20px;">※「現金」と入力するとおつりなどの計算ができます</p>
-        <div id="paymentMethodsContainer">
-            <div class="payment-row" style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
-                <input type="text" class="payment-input" placeholder="決済1 (例: 現金)" style="margin-bottom: 0;">
-                <div style="display: flex; flex-direction: column; align-items: center; min-width: 50px;">
-                    <span style="font-size: 0.6rem; font-weight: 900; margin-bottom: 2px;">セルフ</span>
-                    <label class="switch">
-                        <input type="checkbox" class="payment-self-toggle" checked onchange="autoSavePayments()">
-                        <span class="slider"></span>
-                    </label>
+        <div class="settings-card">
+            <h3 style="font-weight: 900; margin-bottom: 10px; border-left: 8px solid #000; padding-left: 10px;">
+                決済方法（最大5つ）</h3>
+            <p style="font-size: 0.8rem; font-weight: 800; margin-bottom: 20px;">※「現金」と入力するとおつりなどの計算ができます</p>
+            <div id="paymentMethodsContainer">
+                <div class="payment-row" style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+                    <input type="text" class="payment-input" placeholder="決済1 (例: 現金)" style="margin-bottom: 0;">
+                    <div style="display: flex; flex-direction: column; align-items: center; min-width: 50px;">
+                        <span style="font-size: 0.6rem; font-weight: 900; margin-bottom: 2px;">セルフ</span>
+                        <label class="switch">
+                            <input type="checkbox" class="payment-self-toggle" checked onchange="autoSavePayments()">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+                <div class="payment-row" style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+                    <input type="text" class="payment-input" placeholder="決済2 (例: 交通系IC)" style="margin-bottom: 0;">
+                    <div style="display: flex; flex-direction: column; align-items: center; min-width: 50px;">
+                        <span style="font-size: 0.6rem; font-weight: 900; margin-bottom: 2px;">セルフ</span>
+                        <label class="switch">
+                            <input type="checkbox" class="payment-self-toggle" checked onchange="autoSavePayments()">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+                <div class="payment-row" style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+                    <input type="text" class="payment-input" placeholder="決済3 (例: クレジットカード)" style="margin-bottom: 0;">
+                    <div style="display: flex; flex-direction: column; align-items: center; min-width: 50px;">
+                        <span style="font-size: 0.6rem; font-weight: 900; margin-bottom: 2px;">セルフ</span>
+                        <label class="switch">
+                            <input type="checkbox" class="payment-self-toggle" checked onchange="autoSavePayments()">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+                <div class="payment-row" style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+                    <input type="text" class="payment-input" placeholder="決済4 (例: バーコード決済)" style="margin-bottom: 0;">
+                    <div style="display: flex; flex-direction: column; align-items: center; min-width: 50px;">
+                        <span style="font-size: 0.6rem; font-weight: 900; margin-bottom: 2px;">セルフ</span>
+                        <label class="switch">
+                            <input type="checkbox" class="payment-self-toggle" checked onchange="autoSavePayments()">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+                <div class="payment-row" style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+                    <input type="text" class="payment-input" placeholder="決済5 (例: その他)" style="margin-bottom: 0;">
+                    <div style="display: flex; flex-direction: column; align-items: center; min-width: 50px;">
+                        <span style="font-size: 0.6rem; font-weight: 900; margin-bottom: 2px;">セルフ</span>
+                        <label class="switch">
+                            <input type="checkbox" class="payment-self-toggle" checked onchange="autoSavePayments()">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
                 </div>
             </div>
-            <div class="payment-row" style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
-                <input type="text" class="payment-input" placeholder="決済2 (例: 交通系IC)" style="margin-bottom: 0;">
-                <div style="display: flex; flex-direction: column; align-items: center; min-width: 50px;">
-                    <span style="font-size: 0.6rem; font-weight: 900; margin-bottom: 2px;">セルフ</span>
-                    <label class="switch">
-                        <input type="checkbox" class="payment-self-toggle" checked onchange="autoSavePayments()">
-                        <span class="slider"></span>
-                    </label>
+        </div>
+
+        <div class="settings-card">
+            <h3 style="font-weight: 900; margin-bottom: 20px; border-left: 8px solid #000; padding-left: 10px;">割引設定
+            </h3>
+            <div id="discountContainer">
+                <div class="flex-row">
+                    <input type="text" class="discount-name" placeholder="名称1">
+                    <input type="number" class="discount-num-value" placeholder="数値">
+                    <select class="discount-unit" style="border: 3px solid #000; font-weight: 800;">
+                        <option value="yen">円</option>
+                        <option value="percent">％</option>
+                    </select>
+                </div>
+                <div class="flex-row">
+                    <input type="text" class="discount-name" placeholder="名称2">
+                    <input type="number" class="discount-num-value" placeholder="数値">
+                    <select class="discount-unit" style="border: 3px solid #000; font-weight: 800;">
+                        <option value="yen">円</option>
+                        <option value="percent">％</option>
+                    </select>
+                </div>
+                <div class="flex-row">
+                    <input type="text" class="discount-name" placeholder="名称3">
+                    <input type="number" class="discount-num-value" placeholder="数値">
+                    <select class="discount-unit" style="border: 3px solid #000; font-weight: 800;">
+                        <option value="yen">円</option>
+                        <option value="percent">％</option>
+                    </select>
+                </div>
+                <div class="flex-row">
+                    <input type="text" class="discount-name" placeholder="名称4">
+                    <input type="number" class="discount-num-value" placeholder="数値">
+                    <select class="discount-unit" style="border: 3px solid #000; font-weight: 800;">
+                        <option value="yen">円</option>
+                        <option value="percent">％</option>
+                    </select>
+                </div>
+                <div class="flex-row">
+                    <input type="text" class="discount-name" placeholder="名称5">
+                    <input type="number" class="discount-num-value" placeholder="数値">
+                    <select class="discount-unit" style="border: 3px solid #000; font-weight: 800;">
+                        <option value="yen">円</option>
+                        <option value="percent">％</option>
+                    </select>
+                </div>
+                <div class="flex-row">
+                    <input type="text" class="discount-name" placeholder="名称6">
+                    <input type="number" class="discount-num-value" placeholder="数値">
+                    <select class="discount-unit" style="border: 3px solid #000; font-weight: 800;">
+                        <option value="yen">円</option>
+                        <option value="percent">％</option>
+                    </select>
                 </div>
             </div>
-            <div class="payment-row" style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
-                <input type="text" class="payment-input" placeholder="決済3 (例: クレジットカード)" style="margin-bottom: 0;">
-                <div style="display: flex; flex-direction: column; align-items: center; min-width: 50px;">
-                    <span style="font-size: 0.6rem; font-weight: 900; margin-bottom: 2px;">セルフ</span>
-                    <label class="switch">
-                        <input type="checkbox" class="payment-self-toggle" checked onchange="autoSavePayments()">
-                        <span class="slider"></span>
-                    </label>
-                </div>
-            </div>
-            <div class="payment-row" style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
-                <input type="text" class="payment-input" placeholder="決済4 (例: バーコード決済)" style="margin-bottom: 0;">
-                <div style="display: flex; flex-direction: column; align-items: center; min-width: 50px;">
-                    <span style="font-size: 0.6rem; font-weight: 900; margin-bottom: 2px;">セルフ</span>
-                    <label class="switch">
-                        <input type="checkbox" class="payment-self-toggle" checked onchange="autoSavePayments()">
-                        <span class="slider"></span>
-                    </label>
-                </div>
-            </div>
-            <div class="payment-row" style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
-                <input type="text" class="payment-input" placeholder="決済5 (例: その他)" style="margin-bottom: 0;">
-                <div style="display: flex; flex-direction: column; align-items: center; min-width: 50px;">
-                    <span style="font-size: 0.6rem; font-weight: 900; margin-bottom: 2px;">セルフ</span>
-                    <label class="switch">
-                        <input type="checkbox" class="payment-self-toggle" checked onchange="autoSavePayments()">
-                        <span class="slider"></span>
-                    </label>
+        </div>
+
+        <div class="settings-card">
+            <h3 style="font-weight: 900; margin-bottom: 20px; border-left: 8px solid #000; padding-left: 10px;">ポイント付与率
+            </h3>
+            <div id="pointRateContainer">
+                <div class="flex-row">
+                    <!-- 変更後 -->
+                    <input type="number" class="point-rate-num-value" placeholder="数値" oninput="autoSavePointRate()">
+                    <h1>％</h1>
                 </div>
             </div>
         </div>
-    </div>
 
-    <div class="settings-card">
-        <h3 style="font-weight: 900; margin-bottom: 20px; border-left: 8px solid #000; padding-left: 10px;">割引設定</h3>
-        <div id="discountContainer">
-            <div class="flex-row">
-                <input type="text" class="discount-name" placeholder="名称1">
-                <input type="number" class="discount-num-value" placeholder="数値">
-                <select class="discount-unit" style="border: 3px solid #000; font-weight: 800;">
-                    <option value="yen">円</option>
-                    <option value="percent">％</option>
-                </select>
+        <div class="settings-card">
+            <h3 style="font-weight: 900; margin-bottom: 20px; border-left: 8px solid #000; padding-left: 10px;">
+                通知音・プレビュー設定</h3>
+            <div class="sound-setting-item">
+                <label style="margin-bottom: 0;">操作音</label>
+                <label class="switch">
+                    <input type="checkbox" id="soundBtnEnabled" onchange="autoSaveSounds()" checked>
+                    <span class="slider"></span>
+                </label>
             </div>
-            <div class="flex-row">
-                <input type="text" class="discount-name" placeholder="名称2">
-                <input type="number" class="discount-num-value" placeholder="数値">
-                <select class="discount-unit" style="border: 3px solid #000; font-weight: 800;">
-                    <option value="yen">円</option>
-                    <option value="percent">％</option>
-                </select>
+            <div class="sound-setting-item">
+                <label style="margin-bottom: 0;">決済完了音</label>
+                <label class="switch">
+                    <input type="checkbox" id="soundPayEnabled" onchange="autoSaveSounds()" checked>
+                    <span class="slider"></span>
+                </label>
             </div>
-            <div class="flex-row">
-                <input type="text" class="discount-name" placeholder="名称3">
-                <input type="number" class="discount-num-value" placeholder="数値">
-                <select class="discount-unit" style="border: 3px solid #000; font-weight: 800;">
-                    <option value="yen">円</option>
-                    <option value="percent">％</option>
-                </select>
+            <div class="sound-setting-item">
+                <label style="margin-bottom: 0;">スキャン音</label>
+                <label class="switch">
+                    <input type="checkbox" id="soundScanEnabled" onchange="autoSaveSounds()" checked>
+                    <span class="slider"></span>
+                </label>
             </div>
-            <div class="flex-row">
-                <input type="text" class="discount-name" placeholder="名称4">
-                <input type="number" class="discount-num-value" placeholder="数値">
-                <select class="discount-unit" style="border: 3px solid #000; font-weight: 800;">
-                    <option value="yen">円</option>
-                    <option value="percent">％</option>
-                </select>
+            <div class="sound-setting-item">
+                <label style="margin-bottom: 0;">エラー音</label>
+                <label class="switch">
+                    <input type="checkbox" id="soundErrorEnabled" onchange="autoSaveSounds()" checked>
+                    <span class="slider"></span>
+                </label>
             </div>
-            <div class="flex-row">
-                <input type="text" class="discount-name" placeholder="名称5">
-                <input type="number" class="discount-num-value" placeholder="数値">
-                <select class="discount-unit" style="border: 3px solid #000; font-weight: 800;">
-                    <option value="yen">円</option>
-                    <option value="percent">％</option>
-                </select>
+            <div class="sound-setting-item">
+                <label style="margin-bottom: 0;">店員呼出音</label>
+                <label class="switch">
+                    <input type="checkbox" id="soundCallEnabled" onchange="autoSaveSounds()" checked>
+                    <span class="slider"></span>
+                </label>
             </div>
-            <div class="flex-row">
-                <input type="text" class="discount-name" placeholder="名称6">
-                <input type="number" class="discount-num-value" placeholder="数値">
-                <select class="discount-unit" style="border: 3px solid #000; font-weight: 800;">
-                    <option value="yen">円</option>
-                    <option value="percent">％</option>
-                </select>
+            <div class="sound-setting-item" style="margin-top: 10px; border-top: 1px dashed #ccc; padding-top: 15px;">
+                <label style="margin-bottom: 0;">スキャン機能</label>
+                <label class="switch">
+                    <input type="checkbox" id="scannerEnabled" onchange="autoSaveScannerSetting()" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="sound-setting-item">
+                <label style="margin-bottom: 0;">決済完了時のプレビュー</label>
+                <label class="switch">
+                    <input type="checkbox" id="receiptPreviewEnabled" onchange="autoSavePreviewSettings()" checked>
+                    <span class="slider"></span>
+                </label>
             </div>
         </div>
-    </div>
 
-    <div class="settings-card">
-        <h3 style="font-weight: 900; margin-bottom: 20px; border-left: 8px solid #000; padding-left: 10px;">通知音・プレビュー設定</h3>
-        <div class="sound-setting-item">
-            <label style="margin-bottom: 0;">操作音</label>
-            <label class="switch">
-                <input type="checkbox" id="soundBtnEnabled" onchange="autoSaveSounds()" checked>
-                <span class="slider"></span>
-            </label>
-        </div>
-        <div class="sound-setting-item">
-            <label style="margin-bottom: 0;">決済完了音</label>
-            <label class="switch">
-                <input type="checkbox" id="soundPayEnabled" onchange="autoSaveSounds()" checked>
-                <span class="slider"></span>
-            </label>
-        </div>
-        <div class="sound-setting-item">
-            <label style="margin-bottom: 0;">スキャン音</label>
-            <label class="switch">
-                <input type="checkbox" id="soundScanEnabled" onchange="autoSaveSounds()" checked>
-                <span class="slider"></span>
-            </label>
-        </div>
-        <div class="sound-setting-item">
-            <label style="margin-bottom: 0;">エラー音</label>
-            <label class="switch">
-                <input type="checkbox" id="soundErrorEnabled" onchange="autoSaveSounds()" checked>
-                <span class="slider"></span>
-            </label>
-        </div>
-        <div class="sound-setting-item">
-            <label style="margin-bottom: 0;">店員呼出音</label>
-            <label class="switch">
-                <input type="checkbox" id="soundCallEnabled" onchange="autoSaveSounds()" checked>
-                <span class="slider"></span>
-            </label>
-        </div>
-        <div class="sound-setting-item" style="margin-top: 10px; border-top: 1px dashed #ccc; padding-top: 15px;">
-            <label style="margin-bottom: 0;">スキャン機能</label>
-            <label class="switch">
-                <input type="checkbox" id="scannerEnabled" onchange="autoSaveScannerSetting()" checked>
-                <span class="slider"></span>
-            </label>
-        </div>
-        <div class="sound-setting-item">
-            <label style="margin-bottom: 0;">決済完了時のプレビュー</label>
-            <label class="switch">
-                <input type="checkbox" id="receiptPreviewEnabled" onchange="autoSavePreviewSettings()" checked>
-                <span class="slider"></span>
-            </label>
-        </div>
-    </div>
+        <div class="settings-card">
+            <h3 style="font-weight: 900; margin-bottom: 20px; border-left: 8px solid #000; padding-left: 10px;">
+                データのバックアップ</h3>
 
-    <div class="settings-card">
-        <h3 style="font-weight: 900; margin-bottom: 20px; border-left: 8px solid #000; padding-left: 10px;">データのバックアップ</h3>
-        
-        <label>操作対象のデータを選択</label>
-        <div class="data-selector" id="dataSelector">
-            <label class="data-option"><input type="checkbox" value="products" checked> 商品＋カテゴリ</label>
-            <label class="data-option"><input type="checkbox" value="history" checked> 販売履歴</label>
-            <label class="data-option"><input type="checkbox" value="profile" checked> 店舗情報</label>
-            <label class="data-option"><input type="checkbox" value="payments" checked> 決済手段</label>
-            <label class="data-option"><input type="checkbox" value="discounts" checked> 割引情報</label>
-            <label class="data-option"><input type="checkbox" value="stock" checked> 在庫情報</label>
+            <label>操作対象のデータを選択</label>
+            <div class="data-selector" id="dataSelector">
+                <label class="data-option"><input type="checkbox" value="products" checked> 商品＋カテゴリ</label>
+                <label class="data-option"><input type="checkbox" value="history" checked> 販売履歴</label>
+                <label class="data-option"><input type="checkbox" value="profile" checked> 店舗情報</label>
+                <label class="data-option"><input type="checkbox" value="payments" checked> 決済手段</label>
+                <label class="data-option"><input type="checkbox" value="discounts" checked> 割引情報</label>
+                <label class="data-option"><input type="checkbox" value="stock" checked> 在庫情報</label>
+            </div>
+
+            <label>データの書き出し</label>
+            <button id="exportBtn" class="save-btn"
+                style="margin-bottom: 25px; background: #fff; color: #000;">選択したデータを保存</button>
+
+            <label>データの読み込み</label>
+            <div id="dropZone" class="drop-zone">ここにバックアップファイルをドロップ</div>
+            <input type="file" id="fileInput" style="display: none;" accept=".json">
         </div>
 
-        <label>データの書き出し</label>
-        <button id="exportBtn" class="save-btn" style="margin-bottom: 25px; background: #fff; color: #000;">選択したデータを保存</button>
-        
-        <label>データの読み込み</label>
-        <div id="dropZone" class="drop-zone">ここにバックアップファイルをドロップ</div>
-        <input type="file" id="fileInput" style="display: none;" accept=".json">
-    </div>
-
-    <div class="settings-card" id="storage-status-card">
-        <h3 style="font-weight: 900; margin-bottom: 10px; border-left: 8px solid #000; padding-left: 10px;">ストレージ使用量</h3>
-        <p style="font-size: 0.8rem; font-weight: 800; margin-bottom: 15px;">
-            ブラウザの保存容量のうち、現在 <span id="storage-usage-text">0.00%</span> を使用中
-        </p>
-        <div style="width: 100%; height: 30px; border: 3px solid #000; background: #fff; position: relative; overflow: hidden;">
-            <div id="storage-bar" style="width: 0%; height: 100%; background: var(--accent); border-right: 3px solid #000; transition: width 0.5s ease-in-out;"></div>
+        <div class="settings-card" id="storage-status-card">
+            <h3 style="font-weight: 900; margin-bottom: 10px; border-left: 8px solid #000; padding-left: 10px;">ストレージ使用量
+            </h3>
+            <p style="font-size: 0.8rem; font-weight: 800; margin-bottom: 15px;">
+                ブラウザの保存容量のうち、現在 <span id="storage-usage-text">0.00%</span> を使用中
+            </p>
+            <div
+                style="width: 100%; height: 30px; border: 3px solid #000; background: #fff; position: relative; overflow: hidden;">
+                <div id="storage-bar"
+                    style="width: 0%; height: 100%; background: var(--accent); border-right: 3px solid #000; transition: width 0.5s ease-in-out;">
+                </div>
+            </div>
         </div>
-    </div>
 
-    <div class="settings-card">
-        <h3 style="font-weight: 900; margin-bottom: 20px; border-left: 8px solid #000; padding-left: 10px;">セルフレジ</h3>
-        <div class="sound-setting-item">
-            <label style="margin-bottom: 0;">セルフレジモード</label>
-            <label class="switch">
-                <input type="checkbox" id="selfCheckoutMode" onchange="autoSaveSelfConfig()">
-                <span class="slider"></span>
-            </label>
+        <div class="settings-card">
+            <h3 style="font-weight: 900; margin-bottom: 20px; border-left: 8px solid #000; padding-left: 10px;">セルフレジ
+            </h3>
+            <div class="sound-setting-item">
+                <label style="margin-bottom: 0;">セルフレジモード</label>
+                <label class="switch">
+                    <input type="checkbox" id="selfCheckoutMode" onchange="autoSaveSelfConfig()">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <label>パスワード（数字4桁）</label>
+            <input type="number" id="selfCheckoutPass" placeholder="例：1234" pattern="\d*"
+                oninput="if(value.length>4)value=value.slice(0,4); autoSaveSelfConfig();" style="margin-bottom: 10px;">
+            <p style="font-size: 0.7rem; font-weight: 800; color: #666;">
+                ※従業員用メニューを開くときに必要です<br>※🔔を長押しすることでパスワード入力画面が出てきます</p>
         </div>
-        <label>パスワード（数字4桁）</label>
-        <input type="number" id="selfCheckoutPass" placeholder="例：1234" pattern="\d*" oninput="if(value.length>4)value=value.slice(0,4); autoSaveSelfConfig();" style="margin-bottom: 10px;">
-        <p style="font-size: 0.7rem; font-weight: 800; color: #666;">※従業員用メニューを開くときに必要です<br>※🔔を長押しすることでパスワード入力画面が出てきます</p>
-    </div>
 
-    <div class="settings-card" style="border-color: #000; background: #fff;">
-        <h3 style="font-weight: 900; margin-bottom: 10px; border-left: 8px solid #000; padding-left: 10px;">💡 サービス改善</h3>
-        <p style="font-size: 0.8rem; font-weight: 800; margin-bottom: 15px;">不具合報告や新機能のリクエストはこちらからお送りください。</p>
-        <a href="https://docs.google.com/forms/d/e/1FAIpQLSfvlhXZz0kiJ03ii4lFBBtK8QY3Q54M1ykejPiV0uDl8fR2SA/viewform?usp=header" target="_blank" class="save-btn" style="background: #fff; color: #000; border: 3px solid #000;">ご意見・ご要望を送る</a>
-    </div>
+        <div class="settings-card" style="border-color: #000; background: #fff;">
+            <h3 style="font-weight: 900; margin-bottom: 10px; border-left: 8px solid #000; padding-left: 10px;">💡
+                サービス改善</h3>
+            <p style="font-size: 0.8rem; font-weight: 800; margin-bottom: 15px;">不具合報告や新機能のリクエストはこちらからお送りください。</p>
+            <a href="https://docs.google.com/forms/d/e/1FAIpQLSfvlhXZz0kiJ03ii4lFBBtK8QY3Q54M1ykejPiV0uDl8fR2SA/viewform?usp=header"
+                target="_blank" class="save-btn"
+                style="background: #fff; color: #000; border: 3px solid #000;">ご意見・ご要望を送る</a>
+        </div>
 
-    <div class="settings-card danger-zone">
-        <h3 style="color: var(--danger); font-weight: 900; margin-bottom: 10px; border-left: 8px solid var(--black); padding-left: 10px;"> ⚠️ データリセット</h3>
-        <p style="color:var(--danger); font-size: 0.8rem; font-weight: 800; margin-bottom: 15px;">選択されたデータが削除されます。ご注意ください。</p>
-        <button id="resetSalesBtn" class="reset-btn">販売履歴をすべてリセット</button>
-        <button id="resetProductsBtn" class="reset-btn">商品・カテゴリ一覧をすべてリセット</button>
-        <button id="resetAllDataBtn" class="reset-btn">すべてのデータをリセット</button>
-    </div>
-    
-</main>
+        <div class="settings-card danger-zone">
+            <h3
+                style="color: var(--danger); font-weight: 900; margin-bottom: 10px; border-left: 8px solid var(--black); padding-left: 10px;">
+                ⚠️ データリセット</h3>
+            <p style="color:var(--danger); font-size: 0.8rem; font-weight: 800; margin-bottom: 15px;">
+                選択されたデータが削除されます。ご注意ください。</p>
+            <button id="resetSalesBtn" class="reset-btn">販売履歴をすべてリセット</button>
+            <button id="resetProductsBtn" class="reset-btn">商品・カテゴリ一覧をすべてリセット</button>
+            <button id="resetAllDataBtn" class="reset-btn">すべてのデータをリセット</button>
+        </div>
 
-<script>
-    const STORAGE_KEYS = {
-        profile: ['rapireji_profile'],
-        payments: ['rapireji_payments'],
-        discounts: ['rapireji_discounts'],
-        sounds: ['rapireji_sounds'],
-        products: ['rapireji_products', 'rapireji_categories'],
-        history: ['rapireji_history'],
-        stock: ['rapireji_stock_config'],
-        self: ['rapireji_self_config']
-    };
+    </main>
 
-    document.addEventListener('DOMContentLoaded', () => {
-        loadLocalSettings();
-        initBackupSystem();
-    });
-
-    function loadLocalSettings() {
-        const profile = JSON.parse(localStorage.getItem('rapireji_profile') || '{}');
-        document.getElementById('companyName').value = profile.companyName || "";
-        document.getElementById('receiptType').value = profile.receiptType || "";
-        document.getElementById('registrationNumber').value = profile.registrationNumber || "";
-        document.getElementById('zipCode').value = profile.zipCode || "";
-        document.getElementById('address').value = profile.address || "";
-        document.getElementById('tel').value = profile.tel || "";
-        document.getElementById('memo').value = profile.memo || "";
-
-        const payments = JSON.parse(localStorage.getItem('rapireji_payments') || '["現金", "交通系IC", "クレジットカード", "バーコード決済", "その他"]');
-        const rows = document.querySelectorAll('.payment-row');
-        rows.forEach((row, i) => {
-            const input = row.querySelector('.payment-input');
-            const toggle = row.querySelector('.payment-self-toggle');
-            const data = payments[i];
-
-            if (data && typeof data === 'object') {
-                input.value = data.name || "";
-                toggle.checked = data.selfEnabled !== false; // 明示的なfalse以外はtrue
-            } else {
-                // 旧データ（文字列のみ）の場合の互換性維持
-                input.value = data || "";
-                toggle.checked = true;
-            }
-        });
-        
-        // 割引設定の読み込み（%表示の復元）
-        const discounts = JSON.parse(localStorage.getItem('rapireji_discounts') || '[]');
-        const nameInputs = document.querySelectorAll('.discount-name');
-        const numInputs = document.querySelectorAll('.discount-num-value');
-        const unitSelects = document.querySelectorAll('.discount-unit');
-        nameInputs.forEach((el, i) => {
-            const item = discounts[i];
-            if (item) {
-                el.value = item.name || "";
-                numInputs[i].value = item.value || "";
-                unitSelects[i].value = item.isPercent ? "percent" : "yen";
-            }
-        });
-
-        // 既存のsounds読み込み部分を下記に差し替え
-        const sounds = JSON.parse(localStorage.getItem('rapireji_sounds') || '{"btn": true, "pay": true, "scan": true, "error": true, "call": true}');
-        const previewSetting = JSON.parse(localStorage.getItem('rapireji_preview_config') || '{"show": true}');
-        const scannerSetting = JSON.parse(localStorage.getItem('rapireji_scanner_config') || '{"enabled": true}');
-        document.getElementById('soundBtnEnabled').checked = sounds.btn;
-        document.getElementById('soundPayEnabled').checked = sounds.pay;
-        document.getElementById('soundScanEnabled').checked = sounds.scan;
-        document.getElementById('soundErrorEnabled').checked = sounds.error; // 追加
-        document.getElementById('soundCallEnabled').checked = sounds.call;
-        document.getElementById('scannerEnabled').checked = scannerSetting.enabled;
-        document.getElementById('receiptPreviewEnabled').checked = previewSetting.show;
-
-        // セルフレジ設定の読み込み
-        const selfConfig = JSON.parse(localStorage.getItem('rapireji_self_config') || '{"enabled": false, "pass": ""}');
-        document.getElementById('selfCheckoutMode').checked = selfConfig.enabled;
-        document.getElementById('selfCheckoutPass').value = selfConfig.pass;
-    }
-
-    function initBackupSystem() {
-        const dropZone = document.getElementById('dropZone');
-        const fileInput = document.getElementById('fileInput');
-
-        // エクスポート処理
-        document.getElementById('exportBtn').onclick = () => {
-            const selectedTypes = Array.from(document.querySelectorAll('#dataSelector input:checked')).map(cb => cb.value);
-            if (selectedTypes.length === 0) return alert("保存するデータを選択してください");
-
-            const backupData = { _rapireji_version: "2.0", _exported_at: new Date().toISOString() };
-            
-            selectedTypes.forEach(type => {
-                STORAGE_KEYS[type].forEach(key => {
-                    const val = localStorage.getItem(key);
-                    if (val) backupData[key] = val;
-                });
-            });
-
-            const blob = new Blob([JSON.stringify(backupData)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `rapireji_data_${new Date().getTime()}.json`;
-            a.click();
-            URL.revokeObjectURL(url);
+    <script>
+        const STORAGE_KEYS = {
+            profile: ['rapireji_profile'],
+            payments: ['rapireji_payments'],
+            discounts: ['rapireji_discounts'],
+            pointRate: ['rapireji_point_rate'],
+            sounds: ['rapireji_sounds'],
+            products: ['rapireji_products', 'rapireji_categories'],
+            history: ['rapireji_history'],
+            stock: ['rapireji_stock_config'],
+            self: ['rapireji_self_config']
         };
 
-        // インポート処理
-        dropZone.onclick = () => fileInput.click();
-        dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('dragover'); };
-        dropZone.ondragleave = () => dropZone.classList.remove('dragover');
-        dropZone.ondrop = (e) => { e.preventDefault(); dropZone.classList.remove('dragover'); handleFile(e.dataTransfer.files[0]); };
-        fileInput.onchange = (e) => handleFile(e.target.files[0]);
-    }
+        document.addEventListener('DOMContentLoaded', () => {
+            loadLocalSettings();
+            initBackupSystem();
+        });
 
-    function handleFile(file) {
-        if (!file || file.type !== "application/json") return alert("JSONファイルを選択してください");
+        function loadLocalSettings() {
+            const profile = JSON.parse(localStorage.getItem('rapireji_profile') || '{}');
+            document.getElementById('companyName').value = profile.companyName || "";
+            document.getElementById('receiptType').value = profile.receiptType || "";
+            document.getElementById('registrationNumber').value = profile.registrationNumber || "";
+            document.getElementById('zipCode').value = profile.zipCode || "";
+            document.getElementById('address').value = profile.address || "";
+            document.getElementById('tel').value = profile.tel || "";
+            document.getElementById('memo').value = profile.memo || "";
 
-        const selectedTypes = Array.from(document.querySelectorAll('#dataSelector input:checked')).map(cb => cb.value);
-        if (selectedTypes.length === 0) return alert("復元対象のデータを選択してください");
+            const payments = JSON.parse(localStorage.getItem('rapireji_payments') || '["現金", "交通系IC", "クレジットカード", "バーコード決済", "その他"]');
+            const rows = document.querySelectorAll('.payment-row');
+            rows.forEach((row, i) => {
+                const input = row.querySelector('.payment-input');
+                const toggle = row.querySelector('.payment-self-toggle');
+                const data = payments[i];
 
-        if (!confirm("選択したデータをファイルから復元しますか？現在のデータは上書きされます。")) return;
+                if (data && typeof data === 'object') {
+                    input.value = data.name || "";
+                    toggle.checked = data.selfEnabled !== false; // 明示的なfalse以外はtrue
+                } else {
+                    // 旧データ（文字列のみ）の場合の互換性維持
+                    input.value = data || "";
+                    toggle.checked = true;
+                }
+            });
 
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            try {
-                const data = JSON.parse(e.target.result);
-                let count = 0;
+            // 割引設定の読み込み（%表示の復元）
+            const discounts = JSON.parse(localStorage.getItem('rapireji_discounts') || '[]');
+            const nameInputs = document.querySelectorAll('.discount-name');
+            const numInputs = document.querySelectorAll('.discount-num-value');
+            const unitSelects = document.querySelectorAll('.discount-unit');
+            nameInputs.forEach((el, i) => {
+                const item = discounts[i];
+                if (item) {
+                    el.value = item.name || "";
+                    numInputs[i].value = item.value || "";
+                    unitSelects[i].value = item.isPercent ? "percent" : "yen";
+                }
+            });
+
+            // 変更後
+            const pointRateData = JSON.parse(localStorage.getItem('rapireji_point_rate') || '{}');
+            const pointNumInput = document.querySelector('.point-rate-num-value');
+            if (pointNumInput) {
+                pointNumInput.value = pointRateData.value !== undefined ? pointRateData.value : "";
+            }
+
+            // 既存のsounds読み込み部分を下記に差し替え
+            const sounds = JSON.parse(localStorage.getItem('rapireji_sounds') || '{"btn": true, "pay": true, "scan": true, "error": true, "call": true}');
+            const previewSetting = JSON.parse(localStorage.getItem('rapireji_preview_config') || '{"show": true}');
+            const scannerSetting = JSON.parse(localStorage.getItem('rapireji_scanner_config') || '{"enabled": true}');
+            document.getElementById('soundBtnEnabled').checked = sounds.btn;
+            document.getElementById('soundPayEnabled').checked = sounds.pay;
+            document.getElementById('soundScanEnabled').checked = sounds.scan;
+            document.getElementById('soundErrorEnabled').checked = sounds.error; // 追加
+            document.getElementById('soundCallEnabled').checked = sounds.call;
+            document.getElementById('scannerEnabled').checked = scannerSetting.enabled;
+            document.getElementById('receiptPreviewEnabled').checked = previewSetting.show;
+
+            // セルフレジ設定の読み込み
+            const selfConfig = JSON.parse(localStorage.getItem('rapireji_self_config') || '{"enabled": false, "pass": ""}');
+            document.getElementById('selfCheckoutMode').checked = selfConfig.enabled;
+            document.getElementById('selfCheckoutPass').value = selfConfig.pass;
+        }
+
+        function initBackupSystem() {
+            const dropZone = document.getElementById('dropZone');
+            const fileInput = document.getElementById('fileInput');
+
+            // エクスポート処理
+            document.getElementById('exportBtn').onclick = () => {
+                const selectedTypes = Array.from(document.querySelectorAll('#dataSelector input:checked')).map(cb => cb.value);
+                if (selectedTypes.length === 0) return alert("保存するデータを選択してください");
+
+                const backupData = { _rapireji_version: "2.0", _exported_at: new Date().toISOString() };
 
                 selectedTypes.forEach(type => {
                     STORAGE_KEYS[type].forEach(key => {
-                        if (data[key]) {
-                            localStorage.setItem(key, data[key]);
-                            count++;
-                        }
+                        const val = localStorage.getItem(key);
+                        if (val) backupData[key] = val;
                     });
                 });
 
-                if (count > 0) {
-                    alert("選択されたデータの復元が完了しました。");
-                    location.reload();
-                } else {
-                    alert("ファイルの中に選択されたデータが見つかりませんでした。");
+                const blob = new Blob([JSON.stringify(backupData)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `rapireji_data_${new Date().getTime()}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+            };
+
+            // インポート処理
+            dropZone.onclick = () => fileInput.click();
+            dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('dragover'); };
+            dropZone.ondragleave = () => dropZone.classList.remove('dragover');
+            dropZone.ondrop = (e) => { e.preventDefault(); dropZone.classList.remove('dragover'); handleFile(e.dataTransfer.files[0]); };
+            fileInput.onchange = (e) => handleFile(e.target.files[0]);
+        }
+
+        function handleFile(file) {
+            if (!file || file.type !== "application/json") return alert("JSONファイルを選択してください");
+
+            const selectedTypes = Array.from(document.querySelectorAll('#dataSelector input:checked')).map(cb => cb.value);
+            if (selectedTypes.length === 0) return alert("復元対象のデータを選択してください");
+
+            if (!confirm("選択したデータをファイルから復元しますか？現在のデータは上書きされます。")) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    let count = 0;
+
+                    selectedTypes.forEach(type => {
+                        STORAGE_KEYS[type].forEach(key => {
+                            if (data[key]) {
+                                localStorage.setItem(key, data[key]);
+                                count++;
+                            }
+                        });
+                    });
+
+                    if (count > 0) {
+                        alert("選択されたデータの復元が完了しました。");
+                        location.reload();
+                    } else {
+                        alert("ファイルの中に選択されたデータが見つかりませんでした。");
+                    }
+                } catch (err) {
+                    alert("ファイルの解析に失敗しました。");
                 }
-            } catch (err) {
-                alert("ファイルの解析に失敗しました。");
-            }
-        };
-        reader.readAsText(file);
-    }
+            };
+            reader.readAsText(file);
+        }
 
-    // 追加：ストレージ使用量を計算して表示を更新する関数
-    function updateStorageIndicator() {
-        let total = 0;
-        for (let key in localStorage) {
-            if (localStorage.hasOwnProperty(key)) {
-                // UTF-16は1文字2バイトなので文字数×2で計算
-                total += (localStorage[key].length + key.length) * 2;
+        // 追加：ストレージ使用量を計算して表示を更新する関数
+        function updateStorageIndicator() {
+            let total = 0;
+            for (let key in localStorage) {
+                if (localStorage.hasOwnProperty(key)) {
+                    // UTF-16は1文字2バイトなので文字数×2で計算
+                    total += (localStorage[key].length + key.length) * 2;
+                }
+            }
+
+            const LIMIT = 5 * 1024 * 1024; // 5MB = 5,242,880バイト
+            const usagePercent = (total / LIMIT * 100).toFixed(2);
+            const barPercent = Math.min(usagePercent, 100); // 100%を超えないように
+
+            // 表示を更新
+            const bar = document.getElementById('storage-bar');
+            const text = document.getElementById('storage-usage-text');
+
+            if (bar && text) {
+                bar.style.width = barPercent + "%";
+                text.innerText = usagePercent + "%";
+
+                // 容量が80%を超えたらバーの色を警告色に変更
+                if (usagePercent > 80) {
+                    bar.style.background = "#ffcc00"; // 黄色
+                }
+                if (usagePercent > 95) {
+                    bar.style.background = "var(--danger)"; // 赤色
+                }
             }
         }
-    
-        const LIMIT = 5 * 1024 * 1024; // 5MB = 5,242,880バイト
-        const usagePercent = (total / LIMIT * 100).toFixed(2);
-        const barPercent = Math.min(usagePercent, 100); // 100%を超えないように
 
-        // 表示を更新
-        const bar = document.getElementById('storage-bar');
-        const text = document.getElementById('storage-usage-text');
-    
-        if (bar && text) {
-            bar.style.width = barPercent + "%";
-            text.innerText = usagePercent + "%";
-
-            // 容量が80%を超えたらバーの色を警告色に変更
-            if (usagePercent > 80) {
-                bar.style.background = "#ffcc00"; // 黄色
-            }
-            if (usagePercent > 95) {
-                bar.style.background = "var(--danger)"; // 赤色
-            }
+        function toHalfWidth(str) {
+            return str.replace(/[０-９]/g, (s) => {
+                return String.fromCharCode(s.charCodeAt(0) - 0xFEE0);
+            });
         }
-    }
 
-    function toHalfWidth(str) {
-        return str.replace(/[０-９]/g, (s) => {
-            return String.fromCharCode(s.charCodeAt(0) - 0xFEE0);
-        });
-    }
+        function autoSaveProfile() {
+            const data = {
+                companyName: document.getElementById('companyName').value,
+                receiptType: document.getElementById('receiptType').value,
+                registrationNumber: toHalfWidth(document.getElementById('registrationNumber').value), // 半角化
+                zipCode: toHalfWidth(document.getElementById('zipCode').value), // 半角化
+                address: document.getElementById('address').value,
+                tel: toHalfWidth(document.getElementById('tel').value), // 半角化
+                memo: document.getElementById('memo').value
+            };
+            localStorage.setItem('rapireji_profile', JSON.stringify(data));
+            updateStorageIndicator();
+        }
 
-    function autoSaveProfile() {
-        const data = {
-            companyName: document.getElementById('companyName').value,
-            receiptType: document.getElementById('receiptType').value,
-            registrationNumber: toHalfWidth(document.getElementById('registrationNumber').value), // 半角化
-            zipCode: toHalfWidth(document.getElementById('zipCode').value), // 半角化
-            address: document.getElementById('address').value,
-            tel: toHalfWidth(document.getElementById('tel').value), // 半角化
-            memo: document.getElementById('memo').value
-        };
-        localStorage.setItem('rapireji_profile', JSON.stringify(data));
-        updateStorageIndicator();
-    }
+        function autoSavePayments() {
+            const rows = document.querySelectorAll('.payment-row');
+            const methods = Array.from(rows).map(row => {
+                const name = row.querySelector('.payment-input').value.trim();
+                const selfEnabled = row.querySelector('.payment-self-toggle').checked;
+                return name !== "" ? { name, selfEnabled } : null;
+            }).filter(v => v !== null);
 
-    function autoSavePayments() {
-        const rows = document.querySelectorAll('.payment-row');
-        const methods = Array.from(rows).map(row => {
-            const name = row.querySelector('.payment-input').value.trim();
-            const selfEnabled = row.querySelector('.payment-self-toggle').checked;
-            return name !== "" ? { name, selfEnabled } : null;
-        }).filter(v => v !== null);
+            localStorage.setItem('rapireji_payments', JSON.stringify(methods));
+            updateStorageIndicator();
+        }
 
-        localStorage.setItem('rapireji_payments', JSON.stringify(methods));
-        updateStorageIndicator();
-    }
+        function autoSaveDiscounts() {
+            const items = [];
+            const nameInputs = document.querySelectorAll('.discount-name');
+            const numInputs = document.querySelectorAll('.discount-num-value');
+            const unitSelects = document.querySelectorAll('.discount-unit');
+            nameInputs.forEach((el, i) => {
+                const name = el.value.trim();
+                const val = numInputs[i].value.trim();
+                const unit = unitSelects[i].value;
 
-    function autoSaveDiscounts() {
-        const items = [];
-        const nameInputs = document.querySelectorAll('.discount-name');
-        const numInputs = document.querySelectorAll('.discount-num-value');
-        const unitSelects = document.querySelectorAll('.discount-unit');
-        nameInputs.forEach((el, i) => {
-            const name = el.value.trim();
-            const val = numInputs[i].value.trim();
-            const unit = unitSelects[i].value;
-            
-            if (name && val !== "") {
+                if (name && val !== "") {
+                    const numValue = parseFloat(val);
+                    if (!isNaN(numValue)) {
+                        items.push({
+                            name: name,
+                            value: numValue,
+                            isPercent: (unit === "percent")
+                        });
+                    }
+                }
+            });
+            localStorage.setItem('rapireji_discounts', JSON.stringify(items));
+            updateStorageIndicator();
+        }
+
+        // 変更後
+        function autoSavePointRate() {
+            const numInput = document.querySelector('.point-rate-num-value');
+
+            if (!numInput) return;
+
+            const val = numInput.value.trim();
+
+            let data = {};
+            if (val !== "") {
                 const numValue = parseFloat(val);
                 if (!isNaN(numValue)) {
-                    items.push({ 
-                        name: name, 
-                        value: numValue, 
-                        isPercent: (unit === "percent") 
-                    });
+                    data = {
+                        value: numValue,
+                        isPercent: true
+                    };
+                }
+            }
+            localStorage.setItem('rapireji_point_rate', JSON.stringify(data));
+            updateStorageIndicator();
+        }
+
+        function autoSaveSounds() {
+            const data = {
+                btn: document.getElementById('soundBtnEnabled').checked,
+                pay: document.getElementById('soundPayEnabled').checked,
+                scan: document.getElementById('soundScanEnabled').checked,
+                error: document.getElementById('soundErrorEnabled').checked,
+                call: document.getElementById('soundCallEnabled').checked // 追加
+            };
+            localStorage.setItem('rapireji_sounds', JSON.stringify(data));
+            updateStorageIndicator();
+        }
+
+        function autoSaveScannerSetting() {
+            const data = {
+                enabled: document.getElementById('scannerEnabled').checked
+            };
+            localStorage.setItem('rapireji_scanner_config', JSON.stringify(data));
+            updateStorageIndicator();
+        }
+
+        function autoSavePreviewSettings() {
+            const data = {
+                show: document.getElementById('receiptPreviewEnabled').checked
+            };
+            localStorage.setItem('rapireji_preview_config', JSON.stringify(data));
+            updateStorageIndicator();
+        }
+
+        function autoSaveSelfConfig() {
+            const modeToggle = document.getElementById('selfCheckoutMode');
+            const passInput = document.getElementById('selfCheckoutPass');
+
+            // オンにしようとした時にパスワードが4桁でない場合
+            if (modeToggle.checked && passInput.value.length !== 4) {
+                alert("セルフレジモードを有効にするには、4桁のパスワードを入力してください。");
+                modeToggle.checked = false; // 強制的にオフに戻す
+                return;
+            }
+            const data = {
+                enabled: modeToggle.checked,
+                pass: passInput.value
+            };
+            localStorage.setItem('rapireji_self_config', JSON.stringify(data));
+            updateStorageIndicator();
+        }
+
+        document.addEventListener('change', (e) => {
+            if (e.target.classList.contains('discount-unit')) autoSaveDiscounts();
+            if (e.target.classList.contains('point-rate-unit')) autoSavePointRate();
+        });
+
+        // 入力イベントの紐付け（DOM読み込み完了後に追加）
+        document.addEventListener('input', (e) => {
+            if (e.target.closest('.settings-card')) {
+                const skipIds = [
+                    'soundBtnEnabled', 'soundPayEnabled', 'soundScanEnabled',
+                    'soundErrorEnabled', 'soundCallEnabled', 'receiptPreviewEnabled',
+                    'scannerEnabled', 'selfCheckoutMode' // scannerEnabledを追加
+                ];
+
+                if (skipIds.includes(e.target.id)) return;
+
+                if (e.target.classList.contains('payment-input')) {
+                    autoSavePayments();
+                } else if (e.target.classList.contains('discount-name') || e.target.classList.contains('discount-num-value')) {
+                    autoSaveDiscounts();
+                } else if (e.target.classList.contains('point-rate-num-value')) {
+                    autoSavePointRate(); // ← クラス名を変更
+                } else {
+                    autoSaveProfile();
                 }
             }
         });
-        localStorage.setItem('rapireji_discounts', JSON.stringify(items));
-        updateStorageIndicator();
-    }
 
-    function autoSaveSounds() {
-        const data = {
-            btn: document.getElementById('soundBtnEnabled').checked,
-            pay: document.getElementById('soundPayEnabled').checked,
-            scan: document.getElementById('soundScanEnabled').checked,
-            error: document.getElementById('soundErrorEnabled').checked,
-            call: document.getElementById('soundCallEnabled').checked // 追加
-        };
-        localStorage.setItem('rapireji_sounds', JSON.stringify(data));
-        updateStorageIndicator();
-    }
+        document.getElementById('resetSalesBtn').onclick = () => { if (confirm("販売履歴を削除しますか？")) localStorage.removeItem('rapireji_history'); };
+        document.getElementById('resetProductsBtn').onclick = () => { if (confirm("商品・カテゴリを削除しますか？")) { localStorage.removeItem('rapireji_products'); localStorage.removeItem('rapireji_categories'); } };
+        document.getElementById('resetAllDataBtn').onclick = () => { if (confirm("すべて初期化しますか？")) { localStorage.clear(); location.reload(); } };
 
-    function autoSaveScannerSetting() {
-        const data = {
-            enabled: document.getElementById('scannerEnabled').checked
-        };
-        localStorage.setItem('rapireji_scanner_config', JSON.stringify(data));
-        updateStorageIndicator();
-    }
+        const menuBtn = document.getElementById('menu-btn');
+        const sideMenu = document.getElementById('side-menu');
+        menuBtn.onclick = () => { menuBtn.classList.toggle('open'); sideMenu.classList.toggle('hidden'); };
 
-    function autoSavePreviewSettings() {
-        const data = {
-            show: document.getElementById('receiptPreviewEnabled').checked
-        };
-        localStorage.setItem('rapireji_preview_config', JSON.stringify(data));
-        updateStorageIndicator();
-    }
+        // --- 現在のページをメニューで強調表示する処理 ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const currentPath = window.location.pathname.split("/").pop();
+            const menuLinks = document.querySelectorAll('.menu-link');
 
-    function autoSaveSelfConfig() {
-        const modeToggle = document.getElementById('selfCheckoutMode');
-        const passInput = document.getElementById('selfCheckoutPass');
-        
-        // オンにしようとした時にパスワードが4桁でない場合
-        if (modeToggle.checked && passInput.value.length !== 4) {
-            alert("セルフレジモードを有効にするには、4桁のパスワードを入力してください。");
-            modeToggle.checked = false; // 強制的にオフに戻す
-            return;
-        }
-        const data = {
-            enabled: modeToggle.checked,
-            pass: passInput.value
-        };
-        localStorage.setItem('rapireji_self_config', JSON.stringify(data));
-        updateStorageIndicator();
-    }
-
-    document.addEventListener('change', (e) => {
-        if (e.target.classList.contains('discount-unit')) autoSaveDiscounts();
-    });
-
-    // 入力イベントの紐付け（DOM読み込み完了後に追加）
-    document.addEventListener('input', (e) => {
-        if (e.target.closest('.settings-card')) {
-            const skipIds = [
-                'soundBtnEnabled', 'soundPayEnabled', 'soundScanEnabled', 
-                'soundErrorEnabled', 'soundCallEnabled', 'receiptPreviewEnabled',
-                'scannerEnabled', 'selfCheckoutMode' // scannerEnabledを追加
-            ];
-        
-            if (skipIds.includes(e.target.id)) return;
-
-            if (e.target.classList.contains('payment-input')) {
-                autoSavePayments();
-            } else if (e.target.classList.contains('discount-name') || e.target.classList.contains('discount-num-value')) {
-                autoSaveDiscounts();
-            } else {
-                autoSaveProfile();
-            }
-        }
-    });
-    
-    document.getElementById('resetSalesBtn').onclick = () => { if(confirm("販売履歴を削除しますか？")) localStorage.removeItem('rapireji_history'); };
-    document.getElementById('resetProductsBtn').onclick = () => { if(confirm("商品・カテゴリを削除しますか？")) { localStorage.removeItem('rapireji_products'); localStorage.removeItem('rapireji_categories'); } };
-    document.getElementById('resetAllDataBtn').onclick = () => { if(confirm("すべて初期化しますか？")) { localStorage.clear(); location.reload(); } };
-
-    const menuBtn = document.getElementById('menu-btn');
-    const sideMenu = document.getElementById('side-menu');
-    menuBtn.onclick = () => { menuBtn.classList.toggle('open'); sideMenu.classList.toggle('hidden'); };
-
-    // --- 現在のページをメニューで強調表示する処理 ---
-    document.addEventListener('DOMContentLoaded', () => {
-        const currentPath = window.location.pathname.split("/").pop();
-        const menuLinks = document.querySelectorAll('.menu-link');
-
-        menuLinks.forEach(link => {
-            const linkPath = link.getAttribute('href');
-            // 現在のファイル名と href が一致したら 'active' クラスをつける
-            if (currentPath === linkPath) {
-                link.classList.add('active');
-            }
+            menuLinks.forEach(link => {
+                const linkPath = link.getAttribute('href');
+                // 現在のファイル名と href が一致したら 'active' クラスをつける
+                if (currentPath === linkPath) {
+                    link.classList.add('active');
+                }
+            });
+            loadLocalSettings();
+            initBackupSystem();
+            updateStorageIndicator();
         });
-        loadLocalSettings();
-        initBackupSystem();
-        updateStorageIndicator();
-    });
-</script>
+    </script>
 </body>
+
 </html>
