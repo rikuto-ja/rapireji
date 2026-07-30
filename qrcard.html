@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>QRカード管理 | らぴレジ</title>
+    <!-- QRコード生成＆スキャン用ライブラリ -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        :root {
+            --black: #000000;
+            --white: #ffffff;
+            --gray-bg: #f8f9fa;
+            --gray-light: #e9ecef;
+            --accent: #00ff00;
+            --header-h: 60px;
+            --danger: #ff0000;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: sans-serif;
+            touch-action: manipulation;
+        }
+
+        body {
+            background-color: var(--gray-bg);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            height: calc(var(--header-h) + env(safe-area-inset-top));
+            border-bottom: 3px solid var(--black);
+            display: flex;
+            align-items: center;
+            padding: env(safe-area-inset-top) 20px 0 20px;
+            background: var(--white);
+            position: sticky;
+            top: 0;
+            z-index: 1100;
+            justify-content: space-between;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+        }
+
+        header h1 {
+            font-size: 1.5rem;
+            font-weight: 900;
+            margin-left: 20px;
+            white-space: nowrap;
+        }
+
+        /* メニューボタン（ハンバーガーアイコン） */
+        .menu-trigger {
+            width: 30px;
+            height: 22px;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .menu-trigger span {
+            display: block;
+            width: 100%;
+            height: 4px;
+            background: var(--black);
+            position: absolute;
+            left: 0;
+            transition: all 0.3s;
+        }
+
+        .menu-trigger span:nth-child(1) {
+            top: 0;
+        }
+
+        .menu-trigger span:nth-child(2) {
+            top: 9px;
+        }
+
+        .menu-trigger span:nth-child(3) {
+            top: 18px;
+        }
+
+        .menu-trigger.open span:nth-child(1) {
+            transform: translateY(9px) rotate(45deg);
+        }
+
+        .menu-trigger.open span:nth-child(2) {
+            opacity: 0;
+        }
+
+        .menu-trigger.open span:nth-child(3) {
+            transform: translateY(-9px) rotate(-45deg);
+        }
+
+        /* サイドナビゲーション */
+        .side-nav {
+            position: fixed;
+            top: var(--header-h);
+            left: 0;
+            width: 250px;
+            height: calc(100% - var(--header-h));
+            padding-bottom: env(safe-area-inset-bottom);
+            background: var(--white);
+            border-right: 3px solid var(--black);
+            z-index: 1050;
+            transition: transform 0.3s;
+            padding-left: 20px;
+            padding-right: 20px;
+            padding-top: 20px;
+        }
+
+        .side-nav.hidden {
+            transform: translateX(-100%);
+        }
+
+        .menu-link {
+            display: block;
+            padding: 15px;
+            color: var(--black);
+            font-weight: 800;
+            text-decoration: none;
+            border-bottom: 1px solid var(--gray-light);
+        }
+
+        .menu-link.active {
+            background-color: transparent;
+            color: var(--black);
+            font-weight: 900;
+            font-size: 1.1rem;
+            border-left: 8px solid var(--black);
+            padding-left: 7px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .container {
+            flex: 1;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .card {
+            width: 100%;
+            max-width: 500px;
+            background: var(--white);
+            border: 4px solid var(--black);
+            padding: 20px;
+            box-shadow: 6px 6px 0 var(--black);
+            margin-bottom: 25px;
+        }
+
+        /* メインナビボタン (3つの切り替え) */
+        .tab-group {
+            display: flex;
+            gap: 8px;
+            width: 100%;
+            max-width: 500px;
+            margin-bottom: 20px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 14px 5px;
+            font-weight: 900;
+            background: var(--white);
+            border: 3px solid var(--black);
+            cursor: pointer;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+
+        .tab-btn.active {
+            background: var(--black);
+            color: var(--white);
+        }
+
+        label {
+            display: block;
+            font-weight: 900;
+            margin: 10px 0 5px;
+            font-size: 0.95rem;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        select {
+            width: 100%;
+            padding: 10px;
+            border: 3px solid var(--black);
+            font-size: 1rem;
+            font-weight: 800;
+            margin-bottom: 12px;
+            outline: none;
+            border-radius: 0;
+        }
+
+        .btn {
+            width: 100%;
+            background: var(--black);
+            color: var(--white);
+            border: 2px solid var(--black);
+            padding: 14px;
+            font-size: 1rem;
+            font-weight: 900;
+            cursor: pointer;
+            text-align: center;
+            margin-top: 8px;
+        }
+
+        .btn-secondary {
+            background: var(--white);
+            color: var(--black);
+            border: 3px solid var(--black);
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: var(--white);
+            border: 3px solid var(--black);
+        }
+
+        /* 会員カード印刷プレビュー枠 */
+        .printable-card {
+            width: 320px;
+            height: 190px;
+            border: 3px solid #000;
+            padding: 15px;
+            background: #fff;
+            margin: 15px auto;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            box-shadow: 4px 4px 0 #000;
+            position: relative;
+        }
+
+        .printable-card .shop-name {
+            font-weight: 900;
+            font-size: 1rem;
+            border-bottom: 2px solid #000;
+            padding-bottom: 4px;
+        }
+
+        .printable-card .card-main {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 8px;
+        }
+
+        .printable-card .user-info {
+            font-size: 0.85rem;
+            font-weight: 800;
+        }
+
+        /* 履歴テーブル */
+        .history-list {
+            width: 100%;
+            max-height: 200px;
+            overflow-y: auto;
+            border: 2px solid #000;
+            margin-top: 10px;
+        }
+
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px;
+            border-bottom: 1px solid #ccc;
+            font-size: 0.8rem;
+            font-weight: 800;
+        }
+
+        /* 印刷用CSS */
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+
+            #printableArea,
+            #printableArea * {
+                visibility: visible;
+            }
+
+            #printableArea {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+            }
+        }
+
+        @media screen and (max-width: 768px) {
+            header {
+                padding: 0 10px;
+            }
+
+            header h1 {
+                font-size: 0.9rem;
+                margin-left: 10px;
+                flex-shrink: 0;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <div class="header-left">
+            <div class="menu-trigger" id="menu-btn"><span></span><span></span><span></span></div>
+            <h1>QRカード</h1>
+        </div>
+    </header>
+
+    <nav class="side-nav hidden" id="side-menu">
+        <a href="register.html" class="menu-link">レジ操作</a>
+        <a href="product.html" class="menu-link">商品管理</a>
+        <a href="stock.html" class="menu-link">在庫管理</a>
+        <a href="history.html" class="menu-link">販売履歴</a>
+        <a href="return.html" class="menu-link">払い戻し</a>
+        <a href="discount.html" class="menu-link">自動割引</a>
+        <a href="settings.html" class="menu-link">設定</a>
+        <a href="qrcard.html" class="menu-link">QRカード</a>
+        <a href="extend.html" class="menu-link">拡張アプリ</a>
+    </nav>
+
+    <main class="container">
+        <!-- 3つのメイン切り替えボタン -->
+        <div class="tab-group">
+            <button class="tab-btn active" onclick="switchTab('registerTab')">新規登録</button>
+            <button class="tab-btn" onclick="switchTab('scanTab')">読み取り</button>
+            <button class="tab-btn" onclick="switchTab('searchTab')">検索</button>
+        </div>
+
+        <!-- 1. 新規登録画面 -->
+        <div id="registerTab" class="tab-content">
+            <div class="card">
+                <h3 style="border-left: 6px solid #000; padding-left: 8px; margin-bottom: 15px;">会員カード新規作成</h3>
+                <label>お名前</label>
+                <input type="text" id="regName" placeholder="例：山田 太郎">
+                <label>電話番号</label>
+                <input type="text" id="regTel" placeholder="例：09012345678">
+                <label>有効機能の選択</label>
+                <select id="regType">
+                    <option value="both">一体型（ポイント ＋ デポジット）</option>
+                    <option value="point">ポイントカードのみ</option>
+                    <option value="deposit">デポジットカードのみ</option>
+                </select>
+                <button class="btn" onclick="createCard()">カード発行・プレビュー</button>
+            </div>
+
+            <!-- カードプレビュー・印刷領域 -->
+            <div id="cardPreviewArea" style="display: none; text-align: center;">
+                <div id="printableArea">
+                    <div class="printable-card">
+                        <div class="shop-name" id="cardShopName">店舗名</div>
+                        <div class="card-main">
+                            <!-- 会員カード印刷プレビュー枠 (種類とTELを削除) -->
+                            <div class="user-info" style="text-align: left;">
+                                <div>氏名: <span id="cardUserName"></span> 様</div>
+                                <div>会員No: <span id="cardUserNo"></span></div>
+                            </div>
+                            <div id="qrcode"></div>
+                        </div>
+                    </div>
+                </div>
+                <button class="btn btn-secondary" style="max-width: 320px;" onclick="window.print()">🖨️
+                    カードを印刷する</button>
+            </div>
+        </div>
+
+        <!-- 2. 読み取り・操作画面 -->
+        <div id="scanTab" class="tab-content" style="display: none; width: 100%; max-width: 500px;">
+            <!-- IDを追加 -->
+            <div class="card" id="readerCard">
+                <h3 style="border-left: 6px solid #000; padding-left: 8px; margin-bottom: 15px;">QR読み取り</h3>
+                <div id="reader" style="width: 100%; margin-bottom: 15px;"></div>
+            </div>
+        </div>
+
+        <!-- 3. データ参照 (検索) 画面 -->
+        <div id="searchTab" class="tab-content" style="display: none; width: 100%; max-width: 500px;">
+            <div class="card">
+                <h3 style="border-left: 6px solid #000; padding-left: 8px; margin-bottom: 15px;">会員データ検索</h3>
+                <input type="text" id="searchQuery" placeholder="名前、電話番号、会員番号で検索" oninput="searchCards()">
+                <div id="searchResults" style="margin-top: 10px;"></div>
+            </div>
+        </div>
+
+        <!-- ★ここからタブの外に配置（検索からもスキャンからも共通で使用） -->
+        <div id="cardDetailPanel" class="card" style="display: none; width: 100%; max-width: 500px; margin-top: 20px;">
+            <!-- ヘッダー（名前表示に変更） -->
+            <div
+                style="display:flex; justify-content:space-between; align-items:center; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 10px;">
+                <span id="detailNameDisplay" style="font-size: 1.2rem; font-weight: 900;"></span>
+                <span id="detailStatus" style="font-weight:900; padding: 2px 8px; border: 2px solid #000;">有効</span>
+            </div>
+            <p style="font-weight:800; font-size: 0.85rem; margin-bottom: 15px;">会員No: <span id="detailNo"></span></p>
+
+            <!-- 残高 / ポイント表示 -->
+            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                <div style="flex:1; background: #eee; border: 2px solid #000; padding: 10px; text-align: center;">
+                    <div style="font-size:0.75rem; font-weight:900;">デポジット残高</div>
+                    <div style="font-size:1.2rem; font-weight:900;"><span id="detailBalance">0</span> 円</div>
+                </div>
+                <div style="flex:1; background: #eee; border: 2px solid #000; padding: 10px; text-align: center;">
+                    <div style="font-size:0.75rem; font-weight:900;">ポイント</div>
+                    <div style="font-size:1.2rem; font-weight:900;"><span id="detailPoint">0</span> pt</div>
+                </div>
+            </div>
+
+            <!-- 金額・ポイント操作 -->
+            <label>残高・ポイント操作</label>
+            <div style="display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;">
+                <button id="btnCharge" class="btn btn-secondary"
+                    style="margin:0; padding: 10px; font-size: 0.85rem; flex: 1;"
+                    onclick="handleTransaction('charge')">チャージ</button>
+                <button id="btnRefund" class="btn btn-secondary"
+                    style="margin:0; padding: 10px; font-size: 0.85rem; flex: 1;"
+                    onclick="handleTransaction('refund')">払い戻し</button>
+                <button id="btnPointAdd" class="btn btn-secondary"
+                    style="margin:0; padding: 10px; font-size: 0.85rem; flex: 1;"
+                    onclick="handleTransaction('point')">ポイント付与</button>
+                <button id="btnPointUse" class="btn btn-secondary"
+                    style="margin:0; padding: 10px; font-size: 0.85rem; flex: 1;"
+                    onclick="handleTransaction('use_point')">ポイント使用</button>
+            </div>
+
+            <!-- 会員情報変更 -->
+            <label>会員情報変更（自動保存）</label>
+            <div style="background: #f8f9fa; border: 2px solid #000; padding: 10px; margin-bottom: 20px;">
+                <label style="margin-top: 0; font-size: 0.8rem;">お名前</label>
+                <input type="text" id="detailNameInput"
+                    style="padding: 8px; margin-bottom: 10px; width: 100%; box-sizing: border-box;"
+                    onchange="autoSaveCustomerEdit()">
+
+                <label style="font-size: 0.8rem;">電話番号</label>
+                <input type="text" id="detailTel"
+                    style="padding: 8px; margin-bottom: 10px; width: 100%; box-sizing: border-box;"
+                    onchange="autoSaveCustomerEdit()">
+
+                <label style="font-size: 0.8rem;">カード種類</label>
+                <select id="detailType" style="padding: 8px; margin-bottom: 0; width: 100%; box-sizing: border-box;"
+                    onchange="autoSaveCustomerEdit()">
+                    <option value="both">一体型（ポイント ＋ デポジット）</option>
+                    <option value="point">ポイントカードのみ</option>
+                    <option value="deposit">デポジットカードのみ</option>
+                </select>
+            </div>
+
+            <!-- 利用履歴 (位置を上に移動) -->
+            <label>利用履歴</label>
+            <div style="margin-bottom: 20px;">
+                <button class="btn btn-secondary" style="margin:0; padding: 10px; font-size: 0.85rem;"
+                    onclick="showHistory()">利用履歴を見る</button>
+            </div>
+
+            <!-- カード管理設定 -->
+            <label>カード管理</label>
+            <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px;">
+                <button class="btn btn-secondary" style="margin:0; padding: 10px; font-size: 0.85rem;"
+                    onclick="reprintCard()">カードを印刷</button>
+                <button class="btn btn-secondary" style="margin:0; padding: 10px; font-size: 0.85rem;"
+                    id="toggleStatusBtn" onclick="toggleCardStatus()">カード停止</button>
+                <button class="btn btn-secondary" style="margin:0; padding: 10px; font-size: 0.85rem;"
+                    onclick="reissueCard()">再発行</button>
+                <button class="btn btn-secondary" style="margin:0; padding: 10px; font-size: 0.85rem;"
+                    onclick="deleteCard()">カード削除</button>
+            </div>
+        </div>
+
+        <!-- 3. データ参照 (検索) 画面 -->
+        <div id="searchTab" class="tab-content" style="display: none; width: 100%; max-width: 500px;">
+            <div class="card">
+                <h3 style="border-left: 6px solid #000; padding-left: 8px; margin-bottom: 15px;">会員データ検索</h3>
+                <input type="text" id="searchQuery" placeholder="名前、電話番号、会員番号で検索" oninput="searchCards()">
+                <div id="searchResults" style="margin-top: 10px;"></div>
+            </div>
+        </div>
+
+        <!-- 4. 利用履歴画面（新規追加） -->
+        <div id="historyTab" class="tab-content" style="display: none; width: 100%; max-width: 500px;">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h3 style="border-left: 6px solid #000; padding-left: 8px; margin: 0;">利用履歴</h3>
+                    <button class="btn btn-secondary"
+                        style="margin:0; padding: 5px 15px; font-size: 0.85rem; width: auto;"
+                        onclick="closeHistory()">戻る</button>
+                </div>
+
+                <label>日付で絞り込み</label>
+                <input type="date" id="historyDateFilter" onchange="renderHistoryList()">
+
+                <div class="history-list" id="historyContainerTab" style="max-height: 400px; margin-top: 15px;"></div>
+            </div>
+        </div>
+    </main>
+    <script>
+        let activeCardData = null;
+        let html5QrcodeScanner = null;
+
+        // メニューの開閉操作
+        const menuBtn = document.getElementById('menu-btn');
+        const sideMenu = document.getElementById('side-menu');
+        menuBtn.onclick = () => {
+            menuBtn.classList.toggle('open');
+            sideMenu.classList.toggle('hidden');
+        };
+
+        // 現在のページをメニューで強調表示
+        document.addEventListener('DOMContentLoaded', () => {
+            const currentPath = window.location.pathname.split("/").pop();
+            const menuLinks = document.querySelectorAll('.menu-link');
+
+            menuLinks.forEach(link => {
+                const linkPath = link.getAttribute('href');
+                if (currentPath === linkPath) {
+                    link.classList.add('active');
+                }
+            });
+        });
+
+        // タブ切り替え
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabId).style.display = 'block';
+
+            if (event && event.target && event.target.classList) {
+                event.target.classList.add('active');
+            }
+
+            document.getElementById('cardDetailPanel').style.display = 'none';
+            document.getElementById('historyTab').style.display = 'none'; // 履歴画面も閉じる
+
+            // スキャンタブ以外に移動した場合はカメラを完全にオフにする
+            if (tabId !== 'scanTab' && html5QrcodeScanner) {
+                try {
+                    html5QrcodeScanner.clear();
+                    html5QrcodeScanner = null;
+                } catch (e) { }
+            }
+
+            if (tabId === 'scanTab') {
+                document.getElementById('readerCard').style.display = 'block';
+                startScanner();
+            }
+        }
+
+        // initScannerとstartScannerを統合して置き換え（読み取り成功時に自動でオフにする）
+        function startScanner() {
+            if (html5QrcodeScanner) {
+                try { html5QrcodeScanner.clear(); } catch (e) { }
+            }
+            html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
+            html5QrcodeScanner.render((decodedText) => {
+                // 読み取り完了したらカメラをオフにして詳細パネルを表示
+                html5QrcodeScanner.clear().then(() => {
+                    html5QrcodeScanner = null;
+                    document.getElementById('readerCard').style.display = 'none';
+                    loadCardById(decodedText);
+                }).catch(err => { console.error("カメラ停止エラー", err); });
+            }, (error) => { });
+        }
+
+        // 検索結果選択時 (スキャナ画面を開かずに詳細だけ表示する)
+        function selectSearchResult(cardId) {
+            loadCardById(cardId);
+        }
+
+        // --- 新規作成機能 ---
+        function createCard() {
+            const name = document.getElementById('regName').value.trim();
+            const tel = document.getElementById('regTel').value.trim();
+            const type = document.getElementById('regType').value;
+
+            if (!name || !tel) return alert('名前と電話番号を入力してください');
+
+            const cardId = 'RC' + Math.floor(10000000 + Math.random() * 90000000);
+            const profile = JSON.parse(localStorage.getItem('rapireji_profile') || '{}');
+            const shopName = profile.companyName || 'らぴレジ 加盟店';
+
+            const newCard = {
+                id: cardId, name, tel, type,
+                balance: 0, point: 0, status: 'active',
+                createdAt: new Date().toISOString(),
+                history: [{ date: new Date().toLocaleString(), type: '作成', detail: '新規カード発行' }]
+            };
+
+            const cards = JSON.parse(localStorage.getItem('rapireji_qrcards') || '[]');
+            cards.push(newCard);
+            localStorage.setItem('rapireji_qrcards', JSON.stringify(cards));
+
+            // プレビュー表示データのセット
+            document.getElementById('cardShopName').innerText = shopName;
+            document.getElementById('cardUserName').innerText = name;
+            document.getElementById('cardUserNo').innerText = cardId;
+
+            document.getElementById('qrcode').innerHTML = '';
+            new QRCode(document.getElementById('qrcode'), { text: cardId, width: 80, height: 80 });
+
+            // ボタン押下後にプレビューとポイント還元率設定を表示
+            document.getElementById('cardPreviewArea').style.display = 'block';
+
+            alert('カードを発行しました');
+        }
+
+        function loadCardById(cardId) {
+            const cards = JSON.parse(localStorage.getItem('rapireji_qrcards') || '[]');
+            const card = cards.find(c => c.id === cardId.trim());
+
+            if (!card) return alert('該当するカードデータが見つかりません');
+
+            activeCardData = card;
+            renderCardDetail();
+        }
+
+        function renderCardDetail() {
+            const c = activeCardData;
+            document.getElementById('cardDetailPanel').style.display = 'block';
+
+            // 名前を入力欄にセット
+            document.getElementById('detailNameDisplay').innerText = c.name + ' 様';
+            document.getElementById('detailNameInput').value = c.name;
+
+            document.getElementById('detailNo').innerText = c.id;
+            document.getElementById('detailTel').value = c.tel;
+            if (c.type) document.getElementById('detailType').value = c.type;
+            document.getElementById('detailBalance').innerText = c.balance.toLocaleString();
+            document.getElementById('detailPoint').innerText = c.point.toLocaleString();
+
+            const statusEl = document.getElementById('detailStatus');
+            const toggleBtn = document.getElementById('toggleStatusBtn');
+            if (c.status === 'active') {
+                statusEl.innerText = '有効'; statusEl.style.borderColor = '#000'; statusEl.style.color = '#000';
+                toggleBtn.innerText = 'カード停止';
+            } else {
+                statusEl.innerText = '停止中'; statusEl.style.borderColor = 'red'; statusEl.style.color = 'red';
+                toggleBtn.innerText = '停止解除';
+            }
+            updateTransactionButtons(c.type || 'both');
+        }
+
+        // 新規追加: カード種類に応じて操作ボタンの有効・無効を切り替える
+        function updateTransactionButtons(cardType) {
+            const btnCharge = document.getElementById('btnCharge');
+            const btnRefund = document.getElementById('btnRefund');
+            const btnPointAdd = document.getElementById('btnPointAdd');
+            const btnPointUse = document.getElementById('btnPointUse');
+
+            // 一旦すべてのボタンを有効化（スタイルとdisabledをリセット）
+            [btnCharge, btnRefund, btnPointAdd, btnPointUse].forEach(btn => {
+                btn.disabled = false;
+                btn.style.opacity = '1';
+                btn.style.cursor = 'pointer';
+            });
+
+            // 種類に応じて無効化処理
+            if (cardType === 'point') {
+                // ポイントカードのみの場合、デポジット機能を無効化
+                btnCharge.disabled = true; btnCharge.style.opacity = '0.4'; btnCharge.style.cursor = 'not-allowed';
+                btnRefund.disabled = true; btnRefund.style.opacity = '0.4'; btnRefund.style.cursor = 'not-allowed';
+            } else if (cardType === 'deposit') {
+                // デポジットカードのみの場合、ポイント機能を無効化
+                btnPointAdd.disabled = true; btnPointAdd.style.opacity = '0.4'; btnPointAdd.style.cursor = 'not-allowed';
+                btnPointUse.disabled = true; btnPointUse.style.opacity = '0.4'; btnPointUse.style.cursor = 'not-allowed';
+            }
+        }
+
+        function showHistory() {
+            if (!activeCardData) return;
+            document.getElementById('cardDetailPanel').style.display = 'none';
+            document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+
+            document.getElementById('historyTab').style.display = 'block';
+
+            document.getElementById('historyDateFilter').value = ''; // フィルタをリセット
+            renderHistoryList();
+        }
+
+        function closeHistory() {
+            document.getElementById('historyTab').style.display = 'none';
+            // 詳細パネルに戻る（現在アクティブなタブ画面を表示したまま、パネルだけ復活させる）
+            document.getElementById('cardDetailPanel').style.display = 'block';
+        }
+
+        function renderHistoryList() {
+            if (!activeCardData) return;
+            const filterDate = document.getElementById('historyDateFilter').value;
+            const histContainer = document.getElementById('historyContainerTab');
+
+            let filteredHistory = activeCardData.history;
+
+            if (filterDate) {
+                const filterObj = new Date(filterDate);
+                filteredHistory = activeCardData.history.filter(h => {
+                    const hDate = new Date(h.date);
+                    return hDate.getFullYear() === filterObj.getFullYear() &&
+                        hDate.getMonth() === filterObj.getMonth() &&
+                        hDate.getDate() === filterObj.getDate();
+                });
+            }
+
+            if (filteredHistory.length === 0) {
+                histContainer.innerHTML = '<div style="padding: 10px; font-weight: 800; font-size: 0.9rem;">該当する履歴がありません。</div>';
+                return;
+            }
+
+            histContainer.innerHTML = filteredHistory.map(h => `
+            <div class="history-item">
+                <span>${h.date} [${h.type}]</span>
+                <span>${h.detail}</span>
+            </div>
+            `).join('');
+        }
+
+        // --- 残高チャージ / 払い戻し ---
+        function handleTransaction(actionType) {
+            if (!activeCardData) return;
+            if (activeCardData.status !== 'active') return alert('このカードは停止中です');
+
+            const actionName = actionType === 'charge' ? 'チャージ' :
+                actionType === 'refund' ? '払い戻し' :
+                    actionType === 'point' ? 'ポイント付与' : 'ポイント使用';
+            const unit = (actionType === 'point' || actionType === 'use_point') ? 'pt' : '円';
+
+            const inputStr = prompt(`${actionName}する数値を入力してください（${unit}）:`);
+            if (inputStr === null || inputStr.trim() === "") return;
+
+            const amount = parseInt(inputStr, 10);
+            if (isNaN(amount) || amount <= 0) return alert('正しい数値を入力してください');
+
+            if (actionType === 'refund' && activeCardData.balance < amount) {
+                return alert('残高を超えた払い戻しはできません');
+            }
+            if (actionType === 'use_point' && (activeCardData.point || 0) < amount) {
+                return alert('ポイント残高が不足しています');
+            }
+
+            if (actionType === 'charge') {
+                activeCardData.balance += amount;
+                activeCardData.history.unshift({ date: new Date().toLocaleString(), type: 'チャージ', detail: `+¥${amount.toLocaleString()}` });
+            } else if (actionType === 'refund') {
+                activeCardData.balance -= amount;
+                activeCardData.history.unshift({ date: new Date().toLocaleString(), type: '払い戻し', detail: `-¥${amount.toLocaleString()}` });
+            } else if (actionType === 'point') {
+                activeCardData.point = (activeCardData.point || 0) + amount;
+                activeCardData.history.unshift({ date: new Date().toLocaleString(), type: 'ポイント付与', detail: `+${amount.toLocaleString()}pt` });
+            } else if (actionType === 'use_point') {
+                activeCardData.point = (activeCardData.point || 0) - amount;
+                activeCardData.history.unshift({ date: new Date().toLocaleString(), type: 'ポイント使用', detail: `-${amount.toLocaleString()}pt` });
+            }
+
+            updateActiveCardInStorage();
+            renderCardDetail();
+        }
+
+        // 新規追加: 変更があったら自動保存する
+        function autoSaveCustomerEdit() {
+            if (!activeCardData) return;
+            const newName = document.getElementById('detailNameInput').value.trim();
+            const newTel = document.getElementById('detailTel').value.trim();
+            const newType = document.getElementById('detailType').value;
+
+            let changed = false;
+            let detailMsg = [];
+
+            if (activeCardData.name !== newName) { detailMsg.push('名前'); activeCardData.name = newName; changed = true; }
+            if (activeCardData.tel !== newTel) { detailMsg.push('電話番号'); activeCardData.tel = newTel; changed = true; }
+            if (activeCardData.type !== newType) { detailMsg.push('カード種類'); activeCardData.type = newType; changed = true; }
+
+            if (changed) {
+                activeCardData.history.unshift({ date: new Date().toLocaleString(), type: '情報変更', detail: detailMsg.join('・') + 'を更新' });
+                updateActiveCardInStorage();
+                renderCardDetail(); // 履歴を更新するため再描画
+            }
+        }
+
+        // 既存の reissueCard() を上書き（印刷プレビューを開くように変更）
+        function reissueCard() {
+            if (!activeCardData || !confirm('新しい会員番号を発行して旧カードを無効化しますか？')) return;
+
+            const newId = 'RC' + Math.floor(10000000 + Math.random() * 90000000);
+            const oldId = activeCardData.id;
+            activeCardData.id = newId;
+            activeCardData.history.unshift({ date: new Date().toLocaleString(), type: '再発行', detail: `旧No: ${oldId} から変更` });
+
+            const cards = JSON.parse(localStorage.getItem('rapireji_qrcards') || '[]');
+            const idx = cards.findIndex(c => c.id === oldId);
+            if (idx !== -1) {
+                cards[idx] = activeCardData;
+                localStorage.setItem('rapireji_qrcards', JSON.stringify(cards));
+            }
+
+            alert(`新しい会員番号 [ ${newId} ] で再発行しました。プレビュー画面を表示します。`);
+
+            // 処理後にプレビュー表示関数へ流す
+            reprintCard();
+        }
+
+        // 新規追加: カード削除機能
+        function deleteCard() {
+            if (!activeCardData) return;
+            if (!confirm('本当にこのカードデータを削除しますか？\n※この操作は取り消せません。')) return;
+
+            let cards = JSON.parse(localStorage.getItem('rapireji_qrcards') || '[]');
+            cards = cards.filter(c => c.id !== activeCardData.id);
+            localStorage.setItem('rapireji_qrcards', JSON.stringify(cards));
+
+            alert('カードデータを削除しました。');
+            activeCardData = null;
+            document.getElementById('cardDetailPanel').style.display = 'none';
+        }
+
+        function toggleCardStatus() {
+            if (!activeCardData) return;
+            activeCardData.status = activeCardData.status === 'active' ? 'suspended' : 'active';
+            activeCardData.history.unshift({
+                date: new Date().toLocaleString(),
+                type: '状態変更',
+                detail: activeCardData.status === 'active' ? 'カード再開' : 'カード一時停止'
+            });
+            updateActiveCardInStorage();
+            renderCardDetail();
+        }
+
+        function reissueCard() {
+            if (!activeCardData || !confirm('新しい会員番号を発行して旧カードを無効化しますか？')) return;
+
+            const newId = 'RC' + Math.floor(10000000 + Math.random() * 90000000);
+            const oldId = activeCardData.id;
+            activeCardData.id = newId;
+            activeCardData.history.unshift({ date: new Date().toLocaleString(), type: '再発行', detail: `旧No: ${oldId} から変更` });
+
+            // 旧データをID更新して差し替え保存
+            const cards = JSON.parse(localStorage.getItem('rapireji_qrcards') || '[]');
+            const idx = cards.findIndex(c => c.id === oldId);
+            if (idx !== -1) cards[idx] = activeCardData;
+            localStorage.setItem('rapireji_qrcards', JSON.stringify(cards));
+
+            alert(`新しい会員番号 [ ${newId} ] で再発行しました。`);
+            renderCardDetail();
+        }
+
+        // 変更点：今のカードを再発行（印刷プレビュー表示）する関数を追加
+        function reprintCard() {
+            if (!activeCardData) return;
+
+            const profile = JSON.parse(localStorage.getItem('rapireji_profile') || '{}');
+            const shopName = profile.companyName || 'らぴレジ 加盟店';
+
+            document.getElementById('cardShopName').innerText = shopName;
+            document.getElementById('cardUserName').innerText = activeCardData.name;
+            document.getElementById('cardUserNo').innerText = activeCardData.id;
+
+            document.getElementById('qrcode').innerHTML = '';
+            new QRCode(document.getElementById('qrcode'), { text: activeCardData.id, width: 80, height: 80 });
+
+            // 新規登録タブ（プレビュー画面がある場所）へ移動して表示
+            document.getElementById('cardPreviewArea').style.display = 'block';
+
+            alert('カードの印刷プレビューを表示します。');
+            switchTab('registerTab');
+        }
+
+        function updateActiveCardInStorage() {
+            const cards = JSON.parse(localStorage.getItem('rapireji_qrcards') || '[]');
+            const idx = cards.findIndex(c => c.id === activeCardData.id);
+            if (idx !== -1) {
+                cards[idx] = activeCardData;
+                localStorage.setItem('rapireji_qrcards', JSON.stringify(cards));
+            }
+        }
+
+        // --- データ参照 (検索) ---
+        function searchCards() {
+            const query = document.getElementById('searchQuery').value.trim().toLowerCase();
+            const resultsEl = document.getElementById('searchResults');
+            if (!query) { resultsEl.innerHTML = ''; return; }
+
+            const cards = JSON.parse(localStorage.getItem('rapireji_qrcards') || '[]');
+            const matched = cards.filter(c => c.name.toLowerCase().includes(query) || c.tel.includes(query) || c.id.toLowerCase().includes(query));
+
+            if (matched.length === 0) {
+                resultsEl.innerHTML = '<p style="font-size:0.85rem; font-weight:800; color:#666;">該当する会員が見つかりません</p>';
+                return;
+            }
+
+            resultsEl.innerHTML = matched.map(c => `
+            <div style="border: 2px solid #000; padding: 10px; margin-bottom: 8px; cursor: pointer; background: #fff;" onclick="selectSearchResult('${c.id}')">
+                <div style="font-weight:900;">${c.name} 様 (${c.status === 'active' ? '有効' : '停止中'})</div>
+                <div style="font-size:0.8rem; font-weight:800;">No: ${c.id} | TEL: ${c.tel}</div>
+                <div style="font-size:0.8rem; font-weight:800;">残高: ¥${c.balance.toLocaleString()} / pt: ${c.point.toLocaleString()}</div>
+            </div>
+        `).join('');
+        }
+
+        function selectSearchResult(cardId) {
+            // 検索タブを非表示にし、検索入力をリセットする
+            document.getElementById('searchTab').style.display = 'none';
+            document.getElementById('searchQuery').value = '';
+            document.getElementById('searchResults').innerHTML = '';
+
+            loadCardById(cardId);
+        }
+    </script>
+</body>
+
+</html>
