@@ -620,6 +620,13 @@
                     <span class="slider"></span>
                 </label>
             </div>
+            <div class="sound-setting-item">
+                <label style="margin-bottom: 0;">QRカード操作ボタンの表示</label>
+                <label class="switch">
+                    <input type="checkbox" id="qrButtonEnabled" onchange="autoSaveQrButtonSetting()">
+                    <span class="slider"></span>
+                </label>
+            </div>
         </div>
 
         <div class="settings-card">
@@ -634,6 +641,7 @@
                 <label class="data-option"><input type="checkbox" value="payments" checked> 決済手段</label>
                 <label class="data-option"><input type="checkbox" value="discounts" checked> 割引情報</label>
                 <label class="data-option"><input type="checkbox" value="stock" checked> 在庫情報</label>
+                <label class="data-option"><input type="checkbox" value="members" checked> QRカード・会員情報</label>
             </div>
 
             <label>データの書き出し</label>
@@ -708,7 +716,8 @@
             products: ['rapireji_products', 'rapireji_categories'],
             history: ['rapireji_history'],
             stock: ['rapireji_stock_config'],
-            self: ['rapireji_self_config']
+            self: ['rapireji_self_config'],
+            members: ['rapireji_qrcards'],
         };
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -768,6 +777,8 @@
             const sounds = JSON.parse(localStorage.getItem('rapireji_sounds') || '{"btn": true, "pay": true, "scan": true, "error": true, "call": true}');
             const previewSetting = JSON.parse(localStorage.getItem('rapireji_preview_config') || '{"show": true}');
             const scannerSetting = JSON.parse(localStorage.getItem('rapireji_scanner_config') || '{"enabled": true}');
+            const qrButtonSetting = JSON.parse(localStorage.getItem('rapireji_qr_button_config') || '{"enabled": false}');
+            const qrBtnCheckbox = document.getElementById('qrButtonEnabled');
             document.getElementById('soundBtnEnabled').checked = sounds.btn;
             document.getElementById('soundPayEnabled').checked = sounds.pay;
             document.getElementById('soundScanEnabled').checked = sounds.scan;
@@ -775,6 +786,10 @@
             document.getElementById('soundCallEnabled').checked = sounds.call;
             document.getElementById('scannerEnabled').checked = scannerSetting.enabled;
             document.getElementById('receiptPreviewEnabled').checked = previewSetting.show;
+
+            if (qrBtnCheckbox) {
+                qrBtnCheckbox.checked = qrButtonSetting.enabled;
+            }
 
             // セルフレジ設定の読み込み
             const selfConfig = JSON.parse(localStorage.getItem('rapireji_self_config') || '{"enabled": false, "pass": ""}');
@@ -794,10 +809,13 @@
                 const backupData = { _rapireji_version: "2.0", _exported_at: new Date().toISOString() };
 
                 selectedTypes.forEach(type => {
-                    STORAGE_KEYS[type].forEach(key => {
-                        const val = localStorage.getItem(key);
-                        if (val) backupData[key] = val;
-                    });
+                    // STORAGE_KEYS に該当のキー群が存在するかチェックして安全に取得
+                    if (STORAGE_KEYS[type] && Array.isArray(STORAGE_KEYS[type])) {
+                        STORAGE_KEYS[type].forEach(key => {
+                            const val = localStorage.getItem(key);
+                            if (val) backupData[key] = val;
+                        });
+                    }
                 });
 
                 const blob = new Blob([JSON.stringify(backupData)], { type: 'application/json' });
@@ -809,7 +827,7 @@
                 URL.revokeObjectURL(url);
             };
 
-            // インポート処理
+            // インポート処理（※handleFile側で backupData[key] を正しく localStorage に復元する処理になっているはずです）
             dropZone.onclick = () => fileInput.click();
             dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('dragover'); };
             dropZone.ondragleave = () => dropZone.classList.remove('dragover');
@@ -992,6 +1010,15 @@
             updateStorageIndicator();
         }
 
+        // 自動保存関数
+        function autoSaveQrButtonSetting() {
+            const data = {
+                enabled: document.getElementById('qrButtonEnabled').checked
+            };
+            localStorage.setItem('rapireji_qr_button_config', JSON.stringify(data));
+            updateStorageIndicator();
+        }
+
         function autoSaveSelfConfig() {
             const modeToggle = document.getElementById('selfCheckoutMode');
             const passInput = document.getElementById('selfCheckoutPass');
@@ -1021,7 +1048,7 @@
                 const skipIds = [
                     'soundBtnEnabled', 'soundPayEnabled', 'soundScanEnabled',
                     'soundErrorEnabled', 'soundCallEnabled', 'receiptPreviewEnabled',
-                    'scannerEnabled', 'selfCheckoutMode' // scannerEnabledを追加
+                    'scannerEnabled', 'selfCheckoutMode', 'qrButtonEnabled'
                 ];
 
                 if (skipIds.includes(e.target.id)) return;
