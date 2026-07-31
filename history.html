@@ -1,111 +1,321 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>販売履歴 | らぴレジ</title>
     <style>
         :root {
-            --black: #000000; --white: #ffffff; --gray-bg: #f8f9fa;
-            --gray-light: #e9ecef; --accent: #00ff00; --header-h: 60px;
+            --black: #000000;
+            --white: #ffffff;
+            --gray-bg: #f8f9fa;
+            --gray-light: #e9ecef;
+            --accent: #00ff00;
+            --header-h: 60px;
         }
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; touch-action: manipulation; }
-        
-        body { background-color: var(--white); color: var(--black); min-height: 100vh; display: flex; flex-direction: column; }
-        
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: sans-serif;
+            touch-action: manipulation;
+        }
+
+        body {
+            background-color: var(--white);
+            color: var(--black);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
         header {
-            height: calc(var(--header-h) + env(safe-area-inset-top)); 
+            height: calc(var(--header-h) + env(safe-area-inset-top));
             border-bottom: 3px solid var(--black);
-            display: flex; 
-            align-items: center; 
-            padding: env(safe-area-inset-top) 20px 0 20px; 
+            display: flex;
+            align-items: center;
+            padding: env(safe-area-inset-top) 20px 0 20px;
             background: var(--white);
-            position: sticky; 
-            top: 0; 
+            position: sticky;
+            top: 0;
             z-index: 1100;
             justify-content: space-between;
         }
 
-        .header-left { display: flex; align-items: center; }
-        header h1 { font-size: 1.5rem; font-weight: 900; margin-left: 20px; white-space: nowrap; }
+        .header-left {
+            display: flex;
+            align-items: center;
+        }
+
+        header h1 {
+            font-size: 1.5rem;
+            font-weight: 900;
+            margin-left: 20px;
+            white-space: nowrap;
+        }
 
         .header-ad-space {
-            flex: 1; margin-left: 20px; height: 50px; background: #fff;
-            display: flex; align-items: center; justify-content: center;
-            border: 1px dashed #ccc; overflow: hidden;
+            flex: 1;
+            margin-left: 20px;
+            height: 50px;
+            background: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px dashed #ccc;
+            overflow: hidden;
         }
-        
-        .menu-trigger { width: 30px; height: 22px; cursor: pointer; position: relative; }
-        .menu-trigger span { display: block; width: 100%; height: 4px; background: var(--black); position: absolute; left: 0; transition: all 0.3s; }
-        .menu-trigger span:nth-child(1) { top: 0; }
-        .menu-trigger span:nth-child(2) { top: 9px; }
-        .menu-trigger span:nth-child(3) { top: 18px; }
-        .menu-trigger.open span:nth-child(1) { transform: translateY(9px) rotate(45deg); }
-        .menu-trigger.open span:nth-child(2) { opacity: 0; }
-        .menu-trigger.open span:nth-child(3) { transform: translateY(-9px) rotate(-45deg); }
-        .menu-link.active { background-color: transparent; color: var(--black); font-weight: 900; font-size: 1.1rem; border-left: 8px solid var(--black); padding-left: 7px; }
 
-        .side-nav { 
-            position: fixed; 
-            top: var(--header-h); 
-            left: 0; 
-            width: 250px; 
-            height: calc(100% - var(--header-h)); 
-            padding-bottom: env(safe-area-inset-bottom); 
-            background: var(--white); 
-            border-right: 3px solid var(--black); 
-            z-index: 1050; 
-            transition: transform 0.3s; 
+        .menu-trigger {
+            width: 30px;
+            height: 22px;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .menu-trigger span {
+            display: block;
+            width: 100%;
+            height: 4px;
+            background: var(--black);
+            position: absolute;
+            left: 0;
+            transition: all 0.3s;
+        }
+
+        .menu-trigger span:nth-child(1) {
+            top: 0;
+        }
+
+        .menu-trigger span:nth-child(2) {
+            top: 9px;
+        }
+
+        .menu-trigger span:nth-child(3) {
+            top: 18px;
+        }
+
+        .menu-trigger.open span:nth-child(1) {
+            transform: translateY(9px) rotate(45deg);
+        }
+
+        .menu-trigger.open span:nth-child(2) {
+            opacity: 0;
+        }
+
+        .menu-trigger.open span:nth-child(3) {
+            transform: translateY(-9px) rotate(-45deg);
+        }
+
+        .menu-link.active {
+            background-color: transparent;
+            color: var(--black);
+            font-weight: 900;
+            font-size: 1.1rem;
+            border-left: 8px solid var(--black);
+            padding-left: 7px;
+        }
+
+        .side-nav {
+            position: fixed;
+            top: var(--header-h);
+            left: 0;
+            width: 250px;
+            height: calc(100% - var(--header-h));
+            padding-bottom: env(safe-area-inset-bottom);
+            background: var(--white);
+            border-right: 3px solid var(--black);
+            z-index: 1050;
+            transition: transform 0.3s;
             padding-left: 20px;
             padding-right: 20px;
             padding-top: 20px;
         }
-        .side-nav.hidden { transform: translateX(-100%); }
-        .menu-link { display: block; padding: 15px; color: var(--black); font-weight: 800; text-decoration: none; border-bottom: 1px solid var(--gray-light); }
 
-        .main-content { padding: 20px; max-width: 900px; margin: 0 auto; width: 100%; }
-        .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 25px; }
-        .summary-card { background: var(--white); border: 4px solid var(--black); padding: 12px; box-shadow: 5px 5px 0 var(--black); }
-        .summary-label { font-size: 0.7rem; font-weight: 900; margin-bottom: 5px; }
-        .summary-value { font-size: 1.1rem; font-weight: 900; word-break: break-all; }
-
-        .filter-section { border: 4px solid var(--black); padding: 20px; margin-bottom: 30px; background: var(--gray-bg); box-shadow: 5px 5px 0 var(--black); }
-        .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
-        .filter-group { width: 100%; }
-        label { display: block; font-weight: 900; margin-bottom: 5px; font-size: 0.85rem; }
-        input { width: 100%; padding: 10px; border: 3px solid var(--black); font-weight: 800; border-radius: 0; font-size: 0.85rem; -webkit-appearance: none; }
-        
-        .btn-row { margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap; }
-        button { background: var(--black); color: var(--white); padding: 12px 20px; border: 3px solid var(--black); font-weight: 900; cursor: pointer; border-radius: 0; }
-        button:active { transform: translate(2px, 2px); }
-        .btn-outline { background: var(--white); color: var(--black); }
-        /* 再発行ボタン用のグレー（お好みの濃さに調整してください） */
-        .btn-gray { 
-            background: #666666 !important; 
-            border-color: #666666 !important; 
+        .side-nav.hidden {
+            transform: translateX(-100%);
         }
 
-        .history-item { border: 3px solid var(--black); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; cursor: pointer; font-weight: 900; background: #fff; }
-        .history-item.voided { background: #eee; border-color: #999; color: #999; text-decoration: line-through; }
-        .status-badge { font-size: 0.65rem; padding: 2px 6px; border: 2px solid var(--black); margin-left: 8px; font-weight: 900; }
+        .menu-link {
+            display: block;
+            padding: 15px;
+            color: var(--black);
+            font-weight: 800;
+            text-decoration: none;
+            border-bottom: 1px solid var(--gray-light);
+        }
 
-        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.98); display: flex; align-items: center; justify-content: center; z-index: 2000; }
-        .modal-content { background: #fff; padding: 30px; border: 6px solid #000; width: 95%; max-width: 500px; max-height: 90vh; overflow-y: auto; box-shadow: 10px 10px 0px var(--black); }
-        .modal.hidden { display: none !important; }
+        .main-content {
+            padding: 20px;
+            max-width: 900px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 25px;
+        }
+
+        .summary-card {
+            background: var(--white);
+            border: 4px solid var(--black);
+            padding: 12px;
+            box-shadow: 5px 5px 0 var(--black);
+        }
+
+        .summary-label {
+            font-size: 0.7rem;
+            font-weight: 900;
+            margin-bottom: 5px;
+        }
+
+        .summary-value {
+            font-size: 1.1rem;
+            font-weight: 900;
+            word-break: break-all;
+        }
+
+        .filter-section {
+            border: 4px solid var(--black);
+            padding: 20px;
+            margin-bottom: 30px;
+            background: var(--gray-bg);
+            box-shadow: 5px 5px 0 var(--black);
+        }
+
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .filter-group {
+            width: 100%;
+        }
+
+        label {
+            display: block;
+            font-weight: 900;
+            margin-bottom: 5px;
+            font-size: 0.85rem;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 3px solid var(--black);
+            font-weight: 800;
+            border-radius: 0;
+            font-size: 0.85rem;
+            -webkit-appearance: none;
+        }
+
+        .btn-row {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background: var(--black);
+            color: var(--white);
+            padding: 12px 20px;
+            border: 3px solid var(--black);
+            font-weight: 900;
+            cursor: pointer;
+            border-radius: 0;
+        }
+
+        button:active {
+            transform: translate(2px, 2px);
+        }
+
+        .btn-outline {
+            background: var(--white);
+            color: var(--black);
+        }
+
+        /* 再発行ボタン用のグレー（お好みの濃さに調整してください） */
+        .btn-gray {
+            background: #666666 !important;
+            border-color: #666666 !important;
+        }
+
+        .history-item {
+            border: 3px solid var(--black);
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            cursor: pointer;
+            font-weight: 900;
+            background: #fff;
+        }
+
+        .history-item.voided {
+            background: #eee;
+            border-color: #999;
+            color: #999;
+            text-decoration: line-through;
+        }
+
+        .status-badge {
+            font-size: 0.65rem;
+            padding: 2px 6px;
+            border: 2px solid var(--black);
+            margin-left: 8px;
+            font-weight: 900;
+        }
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.98);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+
+        .modal-content {
+            background: #fff;
+            padding: 30px;
+            border: 6px solid #000;
+            width: 95%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 10px 10px 0px var(--black);
+        }
+
+        .modal.hidden {
+            display: none !important;
+        }
 
         /* 修正版：長いテキストでもレイアウトを維持する設定 */
         .receipt-area {
             background: #fff;
             border: 1px dashed #000;
             padding: 15px;
-            font-family: 'Consolas', 'Monaco', 'Courier New', monospace; 
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
             white-space: pre-wrap;
             font-size: 0.85rem;
             line-height: 1.2;
             margin-bottom: 15px;
             color: #000;
             /* 修正ポイント：単語の途中でも枠の端で改行させ、 tabular-nums で数字の幅を固定 */
-            word-break: break-all; 
+            word-break: break-all;
             overflow-wrap: break-word;
             font-variant-numeric: tabular-nums;
             letter-spacing: 0;
@@ -113,917 +323,1062 @@
         }
 
         @media screen and (max-width: 768px) {
-            header { padding: 0 10px; }
-            header h1 { font-size: 0.9rem; margin-left: 10px; flex-shrink: 0; }
-            .header-ad-space { display: flex !important; flex: 1; margin-left: 10px; height: 35px; min-width: 80px; border: 1px solid #ddd; font-size: 8px; }
+            header {
+                padding: 0 10px;
+            }
+
+            header h1 {
+                font-size: 0.9rem;
+                margin-left: 10px;
+                flex-shrink: 0;
+            }
+
+            .header-ad-space {
+                display: flex !important;
+                flex: 1;
+                margin-left: 10px;
+                height: 35px;
+                min-width: 80px;
+                border: 1px solid #ddd;
+                font-size: 8px;
+            }
         }
 
         @media print {
-            @page { size: auto; margin: 0; }
-            body { display: block !important; overflow: visible !important; position: static !important; }
-            .modal { position: absolute !important; left: 0 !important; top: 0 !important; background: transparent !important; display: block !important; }
-            .modal-content { box-shadow: none !important; border: none !important; margin: 0 !important; padding: 0 !important; width: 100% !important; max-width: none !important; }
-    
-            /* プレビュー以外を隠す */
-            body > *:not(.modal) { display: none !important; }
-            .modal-content > *:not(#receipt-text) { display: none !important; }
+            @page {
+                size: auto;
+                margin: 0;
+            }
 
-            #receipt-text { 
-                visibility: visible !important; 
-                display: block !important; 
+            body {
+                display: block !important;
+                overflow: visible !important;
+                position: static !important;
+            }
+
+            .modal {
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                background: transparent !important;
+                display: block !important;
+            }
+
+            .modal-content {
+                box-shadow: none !important;
+                border: none !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                width: 100% !important;
+                max-width: none !important;
+            }
+
+            /* プレビュー以外を隠す */
+            body>*:not(.modal) {
+                display: none !important;
+            }
+
+            .modal-content>*:not(#receipt-text) {
+                display: none !important;
+            }
+
+            #receipt-text {
+                visibility: visible !important;
+                display: block !important;
                 position: absolute;
                 left: 0;
                 top: 0;
-                width: 54mm; /* レシート幅に固定 */
-                padding: 4mm; /* 端の文字欠け防止 */
+                width: 54mm;
+                /* レシート幅に固定 */
+                padding: 4mm;
+                /* 端の文字欠け防止 */
                 border: none !important;
                 background: white !important;
-                font-size: 9pt; /* 読みやすいサイズ */
+                font-size: 9pt;
+                /* 読みやすいサイズ */
             }
         }
     </style>
 </head>
+
 <body>
 
-<header>
-    <div class="header-left">
-        <div class="menu-trigger" id="menu-btn"><span></span><span></span><span></span></div>
-        <h1>販売履歴</h1>
-    </div>
-    <div class="header-ad-space" id="ad-top">
-        <span style="color:#ccc; font-size: 8px; font-weight: 900;">AD</span>
-    </div>
-</header>
-
-<nav class="side-nav hidden" id="side-menu">
-    <a href="register.html" class="menu-link">レジ操作</a>
-    <a href="product.html" class="menu-link">商品管理</a>
-    <a href="stock.html" class="menu-link">在庫管理</a>
-    <a href="history.html" class="menu-link">販売履歴</a>
-    <a href="return.html" class="menu-link">払い戻し</a>
-    <a href="discount.html" class="menu-link">自動割引</a>
-    <a href="settings.html" class="menu-link">設定</a>
-    <a href="qrcard.html" class="menu-link">QRカード</a>
-    <a href="extend.html" class="menu-link">拡張アプリ</a>
-</nav>
-
-<main class="main-content">
-    <div class="summary-grid">
-        <div class="summary-card"><div class="summary-label">小計累計</div><div class="summary-value" id="sum-subtotal">¥0</div></div>
-        <div class="summary-card"><div class="summary-label">割引累計</div><div class="summary-value" id="sum-discount">¥0</div></div>
-        <div class="summary-card"><div class="summary-label">最終合計</div><div class="summary-value" id="sum-total">¥0</div></div>
-    </div>
-
-    <section class="filter-section">
-        <div class="filter-grid">
-            <div class="filter-group"><label>開始日時</label><input type="datetime-local" id="filter-start"></div>
-            <div class="filter-group"><label>終了日時</label><input type="datetime-local" id="filter-end"></div>
+    <header>
+        <div class="header-left">
+            <div class="menu-trigger" id="menu-btn"><span></span><span></span><span></span></div>
+            <h1>販売履歴</h1>
         </div>
-        <div class="btn-row">
-            <button id="btn-search">絞り込み表示</button>
-            <button class="btn-outline" id="btn-csv-export">取引明細CSV</button>
-            <button class="btn-outline" id="btn-csv-items">商品別CSV</button>
-            <button class="btn-outline" id="btn-csv-time">時間別分析CSV</button>
-            <button class="btn-outline" id="btn-csv-payment">決済方法別CSV</button>
+        <div class="header-ad-space" id="ad-top">
+            <span style="color:#ccc; font-size: 8px; font-weight: 900;">AD</span>
         </div>
-    </section>
+    </header>
 
-    <div id="history-container"></div>
-</main>
+    <nav class="side-nav hidden" id="side-menu">
+        <a href="register.html" class="menu-link">レジ操作</a>
+        <a href="product.html" class="menu-link">商品管理</a>
+        <a href="stock.html" class="menu-link">在庫管理</a>
+        <a href="history.html" class="menu-link">販売履歴</a>
+        <a href="return.html" class="menu-link">払い戻し</a>
+        <a href="discount.html" class="menu-link">自動割引</a>
+        <a href="settings.html" class="menu-link">設定</a>
+        <a href="qrcard.html" class="menu-link">QRカード</a>
+        <a href="extend.html" class="menu-link">拡張アプリ</a>
+    </nav>
 
-<div id="detailModal" class="modal hidden">
-    <div class="modal-content">
-        <div class="detail-status-bar" id="detail-status-header" style="display:flex; margin-bottom:15px;"></div>
-        <h2 style="font-weight: 900; margin-bottom: 10px; border-left: 10px solid #000; padding-left: 10px;">販売詳細</h2>
-        <div id="detail-info"></div>
-        <div id="receipt-text" class="receipt-area"></div>
-        <button class="btn-gray" style="width:100%; margin-bottom:10px; display:none;" id="btn-reissue-return">払い戻し伝票発行</button>
-        <button class="btn-gray" style="width:100%; margin-bottom:10px;" id="btn-reissue-receipt">レシート発行</button>
-        <button class="btn-gray" style="width:100%; margin-bottom:10px;" id="btn-reissue-bill">領収書発行</button>
-        <button id="btn-void-action" class="btn-outline" style="width:100%; color:red; border-color:red;">この取引を取り消す</button>
-        <button id="btn-close-modal" class="btn-outline" style="width:100%; margin-top:20px; border:none; text-decoration: underline;">閉じる</button>
+    <main class="main-content">
+        <div class="summary-grid">
+            <div class="summary-card">
+                <div class="summary-label">小計累計</div>
+                <div class="summary-value" id="sum-subtotal">¥0</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-label">割引累計</div>
+                <div class="summary-value" id="sum-discount">¥0</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-label">最終合計</div>
+                <div class="summary-value" id="sum-total">¥0</div>
+            </div>
+        </div>
+
+        <section class="filter-section">
+            <div class="filter-grid">
+                <div class="filter-group"><label>開始日時</label><input type="datetime-local" id="filter-start"></div>
+                <div class="filter-group"><label>終了日時</label><input type="datetime-local" id="filter-end"></div>
+            </div>
+            <div class="btn-row">
+                <button id="btn-search">絞り込み表示</button>
+                <button class="btn-outline" id="btn-csv-export">取引明細CSV</button>
+                <button class="btn-outline" id="btn-csv-items">商品別CSV</button>
+                <button class="btn-outline" id="btn-csv-demographics">年齢性別-商品別CSV</button>
+                <button class="btn-outline" id="btn-csv-time">時間別分析CSV</button>
+                <button class="btn-outline" id="btn-csv-payment">決済方法別CSV</button>
+            </div>
+        </section>
+
+        <div id="history-container"></div>
+    </main>
+
+    <div id="detailModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="detail-status-bar" id="detail-status-header" style="display:flex; margin-bottom:15px;"></div>
+            <h2 style="font-weight: 900; margin-bottom: 10px; border-left: 10px solid #000; padding-left: 10px;">販売詳細
+            </h2>
+            <div id="detail-info"></div>
+            <div id="receipt-text" class="receipt-area"></div>
+            <button class="btn-gray" style="width:100%; margin-bottom:10px; display:none;"
+                id="btn-reissue-return">払い戻し伝票発行</button>
+            <button class="btn-gray" style="width:100%; margin-bottom:10px;" id="btn-reissue-receipt">レシート発行</button>
+            <button class="btn-gray" style="width:100%; margin-bottom:10px;" id="btn-reissue-bill">領収書発行</button>
+            <button id="btn-void-action" class="btn-outline"
+                style="width:100%; color:red; border-color:red;">この取引を取り消す</button>
+            <button id="btn-close-modal" class="btn-outline"
+                style="width:100%; margin-top:20px; border:none; text-decoration: underline;">閉じる</button>
+        </div>
     </div>
-</div>
 
-<script type="module">
-    const STORAGE_KEYS = {
-        HISTORY: 'rapireji_history',
-        PROFILE: 'rapireji_profile',
-        PRODUCTS: 'rapireji_products'
-    };
+    <script type="module">
+        const STORAGE_KEYS = {
+            HISTORY: 'rapireji_history',
+            PROFILE: 'rapireji_profile',
+            PRODUCTS: 'rapireji_products'
+        };
 
-    let historyData = [];
-    let filteredData = [];
-    let selectedItem = null;
-    let shopInfo = { companyName: "", address: "", tel: "", memo: "", receiptType: "商品代" };
+        let historyData = [];
+        let filteredData = [];
+        let selectedItem = null;
+        let shopInfo = { companyName: "", address: "", tel: "", memo: "", receiptType: "商品代" };
 
-    document.addEventListener('DOMContentLoaded', () => {
-        loadShopInfo();
-        loadHistory();
-        initLongPress();
-    });
+        document.addEventListener('DOMContentLoaded', () => {
+            loadShopInfo();
+            loadHistory();
+            initLongPress();
+        });
 
-    function loadShopInfo() {
-        const stored = localStorage.getItem(STORAGE_KEYS.PROFILE);
-        if (stored) shopInfo = { ...shopInfo, ...JSON.parse(stored) };
-    }
+        function loadShopInfo() {
+            const stored = localStorage.getItem(STORAGE_KEYS.PROFILE);
+            if (stored) shopInfo = { ...shopInfo, ...JSON.parse(stored) };
+        }
 
-    function loadHistory() {
-        const rawData = localStorage.getItem(STORAGE_KEYS.HISTORY);
-        historyData = rawData ? JSON.parse(rawData) : [];
+        function loadHistory() {
+            const rawData = localStorage.getItem(STORAGE_KEYS.HISTORY);
+            historyData = rawData ? JSON.parse(rawData) : [];
 
-        const startVal = document.getElementById('filter-start').value;
-        const endVal = document.getElementById('filter-end').value;
-    
+            const startVal = document.getElementById('filter-start').value;
+            const endVal = document.getElementById('filter-end').value;
+
             let displayData = [...historyData].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-        if (startVal) {
-            const start = new Date(startVal).getTime();
-            displayData = displayData.filter(h => new Date(h.createdAt).getTime() >= start);
-        }
-        if (endVal) {
-            const end = new Date(endVal).getTime();
-            displayData = displayData.filter(h => new Date(h.createdAt).getTime() <= end);
-        }
-
-        filteredData = displayData; // ★ここを追加：絞り込み結果を保持
-        renderHistory(displayData);
-    }
-
-    function renderHistory(data) {
-        const container = document.getElementById('history-container');
-        container.innerHTML = ""; 
-        let totalSub = 0, totalDisc = 0, totalFinal = 0;
-
-        data.forEach(h => {
-            const isVoided = h.isVoided || false;
-            if (!isVoided) {
-                totalSub += h.subtotal || 0;
-                totalDisc += h.discount || 0;
-                totalFinal += h.totalAmount || 0;
+            if (startVal) {
+                const start = new Date(startVal).getTime();
+                displayData = displayData.filter(h => new Date(h.createdAt).getTime() >= start);
             }
-            const date = new Date(h.createdAt).toLocaleString();
-            
-            const div = document.createElement('div');
-            div.className = `history-item ${isVoided ? 'voided' : ''}`;
-            div.innerHTML = `
+            if (endVal) {
+                const end = new Date(endVal).getTime();
+                displayData = displayData.filter(h => new Date(h.createdAt).getTime() <= end);
+            }
+
+            filteredData = displayData; // ★ここを追加：絞り込み結果を保持
+            renderHistory(displayData);
+        }
+
+        function renderHistory(data) {
+            const container = document.getElementById('history-container');
+            container.innerHTML = "";
+            let totalSub = 0, totalDisc = 0, totalFinal = 0;
+
+            data.forEach(h => {
+                const isVoided = h.isVoided || false;
+                if (!isVoided) {
+                    totalSub += h.subtotal || 0;
+                    totalDisc += h.discount || 0;
+                    totalFinal += h.totalAmount || 0;
+                }
+                const date = new Date(h.createdAt).toLocaleString();
+
+                const div = document.createElement('div');
+                div.className = `history-item ${isVoided ? 'voided' : ''}`;
+                div.innerHTML = `
                 <div>
                     <span>${date}</span>
                 </div>
                 <div>
                     <span style="margin-left:10px;">¥${(h.totalAmount || 0).toLocaleString()}</span>
                 </div>`;
-            div.onclick = () => showDetail(h);
-            container.appendChild(div);
-        });
+                div.onclick = () => showDetail(h);
+                container.appendChild(div);
+            });
 
-        document.getElementById('sum-subtotal').innerText = `¥${totalSub.toLocaleString()}`;
-        document.getElementById('sum-discount').innerText = `¥${totalDisc.toLocaleString()}`;
-        document.getElementById('sum-total').innerText = `¥${totalFinal.toLocaleString()}`;
-    }
+            document.getElementById('sum-subtotal').innerText = `¥${totalSub.toLocaleString()}`;
+            document.getElementById('sum-discount').innerText = `¥${totalDisc.toLocaleString()}`;
+            document.getElementById('sum-total').innerText = `¥${totalFinal.toLocaleString()}`;
+        }
 
-    function updateStatusBadges(data) {
-        const header = document.getElementById('detail-status-header');
-        if (!header) return;
-        const isRefund = (data.paymentMethod === '返金');
+        function updateStatusBadges(data) {
+            const header = document.getElementById('detail-status-header');
+            if (!header) return;
+            const isRefund = (data.paymentMethod === '返金');
 
-        if (isRefund) {
-            // 払戻取引の場合：払戻伝票の状況のみ表示
-            header.innerHTML = `
+            if (isRefund) {
+                // 払戻取引の場合：払戻伝票の状況のみ表示
+                header.innerHTML = `
                 <div class="status-pill" style="border:2px solid #000; font-size:0.7rem; font-weight:900; margin-right:5px; padding:2px 6px; opacity:${data.refundReceiptIssued ? 1 : 0.2}">払戻伝票: ${data.refundReceiptIssued ? '済' : '未'}</div>
                 ${data.isVoided ? '<div class="status-pill" style="background:#000; color:#fff; font-size:0.7rem; padding:2px 6px;">取消済</div>' : ''}`;
-        } else {
-            // 通常取引の場合：レシートと領収書の状況を表示
-            header.innerHTML = `
+            } else {
+                // 通常取引の場合：レシートと領収書の状況を表示
+                header.innerHTML = `
                 <div class="status-pill" style="border:2px solid #000; font-size:0.7rem; font-weight:900; margin-right:5px; padding:2px 6px; opacity:${data.receiptIssued ? 1 : 0.2}">レシート: ${data.receiptIssued ? '済' : '未'}</div>
                 <div class="status-pill" style="border:2px solid #000; font-size:0.7rem; font-weight:900; margin-right:5px; padding:2px 6px; opacity:${data.billIssued ? 1 : 0.2}">領収書: ${data.billIssued ? '済' : '未'}</div>
                 ${data.isVoided ? '<div class="status-pill" style="background:#000; color:#fff; font-size:0.7rem; padding:2px 6px;">取消済</div>' : ''}`;
+            }
         }
-    }
 
-    function showDetail(data) {
-        selectedItem = data;
-        updateStatusBadges(data);
-    
-        document.getElementById('detail-info').innerHTML = `
+        function showDetail(data) {
+            selectedItem = data;
+            updateStatusBadges(data);
+
+            document.getElementById('detail-info').innerHTML = `
             <div style="display:flex;justify-content:space-between; font-weight:900; font-size:1.5rem; padding:20px 0;"><span>最終合計</span><span>¥${(data.totalAmount || 0).toLocaleString()}</span></div>`;
-    
-        // --- ボタンの出し分け制御 ---
-        const isRefund = (data.paymentMethod === '返金');
-        const btnReceipt = document.getElementById('btn-reissue-receipt');
-        const btnBill = document.getElementById('btn-reissue-bill');
-        const btnReturn = document.getElementById('btn-reissue-return');
-        const btnVoid = document.getElementById('btn-void-action');
 
-        if (isRefund) {
-            btnReceipt.style.display = 'none';
-            btnBill.style.display = 'none';
-            btnVoid.style.display = 'none'; 
-            btnReturn.style.display = 'block';
-            generatePreview('return'); 
-        } else {
-            btnReceipt.style.display = 'block';
-            btnBill.style.display = 'block';
-            btnVoid.style.display = data.isVoided ? 'none' : 'block';
-            btnReturn.style.display = 'none';
-            generatePreview('receipt'); 
-        }
-
-        document.getElementById('detailModal').classList.remove('hidden');
-    }
-
-    // --- 変更点：generatePreview 関数を formatLine ロジックベースに統一 ---
-    function generatePreview(type, guestName = "") {
-        const data = selectedItem; if (!data) return;
-        const d = shopInfo;
-        const displayStoreName = d.companyName || "らぴレジ店舗";
-        const regNo = (d && d.registrationNumber) ? d.registrationNumber : null;
-        const zip = d.zipCode ? `〒${d.zipCode}` : "";
-        const receiptPreview = document.getElementById('receipt-text');
-
-        const MAX_WIDTH = 24; 
-        const line = "-".repeat(MAX_WIDTH) + "\n";
-
-        const cashTotal = (data.paymentDetails || []).reduce((sum, p) => {
-            return p.method.includes('現金') ? sum + p.amount : sum;
-        }, 0);
-        const needsStamp = cashTotal >= 50000;
-
-        const getLen = (str) => {
-            let len = 0; if (!str) return 0;
-            for (let i = 0; i < str.length; i++) {
-                (str.charCodeAt(i) <= 255) ? len += 1 : len += 2;
-            }
-            return len;
-        };
-
-        const formatLine = (label, value) => {
-            const labelLen = getLen(label);
-            const valueLen = getLen(value);
-            if (!value) {
-                let result = "";
-                let currentLine = "";
-                let currentLen = 0;
-                for (const char of label) {
-                    const charLen = getLen(char);
-                    if (currentLen + charLen > MAX_WIDTH) {
-                        result += currentLine + "\n";
-                        currentLine = char;
-                        currentLen = charLen;
-                    } else {
-                        currentLine += char;
-                        currentLen += charLen;
-                    }
-                }
-                return result + currentLine + "\n";
-            }
-            const freeSpace = MAX_WIDTH - (labelLen + valueLen);
-            if (freeSpace < 1) {
-                let result = "";
-                let currentLine = "";
-                let currentLen = 0;
-                const chars = Array.from(label);
-                for (let i = 0; i < chars.length; i++) {
-                    const charLen = getLen(chars[i]);
-                    if (currentLen + charLen > MAX_WIDTH) {
-                        result += currentLine + "\n";
-                        currentLine = chars[i];
-                        currentLen = charLen;
-                    } else {
-                        currentLine += chars[i];
-                        currentLen += charLen;
-                    }
-                }
-                const lastLineSpace = MAX_WIDTH - (getLen(currentLine) + valueLen);
-                return (lastLineSpace >= 1) 
-                    ? result + currentLine + " ".repeat(lastLineSpace) + value + "\n"
-                    : result + currentLine + "\n" + " ".repeat(MAX_WIDTH - valueLen) + value + "\n";
-                }
-             return label + " ".repeat(freeSpace) + value + "\n";
-        };
-
-        let t = "";
-        const dateStr = new Date(data.createdAt).toLocaleString();
-        const netTotal = data.taxDetails ? Object.values(data.taxDetails).reduce((a, b) => a + b, 0) : data.totalAmount;
-        const targetDetails = data.finalTaxDetails || data.taxDetails || {};
-
-        if (type === 'return') {
-            t += `    払 い 戻 し 伝 票 \n\n`;
-            t += formatLine(displayStoreName, "");
-            if (zip) t += formatLine(zip, "");
-            if (d.address) t += formatLine(d.address, "");
-            if (d.tel) t += formatLine(`TEL: ${d.tel}`, "");
-            if (regNo) t += formatLine(`登録番号: ${regNo}`, "");
-            t += `日時: ${dateStr}\n${line}`;
-
-            data.items.forEach(item => {
-                const discountAmount = item.appliedDiscount ? item.appliedDiscount.amount : 0;
-                const itemTotalBeforeDiscount = item.price * item.qty;
-                const itemFinalExcl = Math.max(0, itemTotalBeforeDiscount - discountAmount);
-                const priceVal = `¥${itemFinalExcl.toLocaleString()}`;
-
-                const rate = (item.taxRate !== undefined) ? item.taxRate : (item.rate !== undefined ? item.rate : null);
-                const taxMarker = (rate !== null) ? ` *${rate}` : ""; 
-                const label = item.name + taxMarker + (item.qty > 1 ? ` (x${item.qty})` : "");
-                t += formatLine(label, priceVal);
-
-                // --- 商品別割引の表示ロジックを追加 ---
-                if (discountAmount > 0) {
-                    let discNames = [];
-                    const hasPresets = item.appliedPresets && Object.keys(item.appliedPresets).length > 0;
-
-                    if (hasPresets) {
-                        for (const [name, count] of Object.entries(item.appliedPresets)) {
-                            const isUnit = item.appliedDiscount && item.appliedDiscount.mode === 'unit';
-                            const totalCount = isUnit ? (count * item.qty) : count;
-                            discNames.push(totalCount > 1 ? `${name}×${totalCount}` : name);
-                        }
-                    }
-
-                    let displayDiscName = "";
-                    const presetText = discNames.join('、');
-
-                    if (hasPresets) {
-                        displayDiscName = item.hasManualInput ? `割引(${presetText}含む)` : `割引(${presetText})`;
-                    } else {
-                        displayDiscName = "特別割引";
-                    }
-
-                    if (displayDiscName) {
-                        const discLabel = `  (${displayDiscName} -¥${discountAmount.toLocaleString()})`;
-                        t += formatLine(discLabel, "");
-                    }
-                }
-            });
-
-            t += line;
-            const details = data.finalTaxDetails || data.taxDetails || {};
-            const originalExclTotal = Object.values(details).reduce((a, b) => a + (b.originalExcl || b.subtotal || 0), 0);
-
-            t += formatLine("小計(税抜)", `¥${originalExclTotal.toLocaleString()}`);
-
-            if (data.discount > 0) {
-                const dName = data.discountName || "金額調整";
-                t += formatLine(`金額調整(${dName})`, `-¥${data.discount.toLocaleString()}`);
-                const afterDiscountExclTotal = Object.values(details).reduce((a, b) => a + (b.excl || 0), 0);
-                t += formatLine("調整後小計(税抜)", `¥${afterDiscountExclTotal.toLocaleString()}`);
-            }
-
-            t += formatLine("返金合計(税込)", `¥${Math.abs(data.totalAmount || 0).toLocaleString()}`);
-            t += line;
-
-            Object.keys(details).map(Number).sort((a, b) => b - a).forEach(rate => {
-                const val = details[rate];
-                if (!val) return;
-                const exclAmount = val.excl !== undefined ? val.excl : (val.subtotal || 0);
-                const taxAmount = val.tax !== undefined ? val.tax : Math.floor(exclAmount * (rate / 100));
-
-                if (exclAmount > 0) {
-                    t += `${rate}%対象(税抜 ¥${exclAmount.toLocaleString()})\n`;
-                    t += formatLine("  内消費税", `¥${taxAmount.toLocaleString()}`);
-                }
-            });
-
-            t += line;
-            t += `処理方法: ${data.paymentMethod}\n`;
-            t += line + `返品・返金を承りました\n`;
-
-        } else if (type === 'receipt') {
-            t += `       レ シ ー ト \n\n`;
-            t += formatLine(displayStoreName, "");
-            if (zip) t += formatLine(zip, "");
-            if (d.address) t += formatLine(d.address, "");
-            if (d.tel) t += formatLine(`TEL: ${d.tel}`, "");
-            if (regNo) t += formatLine(`登録番号: ${regNo}`, "");
-            t += `日時: ${dateStr}\n${line}`;
-
-            data.items.forEach(item => {
-                const discountAmount = item.appliedDiscount ? item.appliedDiscount.amount : 0;
-                const itemTotalBeforeDiscount = item.price * item.qty;
-                // レシート上の金額は割引適応後の税抜き金額
-                const itemFinalExcl = Math.max(0, itemTotalBeforeDiscount - discountAmount);
-                const priceVal = `¥${itemFinalExcl.toLocaleString()}`;
-                const rate = (item.taxRate !== undefined) ? item.taxRate : (item.rate !== undefined ? item.rate : null);
-                const taxMarker = (rate !== null) ? ` *${rate}` : ""; 
-                const label = item.name + taxMarker + (item.qty > 1 ? ` (x${item.qty})` : "");
-                t += formatLine(label, priceVal);
-
-                if (discountAmount > 0) {
-                    let discNames = [];
-                    const hasPresets = item.appliedPresets && Object.keys(item.appliedPresets).length > 0;
-
-                    // プリセットの名称と回数を取得
-                    if (hasPresets) {
-                        for (const [name, count] of Object.entries(item.appliedPresets)) {
-                            const isUnit = item.appliedDiscount && item.appliedDiscount.mode === 'unit';
-                            const totalCount = isUnit ? (count * item.qty) : count;
-                            discNames.push(totalCount > 1 ? `${name}×${totalCount}` : name);
-                        }
-                    }
-
-                    let displayDiscName = "";
-                    const presetText = discNames.join('、');
-
-                    if (hasPresets) {
-                        if (item.hasManualInput) {
-                            displayDiscName = `割引(${presetText}含む)`;
-                        } else {
-                            displayDiscName = `割引(${presetText})`;
-                        }
-                    } else {
-                        displayDiscName = "特別割引";
-                    }
-
-                    // 割引行の生成 (参考例通りのフォーマット)
-                    if (displayDiscName) {
-                        const discLabel = `  (${displayDiscName} -¥${discountAmount.toLocaleString()})`;
-                        t += formatLine(discLabel, "");
-                    }
-                }
-            });
-            t += line;
-            
-            // 税抜小計の算出（割引前の税抜合計）
-            const details = data.taxDetails || {};
-            // --- generatePreview 関数内の金額集計ロジックを修正 ---
-
-            // 1. 全税率のデータを取得 (finalTaxDetails を優先、なければ taxDetails)
-            const targetDetails = data.finalTaxDetails || data.taxDetails || {};
-            
-            // 2. 小計(税抜)の算出：割引前の「税抜金額」をすべて足す
-            const originalExclTotal = Object.values(targetDetails).reduce((sum, val) => {
-                return sum + (Number(val.originalExcl) || Number(val.subtotal) || Number(val.excl) || 0);
-            }, 0);
-            
-            t += formatLine("小計(税抜)", `¥${originalExclTotal.toLocaleString()}`);
-
-            // --- generatePreview 関数内 ---
-
-if (data.discount > 0) {
-    const dName = data.discountName || "割引";
-    t += formatLine(`割引(${dName})`, `-¥${(data.discount || 0).toLocaleString()}`);
-    
-    // 3. 割引後小計(税抜)の算出
-    const afterDiscountExclTotal = Object.values(targetDetails).reduce((sum, val) => {
-        return sum + (Number(val.excl) || Number(val.subtotal) || 0);
-    }, 0);
-
-    // 【修正箇所】finalExcl ではなく afterDiscountExclTotal を使用する
-    t += formatLine("割引後小計(税抜)", `¥${Math.round(afterDiscountExclTotal).toLocaleString()}`);
-}
-
-            t += formatLine("合計(税込)", `¥${(data.totalAmount || 0).toLocaleString()}`);
-            t += line;
-
-            Object.keys(targetDetails).map(Number).sort((a, b) => b - a).forEach(rate => {
-                const val = targetDetails[rate];
-                if (!val) return;
-
-                const exclAmount = val.excl !== undefined ? val.excl : (val.subtotal || 0);
-                const taxAmount = val.tax !== undefined ? val.tax : Math.floor(exclAmount * (rate / 100));
-
-                if (exclAmount > 0) {
-                    t += `${rate}%対象(税抜 ¥${exclAmount.toLocaleString()})\n`;
-                    t += formatLine("  内消費税", `¥${taxAmount.toLocaleString()}`);
-                }
-            });
-
-            t += line;
-            if (data.paymentDetails && data.paymentDetails.length > 1) {
-            data.paymentDetails.forEach(p => {
-                t += formatLine(`決済方法: ${p.method}`, `¥${p.amount.toLocaleString()}`);
-            });
-        } else {
-            t += `決済方法: ${data.paymentMethod}\n`;
-        }
-            if (data.cashReceived > 0) {
-                t += formatLine("お預かり", `¥${(data.cashReceived || 0).toLocaleString()}`);
-                t += formatLine("お釣り", `¥${(data.change || 0).toLocaleString()}`);
-            }
-            if (needsStamp) t += `\n[[STAMP_HERE]]\n`;
-            t += line;
-            t += `※ *の後の数字は税率です\n`;
-            t += `ありがとうございました\n`;
-            if (d.memo) t += formatLine(`${d.memo}\n`);
-
-        } else {
-            // 領収書
-            const totalTax = data.totalAmount - netTotal;
-            t += `       領 収 書\n\n 日付：${new Date(data.createdAt).toLocaleDateString()}\n No. ${data.id}\n\n`;
-            
-            const recipientLabel = `${guestName || "                "}  様`;
-            const namePadding = Math.max(0, Math.floor((MAX_WIDTH - getLen(recipientLabel)) / 2));
-            t += " ".repeat(namePadding) + recipientLabel + "\n\n";
-
-            const amountStr = `金額 ¥${data.totalAmount.toLocaleString()}-`;
-            const amtPadding = Math.max(0, Math.floor((MAX_WIDTH - getLen(amountStr)) / 2));
-            t += " ".repeat(amtPadding) + amountStr + "\n\n";
-
-            t += formatLine(` 但 ${d.receiptType || "商品代"} として`, "");
-            t += ` 正に領収いたしました\n\n [内訳]\n`;
-            const details = data.finalTaxDetails || {};
-            Object.keys(details).map(Number).sort((a, b) => b - a).forEach(rate => {
-                const taxData = details[rate];
-                if (taxData.excl > 0) {
-                    t += formatLine(` ${rate}%対象税抜:`, `¥${taxData.excl.toLocaleString()}`);
-                    t += formatLine(` 内消費税:`, `¥${taxData.tax.toLocaleString()}`);
-                }
-            });
-            
-            if (needsStamp) t += `\n[[STAMP_HERE]]\n`;
-            t += `\n${line}[発行者]\n`;
-            t += formatLine(displayStoreName, "");
-            if (zip) t += formatLine(zip, "");
-            if (d.address) t += formatLine(d.address, "");
-            if (d.tel) t += formatLine(`TEL: ${d.tel}`, "");
-            if (regNo) t += formatLine(`登録番号: ${regNo}`, "");
-            t += line;
-        }
-        receiptPreview.innerHTML = t.replace('[[STAMP_HERE]]', `<div style="border: 1px solid #000; width: 60px; height: 70px; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 10px; margin: 10px 0 10px 50px;">収入印紙<br>貼付枠</div>`);
-    }
-
-    // --- ボタンのイベント登録 ---
-    document.getElementById('btn-reissue-return').onclick = () => reissue('return');
-    
-    // --- 長押し・クリック処理 ---
-    function initLongPress() {
-        const btnBill = document.getElementById('btn-reissue-bill');
-        let timer;
-        let isLongPress = false;
-
-        const start = (e) => {
-            isLongPress = false;
-            timer = setTimeout(() => {
-                isLongPress = true;
-                const name = prompt("領収書の宛名を入力してください", "");
-                if (name !== null) reissue('bill', name);
-            }, 500);
-        };
-
-        const end = (e) => {
-            clearTimeout(timer);
-            if (!isLongPress && e.type === 'click') {
-                reissue('bill', ""); // 普通のクリックは宛名なし
-            }
-        };
-
-        // マウスとタッチ両対応
-        btnBill.addEventListener('mousedown', start);
-        btnBill.addEventListener('touchstart', start, {passive: true});
-        btnBill.addEventListener('click', end);
-        btnBill.addEventListener('touchend', end);
-    }
-
-    // --- 変更点：reissue 関数内のフラグ更新処理 ---
-    function reissue(type, guestName = "") { 
-        if (!selectedItem) return;
-
-        generatePreview(type, guestName);
-        window.print(); 
-
-        const history = JSON.parse(localStorage.getItem(STORAGE_KEYS.HISTORY) || '[]');
-        const idx = history.findIndex(h => h.id === selectedItem.id);
-
-        if (idx !== -1) {
-            if (type === 'receipt') {
-                history[idx].receiptIssued = true;
-            } else if (type === 'return') {
-                // ここを修正：払戻伝票専用のフラグを更新
-                history[idx].refundReceiptIssued = true;
-            } else if (type === 'bill') {
-                history[idx].billIssued = true;
-            }
-    
-            localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(history));
-            selectedItem = history[idx];
-    
-            updateStatusBadges(selectedItem); // 修正：updateStatusDisplayではなく定義済みのこちらを呼ぶのが確実です
-            loadHistory(); 
-        }
-    }
-
-    document.getElementById('btn-reissue-receipt').onclick = () => reissue('receipt');
-    document.getElementById('btn-close-modal').onclick = () => document.getElementById('detailModal').classList.add('hidden');
-    document.getElementById('btn-search').onclick = loadHistory;
-
-    document.getElementById('btn-void-action').onclick = () => {
-        if(!confirm("この取引を取り消してよろしいですか？\n(在庫数も復元されます)")) return;
-        const history = JSON.parse(localStorage.getItem(STORAGE_KEYS.HISTORY) || '[]');
-        const idx = history.findIndex(h => h.id === selectedItem.id);
-        if (idx !== -1) {
-            const products = JSON.parse(localStorage.getItem(STORAGE_KEYS.PRODUCTS) || '[]');
-            selectedItem.items.forEach(soldItem => {
-                const pIdx = products.findIndex(p => p.id === soldItem.id);
-                if (pIdx !== -1) {
-                    products[pIdx].stock = (Number(products[pIdx].stock) || 0) + soldItem.qty;
-                }
-            });
-            localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products));
-            history[idx].isVoided = true;
-            localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(history));
-            document.getElementById('detailModal').classList.add('hidden');
-            loadHistory();
-            alert("取引を取り消し、在庫を復元しました。");
-        }
-    };
-    
-    // --- CSV改善版（動的税率対応 + 割引名追加） ---
-    document.getElementById('btn-csv-export').onclick = () => {
-        // 1. 存在する税率をすべて抽出する（重複なし・降順）
-        const activeRates = new Set();
-        filteredData.forEach(h => {
-            const details = h.finalTaxDetails || h.taxDetails || {};
-            Object.keys(details).forEach(rate => activeRates.add(Number(rate)));
-        });
-        const sortedRates = Array.from(activeRates).sort((a, b) => b - a);
-
-        // 2. ヘッダーの作成
-        // 「割引」の後に「割引名」を追加
-        let header = ["日時", "内訳", "商品別割引/金額調整（合計）","商品別割引/金額調整（詳細）", "小計", "割引/金額調整", "割引名/金額調整名", "税抜合計", "消費税額"];
-        
-        // 存在する税率分だけ列を追加
-        sortedRates.forEach(rate => {
-            header.push(`${rate}%対象(税抜)`);
-            header.push(`${rate}%内消費税`);
-        });
-        header.push("最終合計", "支払方法", "分割決済詳細", "取引状態", "レシート発行", "領収書発行", "払戻伝票発行");
-
-        let csv = "\uFEFF" + header.map(h => `"${h}"`).join(",") + "\n";
-
-        // 3. データ行の作成
-        filteredData.forEach(h => {
-            const d = new Date(h.createdAt);
-            const dateStr = `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
-            const itemDetail = h.items.map(i => `${i.name}x${i.qty}`).join(' / ');
-            
-            const details = h.finalTaxDetails || h.taxDetails || {};
-            let itemDiscountTotalVal = 0;
-        
-            const itemDiscounts = h.items
-                .map(i => {
-                    const orgP = Number(i.originalPrice) || 0;
-                    const curP = Number(i.price) || 0;
-                    const qty = Number(i.qty) || 0;
-
-                    const appDisc = i.appliedDiscount || {};
-                    const adjAmount = Number(appDisc.amount) || 0;
-                    const hasAdjustment = adjAmount > 0;
-                    const hasPresets = i.appliedPresets && Object.keys(i.appliedPresets).length > 0;
-                    
-                    // 元値があり、かつ現在の売価より高い場合のみ割引として計算
-                    if ((orgP > curP) || hasAdjustment) {
-                        const totalItemDiscount = ((orgP > curP ? orgP - curP : 0) * qty) + adjAmount;
-                        itemDiscountTotalVal += totalItemDiscount;
-                        // --- 割引名称を抽出するロジックを追加 ---
-                        let discNames = [];
-                        if (hasPresets) {
-                            for (const [name, count] of Object.entries(i.appliedPresets)) {
-                                discNames.push(count > 1 ? `${name}×${count}` : name);
-                            }
-                        }
-                        
-                        if (hasAdjustment && appDisc.name) {
-                            discNames.push(appDisc.name);
-                        }
-                        const nameText = discNames.length > 0 ? `[${discNames.join('、')}]` : "";
-                        // --------------------------------------
-
-                        return `${i.name}${nameText}x${qty}(¥${totalItemDiscount.toLocaleString()})`;
-                    }
-                    return null;
-                })
-                .filter(val => val !== null)
-                .join(' / ') || "--";
-
-            let calculatedTaxTotal = 0;
-            let netTotalForCsv = 0;
-
-            Object.keys(details).forEach(rate => {
-                const val = details[rate];
-                if (!val) return;
-                const exclVal = (typeof val === 'object') ? (Number(val.excl) || Number(val.subtotal) || 0) : (Number(val) || 0);
-                const taxVal = (typeof val === 'object') ? (Number(val.tax) || 0) : Math.floor(exclVal * (Number(rate) / 100));
-                netTotalForCsv += exclVal;
-                calculatedTaxTotal += taxVal;
-            });
-
-            const finalNetTotal = netTotalForCsv;
-            
-            let voidTxt = "有効";
-            if (h.isVoided) {
-                voidTxt = "取消済";
-            } else if (h.paymentMethod === '返金') {
-                voidTxt = "払戻";
-            }
-            
-            // --- 修正箇所：取引種別による表示の切り分け ---
-            const isRefund = (h.paymentMethod === '返金');
-            let receiptTxt, billTxt, refundTxt;
+            // --- ボタンの出し分け制御 ---
+            const isRefund = (data.paymentMethod === '返金');
+            const btnReceipt = document.getElementById('btn-reissue-receipt');
+            const btnBill = document.getElementById('btn-reissue-bill');
+            const btnReturn = document.getElementById('btn-reissue-return');
+            const btnVoid = document.getElementById('btn-void-action');
 
             if (isRefund) {
-                // 払戻（返金）取引の場合
-                receiptTxt = "--"; 
-                billTxt = "--";
-                refundTxt = h.refundReceiptIssued ? "済" : "未";
+                btnReceipt.style.display = 'none';
+                btnBill.style.display = 'none';
+                btnVoid.style.display = 'none';
+                btnReturn.style.display = 'block';
+                generatePreview('return');
             } else {
-                // 通常取引の場合
-                receiptTxt = h.receiptIssued ? "済" : "未";
-                billTxt = h.billIssued ? "済" : "未";
-                refundTxt = "--";
+                btnReceipt.style.display = 'block';
+                btnBill.style.display = 'block';
+                btnVoid.style.display = data.isVoided ? 'none' : 'block';
+                btnReturn.style.display = 'none';
+                generatePreview('receipt');
             }
 
-            let splitPaymentTxt = "--";
-            if (h.paymentDetails && h.paymentDetails.length > 1) {
-                splitPaymentTxt = h.paymentDetails
-                    .map(p => `${p.method} ¥${(p.amount || 0).toLocaleString()}`)
-                    .join(' / ');
-            }
-            
-            const discName = h.discountName || "";
-
-            // 基本情報
-            let row = [
-                `"${dateStr}"`,
-                `"${itemDetail}"`,
-                itemDiscountTotalVal,
-                `"${itemDiscounts}"`,
-                Number(h.subtotal) || 0,
-        Number(h.discount) || 0,
-                `"${h.discountName || ""}"`,
-                finalNetTotal,
-                calculatedTaxTotal
-            ];
-
-            // 動的な税率別の金額を追加
-            sortedRates.forEach(rate => {
-                const val = details[rate];
-                const sub = (val && typeof val === 'object') ? (Number(val.excl) || Number(val.subtotal) || 0) : (Number(val) || 0);
-                const tax = (val && typeof val === 'object') ? (Number(val.tax) || 0) : Math.floor(sub * (Number(rate) / 100));
-        
-                row.push(sub); 
-                row.push(tax); 
-            });
-
-            // 残りの情報
-            row.push(
-                Number(h.totalAmount) || 0,
-                `"${h.paymentMethod}"`,
-                `"${splitPaymentTxt}"`,
-                `"${voidTxt}"`,
-                `"${receiptTxt}"`,
-                `"${billTxt}"`,
-                `"${refundTxt}"`
-            );
-
-            csv += row.join(",") + "\n";
-        });
-
-        downloadCSV(csv, "取引明細レポート.csv");
-    };
-
-    document.getElementById('btn-csv-items').onclick = () => {
-        const itemMap = {};
-        // 取消分は分析から除外して正確な売上を出す
-        filteredData.filter(h => !h.isVoided).forEach(h => {
-            h.items.forEach(i => {
-                if (!itemMap[i.name]) itemMap[i.name] = { qty: 0, amount: 0 };
-                itemMap[i.name].qty += i.qty; itemMap[i.name].amount += (i.price * i.qty);
-            });
-        });
-        let csv = "\uFEFF商品名,販売個数,売上合計\n";
-        Object.keys(itemMap).forEach(name => { csv += `"${name}",${itemMap[name].qty},${itemMap[name].amount}\n`; });
-        downloadCSV(csv, "商品別売上分析.csv");
-    };
-
-    document.getElementById('btn-csv-time').onclick = () => {
-        const timeMap = {}; const itemSet = new Set();
-        // 取消分は除外
-        filteredData.filter(h => !h.isVoided).forEach(h => {
-            const hour = new Date(h.createdAt).getHours();
-            if (!timeMap[hour]) timeMap[hour] = {};
-            h.items.forEach(i => { timeMap[hour][i.name] = (timeMap[hour][i.name] || 0) + i.qty; itemSet.add(i.name); });
-        });
-        const sortedItems = Array.from(itemSet);
-        let csv = "\uFEFF時間帯," + sortedItems.map(n => `"${n}"`).join(",") + ",合計個数\n";
-        for (let h = 0; h < 24; h++) {
-            let row = [`${h}時`]; let sum = 0;
-            sortedItems.forEach(name => { const qty = timeMap[h]?.[name] || 0; row.push(qty); sum += qty; });
-            row.push(sum); csv += row.join(",") + "\n";
+            document.getElementById('detailModal').classList.remove('hidden');
         }
-        downloadCSV(csv, "時間別商品分析.csv");
-    };
 
-    // --- 決済方法別売上CSVの追加 ---
-    document.getElementById('btn-csv-payment').onclick = () => {
-        const paymentMap = {};
-    
-        // 取消分を除外して集計
-        filteredData.filter(h => !h.isVoided).forEach(h => {
-            // 分割決済（paymentDetails）がある場合はそれを優先、なければ paymentMethod を使用
-            if (h.paymentDetails && h.paymentDetails.length > 0) {
-                h.paymentDetails.forEach(p => {
-                    const method = p.method || "不明";
-                    if (!paymentMap[method]) paymentMap[method] = { count: 0, amount: 0 };
-                    paymentMap[method].count += 1;
-                    paymentMap[method].amount += (p.amount || 0);
+        // --- 変更点：generatePreview 関数を formatLine ロジックベースに統一 ---
+        function generatePreview(type, guestName = "") {
+            const data = selectedItem; if (!data) return;
+            const d = shopInfo;
+            const displayStoreName = d.companyName || "らぴレジ店舗";
+            const regNo = (d && d.registrationNumber) ? d.registrationNumber : null;
+            const zip = d.zipCode ? `〒${d.zipCode}` : "";
+            const receiptPreview = document.getElementById('receipt-text');
+
+            const MAX_WIDTH = 24;
+            const line = "-".repeat(MAX_WIDTH) + "\n";
+
+            const cashTotal = (data.paymentDetails || []).reduce((sum, p) => {
+                return p.method.includes('現金') ? sum + p.amount : sum;
+            }, 0);
+            const needsStamp = cashTotal >= 50000;
+
+            const getLen = (str) => {
+                let len = 0; if (!str) return 0;
+                for (let i = 0; i < str.length; i++) {
+                    (str.charCodeAt(i) <= 255) ? len += 1 : len += 2;
+                }
+                return len;
+            };
+
+            const formatLine = (label, value) => {
+                const labelLen = getLen(label);
+                const valueLen = getLen(value);
+                if (!value) {
+                    let result = "";
+                    let currentLine = "";
+                    let currentLen = 0;
+                    for (const char of label) {
+                        const charLen = getLen(char);
+                        if (currentLen + charLen > MAX_WIDTH) {
+                            result += currentLine + "\n";
+                            currentLine = char;
+                            currentLen = charLen;
+                        } else {
+                            currentLine += char;
+                            currentLen += charLen;
+                        }
+                    }
+                    return result + currentLine + "\n";
+                }
+                const freeSpace = MAX_WIDTH - (labelLen + valueLen);
+                if (freeSpace < 1) {
+                    let result = "";
+                    let currentLine = "";
+                    let currentLen = 0;
+                    const chars = Array.from(label);
+                    for (let i = 0; i < chars.length; i++) {
+                        const charLen = getLen(chars[i]);
+                        if (currentLen + charLen > MAX_WIDTH) {
+                            result += currentLine + "\n";
+                            currentLine = chars[i];
+                            currentLen = charLen;
+                        } else {
+                            currentLine += chars[i];
+                            currentLen += charLen;
+                        }
+                    }
+                    const lastLineSpace = MAX_WIDTH - (getLen(currentLine) + valueLen);
+                    return (lastLineSpace >= 1)
+                        ? result + currentLine + " ".repeat(lastLineSpace) + value + "\n"
+                        : result + currentLine + "\n" + " ".repeat(MAX_WIDTH - valueLen) + value + "\n";
+                }
+                return label + " ".repeat(freeSpace) + value + "\n";
+            };
+
+            let t = "";
+            const dateStr = new Date(data.createdAt).toLocaleString();
+            const netTotal = data.taxDetails ? Object.values(data.taxDetails).reduce((a, b) => a + b, 0) : data.totalAmount;
+            const targetDetails = data.finalTaxDetails || data.taxDetails || {};
+
+            if (type === 'return') {
+                t += `    払 い 戻 し 伝 票 \n\n`;
+                t += formatLine(displayStoreName, "");
+                if (zip) t += formatLine(zip, "");
+                if (d.address) t += formatLine(d.address, "");
+                if (d.tel) t += formatLine(`TEL: ${d.tel}`, "");
+                if (regNo) t += formatLine(`登録番号: ${regNo}`, "");
+                t += `日時: ${dateStr}\n${line}`;
+
+                data.items.forEach(item => {
+                    const discountAmount = item.appliedDiscount ? item.appliedDiscount.amount : 0;
+                    const itemTotalBeforeDiscount = item.price * item.qty;
+                    const itemFinalExcl = Math.max(0, itemTotalBeforeDiscount - discountAmount);
+                    const priceVal = `¥${itemFinalExcl.toLocaleString()}`;
+
+                    const rate = (item.taxRate !== undefined) ? item.taxRate : (item.rate !== undefined ? item.rate : null);
+                    const taxMarker = (rate !== null) ? ` *${rate}` : "";
+                    const label = item.name + taxMarker + (item.qty > 1 ? ` (x${item.qty})` : "");
+                    t += formatLine(label, priceVal);
+
+                    // --- 商品別割引の表示ロジックを追加 ---
+                    if (discountAmount > 0) {
+                        let discNames = [];
+                        const hasPresets = item.appliedPresets && Object.keys(item.appliedPresets).length > 0;
+
+                        if (hasPresets) {
+                            for (const [name, count] of Object.entries(item.appliedPresets)) {
+                                const isUnit = item.appliedDiscount && item.appliedDiscount.mode === 'unit';
+                                const totalCount = isUnit ? (count * item.qty) : count;
+                                discNames.push(totalCount > 1 ? `${name}×${totalCount}` : name);
+                            }
+                        }
+
+                        let displayDiscName = "";
+                        const presetText = discNames.join('、');
+
+                        if (hasPresets) {
+                            displayDiscName = item.hasManualInput ? `割引(${presetText}含む)` : `割引(${presetText})`;
+                        } else {
+                            displayDiscName = "特別割引";
+                        }
+
+                        if (displayDiscName) {
+                            const discLabel = `  (${displayDiscName} -¥${discountAmount.toLocaleString()})`;
+                            t += formatLine(discLabel, "");
+                        }
+                    }
                 });
+
+                t += line;
+                const details = data.finalTaxDetails || data.taxDetails || {};
+                const originalExclTotal = Object.values(details).reduce((a, b) => a + (b.originalExcl || b.subtotal || 0), 0);
+
+                t += formatLine("小計(税抜)", `¥${originalExclTotal.toLocaleString()}`);
+
+                if (data.discount > 0) {
+                    const dName = data.discountName || "金額調整";
+                    t += formatLine(`金額調整(${dName})`, `-¥${data.discount.toLocaleString()}`);
+                    const afterDiscountExclTotal = Object.values(details).reduce((a, b) => a + (b.excl || 0), 0);
+                    t += formatLine("調整後小計(税抜)", `¥${afterDiscountExclTotal.toLocaleString()}`);
+                }
+
+                t += formatLine("返金合計(税込)", `¥${Math.abs(data.totalAmount || 0).toLocaleString()}`);
+                t += line;
+
+                Object.keys(details).map(Number).sort((a, b) => b - a).forEach(rate => {
+                    const val = details[rate];
+                    if (!val) return;
+                    const exclAmount = val.excl !== undefined ? val.excl : (val.subtotal || 0);
+                    const taxAmount = val.tax !== undefined ? val.tax : Math.floor(exclAmount * (rate / 100));
+
+                    if (exclAmount > 0) {
+                        t += `${rate}%対象(税抜 ¥${exclAmount.toLocaleString()})\n`;
+                        t += formatLine("  内消費税", `¥${taxAmount.toLocaleString()}`);
+                    }
+                });
+
+                t += line;
+                t += `処理方法: ${data.paymentMethod}\n`;
+                t += line + `返品・返金を承りました\n`;
+
+            } else if (type === 'receipt') {
+                t += `       レ シ ー ト \n\n`;
+                t += formatLine(displayStoreName, "");
+                if (zip) t += formatLine(zip, "");
+                if (d.address) t += formatLine(d.address, "");
+                if (d.tel) t += formatLine(`TEL: ${d.tel}`, "");
+                if (regNo) t += formatLine(`登録番号: ${regNo}`, "");
+                t += `日時: ${dateStr}\n${line}`;
+
+                data.items.forEach(item => {
+                    const discountAmount = item.appliedDiscount ? item.appliedDiscount.amount : 0;
+                    const itemTotalBeforeDiscount = item.price * item.qty;
+                    // レシート上の金額は割引適応後の税抜き金額
+                    const itemFinalExcl = Math.max(0, itemTotalBeforeDiscount - discountAmount);
+                    const priceVal = `¥${itemFinalExcl.toLocaleString()}`;
+                    const rate = (item.taxRate !== undefined) ? item.taxRate : (item.rate !== undefined ? item.rate : null);
+                    const taxMarker = (rate !== null) ? ` *${rate}` : "";
+                    const label = item.name + taxMarker + (item.qty > 1 ? ` (x${item.qty})` : "");
+                    t += formatLine(label, priceVal);
+
+                    if (discountAmount > 0) {
+                        let discNames = [];
+                        const hasPresets = item.appliedPresets && Object.keys(item.appliedPresets).length > 0;
+
+                        // プリセットの名称と回数を取得
+                        if (hasPresets) {
+                            for (const [name, count] of Object.entries(item.appliedPresets)) {
+                                const isUnit = item.appliedDiscount && item.appliedDiscount.mode === 'unit';
+                                const totalCount = isUnit ? (count * item.qty) : count;
+                                discNames.push(totalCount > 1 ? `${name}×${totalCount}` : name);
+                            }
+                        }
+
+                        let displayDiscName = "";
+                        const presetText = discNames.join('、');
+
+                        if (hasPresets) {
+                            if (item.hasManualInput) {
+                                displayDiscName = `割引(${presetText}含む)`;
+                            } else {
+                                displayDiscName = `割引(${presetText})`;
+                            }
+                        } else {
+                            displayDiscName = "特別割引";
+                        }
+
+                        // 割引行の生成 (参考例通りのフォーマット)
+                        if (displayDiscName) {
+                            const discLabel = `  (${displayDiscName} -¥${discountAmount.toLocaleString()})`;
+                            t += formatLine(discLabel, "");
+                        }
+                    }
+                });
+                t += line;
+
+                // 税抜小計の算出（割引前の税抜合計）
+                const details = data.taxDetails || {};
+                // --- generatePreview 関数内の金額集計ロジックを修正 ---
+
+                // 1. 全税率のデータを取得 (finalTaxDetails を優先、なければ taxDetails)
+                const targetDetails = data.finalTaxDetails || data.taxDetails || {};
+
+                // 2. 小計(税抜)の算出：割引前の「税抜金額」をすべて足す
+                const originalExclTotal = Object.values(targetDetails).reduce((sum, val) => {
+                    return sum + (Number(val.originalExcl) || Number(val.subtotal) || Number(val.excl) || 0);
+                }, 0);
+
+                t += formatLine("小計(税抜)", `¥${originalExclTotal.toLocaleString()}`);
+
+                // --- generatePreview 関数内 ---
+
+                if (data.discount > 0) {
+                    const dName = data.discountName || "割引";
+                    t += formatLine(`割引(${dName})`, `-¥${(data.discount || 0).toLocaleString()}`);
+
+                    // 3. 割引後小計(税抜)の算出
+                    const afterDiscountExclTotal = Object.values(targetDetails).reduce((sum, val) => {
+                        return sum + (Number(val.excl) || Number(val.subtotal) || 0);
+                    }, 0);
+
+                    // 【修正箇所】finalExcl ではなく afterDiscountExclTotal を使用する
+                    t += formatLine("割引後小計(税抜)", `¥${Math.round(afterDiscountExclTotal).toLocaleString()}`);
+                }
+
+                t += formatLine("合計(税込)", `¥${(data.totalAmount || 0).toLocaleString()}`);
+                t += line;
+
+                Object.keys(targetDetails).map(Number).sort((a, b) => b - a).forEach(rate => {
+                    const val = targetDetails[rate];
+                    if (!val) return;
+
+                    const exclAmount = val.excl !== undefined ? val.excl : (val.subtotal || 0);
+                    const taxAmount = val.tax !== undefined ? val.tax : Math.floor(exclAmount * (rate / 100));
+
+                    if (exclAmount > 0) {
+                        t += `${rate}%対象(税抜 ¥${exclAmount.toLocaleString()})\n`;
+                        t += formatLine("  内消費税", `¥${taxAmount.toLocaleString()}`);
+                    }
+                });
+
+                t += line;
+                if (data.paymentDetails && data.paymentDetails.length > 1) {
+                    data.paymentDetails.forEach(p => {
+                        t += formatLine(`決済方法: ${p.method}`, `¥${p.amount.toLocaleString()}`);
+                    });
+                } else {
+                    t += `決済方法: ${data.paymentMethod}\n`;
+                }
+                if (data.cashReceived > 0) {
+                    t += formatLine("お預かり", `¥${(data.cashReceived || 0).toLocaleString()}`);
+                    t += formatLine("お釣り", `¥${(data.change || 0).toLocaleString()}`);
+                }
+                // --- 【修正】履歴データ(data)内の memberInfo から会員情報を印字 ---
+                const receiptData = data.memberInfo || window.lastReceiptData;
+                if (receiptData && receiptData.cardId) {
+                    t += line;
+                    // 会員番号の下4桁以外を * でマスク（例: "********1234"）
+                    const cardIdStr = String(receiptData.cardId);
+                    const maskedId = cardIdStr.length > 4
+                        ? "*".repeat(cardIdStr.length - 4) + cardIdStr.slice(-4)
+                        : cardIdStr;
+
+                    t += formatLine("会員番号", maskedId);
+
+                    // 今回の獲得ポイント
+                    if (receiptData.earnedPoint !== undefined) {
+                        t += formatLine("今回獲得ポイント", `+${Number(receiptData.earnedPoint).toLocaleString()}pt`);
+                    }
+
+                    // 残高
+                    if (receiptData.currentBalance !== undefined && receiptData.currentBalance !== null) {
+                        t += formatLine("残高", `¥${Number(receiptData.currentBalance).toLocaleString()}`);
+                    }
+
+                    // ポイント残高
+                    if (receiptData.currentPoint !== undefined && receiptData.currentPoint !== null) {
+                        t += formatLine("ポイント残高", `${Number(receiptData.currentPoint).toLocaleString()}pt`);
+                    }
+                }
+                // ----------------------------------------------------
+
+                if (needsStamp) t += `\n[[STAMP_HERE]]\n`;
+                t += line;
+                t += `※ *の後の数字は税率です\n`;
+                t += `ありがとうございました\n`;
+                if (d.memo) t += formatLine(`${d.memo}\n`);
+
             } else {
-                const method = h.paymentMethod || "不明";
-                if (!paymentMap[method]) paymentMap[method] = { count: 0, amount: 0 };
-                paymentMap[method].count += 1;
-                paymentMap[method].amount += (h.totalAmount || 0);
+                // 領収書
+                const totalTax = data.totalAmount - netTotal;
+                t += `       領 収 書\n\n 日付：${new Date(data.createdAt).toLocaleDateString()}\n No. ${data.id}\n\n`;
+
+                const recipientLabel = `${guestName || "                "}  様`;
+                const namePadding = Math.max(0, Math.floor((MAX_WIDTH - getLen(recipientLabel)) / 2));
+                t += " ".repeat(namePadding) + recipientLabel + "\n\n";
+
+                const amountStr = `金額 ¥${data.totalAmount.toLocaleString()}-`;
+                const amtPadding = Math.max(0, Math.floor((MAX_WIDTH - getLen(amountStr)) / 2));
+                t += " ".repeat(amtPadding) + amountStr + "\n\n";
+
+                t += formatLine(` 但 ${d.receiptType || "商品代"} として`, "");
+                t += ` 正に領収いたしました\n\n [内訳]\n`;
+                const details = data.finalTaxDetails || {};
+                Object.keys(details).map(Number).sort((a, b) => b - a).forEach(rate => {
+                    const taxData = details[rate];
+                    if (taxData.excl > 0) {
+                        t += formatLine(` ${rate}%対象税抜:`, `¥${taxData.excl.toLocaleString()}`);
+                        t += formatLine(` 内消費税:`, `¥${taxData.tax.toLocaleString()}`);
+                    }
+                });
+
+                if (needsStamp) t += `\n[[STAMP_HERE]]\n`;
+                t += `\n${line}[発行者]\n`;
+                t += formatLine(displayStoreName, "");
+                if (zip) t += formatLine(zip, "");
+                if (d.address) t += formatLine(d.address, "");
+                if (d.tel) t += formatLine(`TEL: ${d.tel}`, "");
+                if (regNo) t += formatLine(`登録番号: ${regNo}`, "");
+                t += line;
             }
-        });
+            receiptPreview.innerHTML = t.replace('[[STAMP_HERE]]', `<div style="border: 1px solid #000; width: 60px; height: 70px; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 10px; margin: 10px 0 10px 50px;">収入印紙<br>貼付枠</div>`);
+        }
 
-        let csv = "\uFEFF決済方法,取引件数,売上合計\n";
-        Object.keys(paymentMap).sort().forEach(method => {
-            csv += `"${method}",${paymentMap[method].count},${paymentMap[method].amount}\n`;
-        });
+        // --- ボタンのイベント登録 ---
+        document.getElementById('btn-reissue-return').onclick = () => reissue('return');
 
-        downloadCSV(csv, "決済方法別売上分析.csv");
-    };
+        // --- 長押し・クリック処理 ---
+        function initLongPress() {
+            const btnBill = document.getElementById('btn-reissue-bill');
+            let timer;
+            let isLongPress = false;
 
-    function downloadCSV(csv, filename) {
-        const now = new Date();
-        // YYYYMMDD 形式の文字列を作成
-        const y = now.getFullYear();
-        const m = String(now.getMonth() + 1).padStart(2, '0');
-        const d = String(now.getDate()).padStart(2, '0');
-        const dateSuffix = `${y}${m}${d}`;
+            const start = (e) => {
+                isLongPress = false;
+                timer = setTimeout(() => {
+                    isLongPress = true;
+                    const name = prompt("領収書の宛名を入力してください", "");
+                    if (name !== null) reissue('bill', name);
+                }, 500);
+            };
 
-        // 拡張子の前に日付を挿入する（例：レポート.csv -> レポート_20260228.csv）
-        const newFilename = filename.replace(".csv", `_${dateSuffix}.csv`);
+            const end = (e) => {
+                clearTimeout(timer);
+                if (!isLongPress && e.type === 'click') {
+                    reissue('bill', ""); // 普通のクリックは宛名なし
+                }
+            };
 
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
-        link.download = newFilename; 
-        link.click();
-    }
+            // マウスとタッチ両対応
+            btnBill.addEventListener('mousedown', start);
+            btnBill.addEventListener('touchstart', start, { passive: true });
+            btnBill.addEventListener('click', end);
+            btnBill.addEventListener('touchend', end);
+        }
 
-    const menuBtn = document.getElementById('menu-btn');
-    const sideMenu = document.getElementById('side-menu');
-    menuBtn.onclick = () => { menuBtn.classList.toggle('open'); sideMenu.classList.toggle('hidden'); };
+        // --- 変更点：reissue 関数内のフラグ更新処理 ---
+        function reissue(type, guestName = "") {
+            if (!selectedItem) return;
 
-    document.addEventListener('DOMContentLoaded', () => {
-        const currentPath = window.location.pathname.split("/").pop();
-        const menuLinks = document.querySelectorAll('.menu-link');
+            generatePreview(type, guestName);
+            window.print();
 
-        menuLinks.forEach(link => {
-            const linkPath = link.getAttribute('href');
-            // 現在のファイル名と href が一致したら 'active' クラスをつける
-            if (currentPath === linkPath) {
-                link.classList.add('active');
+            const history = JSON.parse(localStorage.getItem(STORAGE_KEYS.HISTORY) || '[]');
+            const idx = history.findIndex(h => h.id === selectedItem.id);
+
+            if (idx !== -1) {
+                if (type === 'receipt') {
+                    history[idx].receiptIssued = true;
+                } else if (type === 'return') {
+                    // ここを修正：払戻伝票専用のフラグを更新
+                    history[idx].refundReceiptIssued = true;
+                } else if (type === 'bill') {
+                    history[idx].billIssued = true;
+                }
+
+                localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(history));
+                selectedItem = history[idx];
+
+                updateStatusBadges(selectedItem); // 修正：updateStatusDisplayではなく定義済みのこちらを呼ぶのが確実です
+                loadHistory();
             }
-        });
-    });
+        }
 
-    // finalizeTransaction 関数内の該当箇所を差し替え
-    function finalizeTransaction() {
-        playSnd('snd-beep2');
-        const now = new Date();
-        lastHistoryId = Date.now();
+        document.getElementById('btn-reissue-receipt').onclick = () => reissue('receipt');
+        document.getElementById('btn-close-modal').onclick = () => document.getElementById('detailModal').classList.add('hidden');
+        document.getElementById('btn-search').onclick = loadHistory;
 
-        const methodSummary = paymentDetails.map(p => p.method).join('・');
-
-        // order.finalCalculated.details が正しく生成されているか確認しつつ代入
-        const historyEntry = {
-            id: lastHistoryId,
-            items: order.items,
-            subtotal: order.totalAmount,
-            taxDetails: order.taxDetails, 
-            finalTaxDetails: order.finalCalculated.details, // ★ここが重要
-            discount: discountVal,
-            discountName: window.currentDiscountName || "",
-            totalAmount: order.finalCalculated.total,
-            paymentMethod: methodSummary,
-            paymentDetails: JSON.parse(JSON.stringify(paymentDetails)), 
-            cashReceived: paymentDetails.reduce((sum, p) => sum + p.cashReceived, 0),
-            change: paymentDetails.reduce((sum, p) => sum + p.change, 0),
-            createdAt: now.toISOString(),
-            isVoided: false,
-            receiptIssued: false,
-            billIssued: false,
-            date: now // generateContentで使うためにDateオブジェクトも保持
+        document.getElementById('btn-void-action').onclick = () => {
+            if (!confirm("この取引を取り消してよろしいですか？\n(在庫数も復元されます)")) return;
+            const history = JSON.parse(localStorage.getItem(STORAGE_KEYS.HISTORY) || '[]');
+            const idx = history.findIndex(h => h.id === selectedItem.id);
+            if (idx !== -1) {
+                const products = JSON.parse(localStorage.getItem(STORAGE_KEYS.PRODUCTS) || '[]');
+                selectedItem.items.forEach(soldItem => {
+                    const pIdx = products.findIndex(p => p.id === soldItem.id);
+                    if (pIdx !== -1) {
+                        products[pIdx].stock = (Number(products[pIdx].stock) || 0) + soldItem.qty;
+                    }
+                });
+                localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products));
+                history[idx].isVoided = true;
+                localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(history));
+                document.getElementById('detailModal').classList.add('hidden');
+                loadHistory();
+                alert("取引を取り消し、在庫を復元しました。");
+            }
         };
 
-        // グローバル変数に即座に代入（これでundefinedを防ぐ）
-        window.currentPaymentData = historyEntry;
+        // --- CSV改善版（動的税率対応 + 割引名追加） ---
+        document.getElementById('btn-csv-export').onclick = () => {
+            // 1. 存在する税率をすべて抽出する（重複なし・降順）
+            const activeRates = new Set();
+            filteredData.forEach(h => {
+                const details = h.finalTaxDetails || h.taxDetails || {};
+                Object.keys(details).forEach(rate => activeRates.add(Number(rate)));
+            });
+            const sortedRates = Array.from(activeRates).sort((a, b) => b - a);
 
-        let history = JSON.parse(localStorage.getItem(STORAGE_KEYS.HISTORY) || '[]');
-        history.push(historyEntry);
-        localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(history));
+            // 2. ヘッダーの作成
+            // 「割引」の後に「割引名」を追加
+            let header = ["日時", "内訳", "商品別割引/金額調整（合計）", "商品別割引/金額調整（詳細）", "小計", "割引/金額調整", "割引名/金額調整名", "税抜合計", "消費税額"];
 
-        const msgArea = document.getElementById('paymentResultMsg');
-        const totalChange = historyEntry.change;
-        msgArea.innerHTML = "";
-        if (totalChange > 0) {
-            msgArea.innerHTML += `<div style="color: var(--danger); font-size: 1.5rem; font-weight: 900;">お釣り: ¥${totalChange.toLocaleString()}</div>`;
+            // 存在する税率分だけ列を追加
+            sortedRates.forEach(rate => {
+                header.push(`${rate}%対象(税抜)`);
+                header.push(`${rate}%内消費税`);
+            });
+            header.push("最終合計", "支払方法", "分割決済詳細", "取引状態", "レシート発行", "領収書発行", "払戻伝票発行");
+
+            let csv = "\uFEFF" + header.map(h => `"${h}"`).join(",") + "\n";
+
+            // 3. データ行の作成
+            filteredData.forEach(h => {
+                const d = new Date(h.createdAt);
+                const dateStr = `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
+                const itemDetail = h.items.map(i => `${i.name}x${i.qty}`).join(' / ');
+
+                const details = h.finalTaxDetails || h.taxDetails || {};
+                let itemDiscountTotalVal = 0;
+
+                const itemDiscounts = h.items
+                    .map(i => {
+                        const orgP = Number(i.originalPrice) || 0;
+                        const curP = Number(i.price) || 0;
+                        const qty = Number(i.qty) || 0;
+
+                        const appDisc = i.appliedDiscount || {};
+                        const adjAmount = Number(appDisc.amount) || 0;
+                        const hasAdjustment = adjAmount > 0;
+                        const hasPresets = i.appliedPresets && Object.keys(i.appliedPresets).length > 0;
+
+                        // 元値があり、かつ現在の売価より高い場合のみ割引として計算
+                        if ((orgP > curP) || hasAdjustment) {
+                            const totalItemDiscount = ((orgP > curP ? orgP - curP : 0) * qty) + adjAmount;
+                            itemDiscountTotalVal += totalItemDiscount;
+                            // --- 割引名称を抽出するロジックを追加 ---
+                            let discNames = [];
+                            if (hasPresets) {
+                                for (const [name, count] of Object.entries(i.appliedPresets)) {
+                                    discNames.push(count > 1 ? `${name}×${count}` : name);
+                                }
+                            }
+
+                            if (hasAdjustment && appDisc.name) {
+                                discNames.push(appDisc.name);
+                            }
+                            const nameText = discNames.length > 0 ? `[${discNames.join('、')}]` : "";
+                            // --------------------------------------
+
+                            return `${i.name}${nameText}x${qty}(¥${totalItemDiscount.toLocaleString()})`;
+                        }
+                        return null;
+                    })
+                    .filter(val => val !== null)
+                    .join(' / ') || "--";
+
+                let calculatedTaxTotal = 0;
+                let netTotalForCsv = 0;
+
+                Object.keys(details).forEach(rate => {
+                    const val = details[rate];
+                    if (!val) return;
+                    const exclVal = (typeof val === 'object') ? (Number(val.excl) || Number(val.subtotal) || 0) : (Number(val) || 0);
+                    const taxVal = (typeof val === 'object') ? (Number(val.tax) || 0) : Math.floor(exclVal * (Number(rate) / 100));
+                    netTotalForCsv += exclVal;
+                    calculatedTaxTotal += taxVal;
+                });
+
+                const finalNetTotal = netTotalForCsv;
+
+                let voidTxt = "有効";
+                if (h.isVoided) {
+                    voidTxt = "取消済";
+                } else if (h.paymentMethod === '返金') {
+                    voidTxt = "払戻";
+                }
+
+                // --- 修正箇所：取引種別による表示の切り分け ---
+                const isRefund = (h.paymentMethod === '返金');
+                let receiptTxt, billTxt, refundTxt;
+
+                if (isRefund) {
+                    // 払戻（返金）取引の場合
+                    receiptTxt = "--";
+                    billTxt = "--";
+                    refundTxt = h.refundReceiptIssued ? "済" : "未";
+                } else {
+                    // 通常取引の場合
+                    receiptTxt = h.receiptIssued ? "済" : "未";
+                    billTxt = h.billIssued ? "済" : "未";
+                    refundTxt = "--";
+                }
+
+                let splitPaymentTxt = "--";
+                if (h.paymentDetails && h.paymentDetails.length > 1) {
+                    splitPaymentTxt = h.paymentDetails
+                        .map(p => `${p.method} ¥${(p.amount || 0).toLocaleString()}`)
+                        .join(' / ');
+                }
+
+                const discName = h.discountName || "";
+
+                // 基本情報
+                let row = [
+                    `"${dateStr}"`,
+                    `"${itemDetail}"`,
+                    itemDiscountTotalVal,
+                    `"${itemDiscounts}"`,
+                    Number(h.subtotal) || 0,
+                    Number(h.discount) || 0,
+                    `"${h.discountName || ""}"`,
+                    finalNetTotal,
+                    calculatedTaxTotal
+                ];
+
+                // 動的な税率別の金額を追加
+                sortedRates.forEach(rate => {
+                    const val = details[rate];
+                    const sub = (val && typeof val === 'object') ? (Number(val.excl) || Number(val.subtotal) || 0) : (Number(val) || 0);
+                    const tax = (val && typeof val === 'object') ? (Number(val.tax) || 0) : Math.floor(sub * (Number(rate) / 100));
+
+                    row.push(sub);
+                    row.push(tax);
+                });
+
+                // 残りの情報
+                row.push(
+                    Number(h.totalAmount) || 0,
+                    `"${h.paymentMethod}"`,
+                    `"${splitPaymentTxt}"`,
+                    `"${voidTxt}"`,
+                    `"${receiptTxt}"`,
+                    `"${billTxt}"`,
+                    `"${refundTxt}"`
+                );
+
+                csv += row.join(",") + "\n";
+            });
+
+            downloadCSV(csv, "取引明細レポート.csv");
+        };
+
+        document.getElementById('btn-csv-items').onclick = () => {
+            const itemMap = {};
+            // 取消分は分析から除外して正確な売上を出す
+            filteredData.filter(h => !h.isVoided).forEach(h => {
+                h.items.forEach(i => {
+                    if (!itemMap[i.name]) itemMap[i.name] = { qty: 0, amount: 0 };
+                    itemMap[i.name].qty += i.qty; itemMap[i.name].amount += (i.price * i.qty);
+                });
+            });
+            let csv = "\uFEFF商品名,販売個数,売上合計\n";
+            Object.keys(itemMap).forEach(name => { csv += `"${name}",${itemMap[name].qty},${itemMap[name].amount}\n`; });
+            downloadCSV(csv, "商品別売上分析.csv");
+        };
+
+        document.getElementById('btn-csv-demographics').onclick = () => {
+            // 【前提】年齢別・性別別の集計用マップ
+            // 構造例: { "20代": { "男性": { "商品A": 5, "商品B": 2 }, "女性": { ... } }, ... }
+            const demoMap = {};
+
+            // 取消分は分析から除外
+            filteredData.filter(h => !h.isVoided).forEach(h => {
+                // 会員情報が存在するか確認
+                const member = h.memberInfo;
+
+                // 年齢や性別がない場合（非会員など）の振り分け先
+                // ※もし member.age から年代を計算できる場合の例：
+                let ageGroup = "不明";
+                if (member && member.age) {
+                    const age = Number(member.age);
+                    if (!isNaN(age)) {
+                        ageGroup = `${Math.floor(age / 10) * 10}代`; // 例: 25歳 -> "20代"
+                    }
+                } else if (member && member.ageGroup) {
+                    ageGroup = member.ageGroup; // すでに「20代」などの文字列で持っている場合
+                }
+
+                let gender = (member && member.gender) ? member.gender : "不明";
+
+                // マップの初期化
+                if (!demoMap[ageGroup]) demoMap[ageGroup] = {};
+                if (!demoMap[ageGroup][gender]) demoMap[ageGroup][gender] = {};
+
+                // 商品ごとの集計
+                h.items.forEach(i => {
+                    if (!demoMap[ageGroup][gender][i.name]) {
+                        demoMap[ageGroup][gender][i.name] = 0;
+                    }
+                    demoMap[ageGroup][gender][i.name] += i.qty;
+                });
+            });
+
+            // CSVの作成（BOM付きでExcel文字化け対策）
+            let csv = "\uFEFF年代,性別,商品名,販売個数\n";
+
+            Object.keys(demoMap).forEach(ageGroup => {
+                Object.keys(demoMap[ageGroup]).forEach(gender => {
+                    const itemMap = demoMap[ageGroup][gender];
+                    Object.keys(itemMap).forEach(itemName => {
+                        const qty = itemMap[itemName];
+                        csv += `"${ageGroup}","${gender}","${itemName}",${qty}\n`;
+                    });
+                });
+            });
+
+            downloadCSV(csv, "年齢性別別商品売上分析.csv");
+        };
+
+        document.getElementById('btn-csv-time').onclick = () => {
+            const timeMap = {}; const itemSet = new Set();
+            // 取消分は除外
+            filteredData.filter(h => !h.isVoided).forEach(h => {
+                const hour = new Date(h.createdAt).getHours();
+                if (!timeMap[hour]) timeMap[hour] = {};
+                h.items.forEach(i => { timeMap[hour][i.name] = (timeMap[hour][i.name] || 0) + i.qty; itemSet.add(i.name); });
+            });
+            const sortedItems = Array.from(itemSet);
+            let csv = "\uFEFF時間帯," + sortedItems.map(n => `"${n}"`).join(",") + ",合計個数\n";
+            for (let h = 0; h < 24; h++) {
+                let row = [`${h}時`]; let sum = 0;
+                sortedItems.forEach(name => { const qty = timeMap[h]?.[name] || 0; row.push(qty); sum += qty; });
+                row.push(sum); csv += row.join(",") + "\n";
+            }
+            downloadCSV(csv, "時間別商品分析.csv");
+        };
+
+        // --- 決済方法別売上CSVの追加 ---
+        document.getElementById('btn-csv-payment').onclick = () => {
+            const paymentMap = {};
+
+            // 取消分を除外して集計
+            filteredData.filter(h => !h.isVoided).forEach(h => {
+                // 分割決済（paymentDetails）がある場合はそれを優先、なければ paymentMethod を使用
+                if (h.paymentDetails && h.paymentDetails.length > 0) {
+                    h.paymentDetails.forEach(p => {
+                        const method = p.method || "不明";
+                        if (!paymentMap[method]) paymentMap[method] = { count: 0, amount: 0 };
+                        paymentMap[method].count += 1;
+                        paymentMap[method].amount += (p.amount || 0);
+                    });
+                } else {
+                    const method = h.paymentMethod || "不明";
+                    if (!paymentMap[method]) paymentMap[method] = { count: 0, amount: 0 };
+                    paymentMap[method].count += 1;
+                    paymentMap[method].amount += (h.totalAmount || 0);
+                }
+            });
+
+            let csv = "\uFEFF決済方法,取引件数,売上合計\n";
+            Object.keys(paymentMap).sort().forEach(method => {
+                csv += `"${method}",${paymentMap[method].count},${paymentMap[method].amount}\n`;
+            });
+
+            downloadCSV(csv, "決済方法別売上分析.csv");
+        };
+
+        function downloadCSV(csv, filename) {
+            const now = new Date();
+            // YYYYMMDD 形式の文字列を作成
+            const y = now.getFullYear();
+            const m = String(now.getMonth() + 1).padStart(2, '0');
+            const d = String(now.getDate()).padStart(2, '0');
+            const dateSuffix = `${y}${m}${d}`;
+
+            // 拡張子の前に日付を挿入する（例：レポート.csv -> レポート_20260228.csv）
+            const newFilename = filename.replace(".csv", `_${dateSuffix}.csv`);
+
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+            link.download = newFilename;
+            link.click();
         }
-        
-        sessionStorage.removeItem('currentOrder');
-        generateContent('receipt'); 
-        openModal('receiptModal');
-    }   
-</script>
+
+        const menuBtn = document.getElementById('menu-btn');
+        const sideMenu = document.getElementById('side-menu');
+        menuBtn.onclick = () => { menuBtn.classList.toggle('open'); sideMenu.classList.toggle('hidden'); };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const currentPath = window.location.pathname.split("/").pop();
+            const menuLinks = document.querySelectorAll('.menu-link');
+
+            menuLinks.forEach(link => {
+                const linkPath = link.getAttribute('href');
+                // 現在のファイル名と href が一致したら 'active' クラスをつける
+                if (currentPath === linkPath) {
+                    link.classList.add('active');
+                }
+            });
+        });
+
+        // finalizeTransaction 関数内の該当箇所を差し替え
+        function finalizeTransaction() {
+            playSnd('snd-beep2');
+            const now = new Date();
+            lastHistoryId = Date.now();
+
+            const methodSummary = paymentDetails.map(p => p.method).join('・');
+
+            // order.finalCalculated.details が正しく生成されているか確認しつつ代入
+            const historyEntry = {
+                id: lastHistoryId,
+                items: order.items,
+                subtotal: order.totalAmount,
+                taxDetails: order.taxDetails,
+                finalTaxDetails: order.finalCalculated.details, // ★ここが重要
+                discount: discountVal,
+                discountName: window.currentDiscountName || "",
+                totalAmount: order.finalCalculated.total,
+                paymentMethod: methodSummary,
+                paymentDetails: JSON.parse(JSON.stringify(paymentDetails)),
+                cashReceived: paymentDetails.reduce((sum, p) => sum + p.cashReceived, 0),
+                change: paymentDetails.reduce((sum, p) => sum + p.change, 0),
+                createdAt: now.toISOString(),
+                isVoided: false,
+                receiptIssued: false,
+                billIssued: false,
+                date: now // generateContentで使うためにDateオブジェクトも保持
+            };
+
+            // グローバル変数に即座に代入（これでundefinedを防ぐ）
+            window.currentPaymentData = historyEntry;
+
+            let history = JSON.parse(localStorage.getItem(STORAGE_KEYS.HISTORY) || '[]');
+            history.push(historyEntry);
+            localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(history));
+
+            const msgArea = document.getElementById('paymentResultMsg');
+            const totalChange = historyEntry.change;
+            msgArea.innerHTML = "";
+            if (totalChange > 0) {
+                msgArea.innerHTML += `<div style="color: var(--danger); font-size: 1.5rem; font-weight: 900;">お釣り: ¥${totalChange.toLocaleString()}</div>`;
+            }
+
+            sessionStorage.removeItem('currentOrder');
+            generateContent('receipt');
+            openModal('receiptModal');
+        }   
+    </script>
 </body>
+
 </html>
