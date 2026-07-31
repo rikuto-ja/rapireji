@@ -649,6 +649,8 @@
                 earnedPoint: earnedPoints,
                 isDepositUsed: useDeposit > 0,
                 isPointUsed: usePoint > 0,
+                currentBalance: activeCardData.balance,
+                currentPoint: activeCardData.point,
                 timestamp: nowStr
             };
             sessionStorage.setItem('rapireji_last_payment', JSON.stringify(paymentResult));
@@ -662,6 +664,19 @@
             }
 
             if (hasGrantedPoints) {
+                const paymentResult = {
+                    cardId: activeCardData.id,
+                    cardName: activeCardData.name,
+                    usedDeposit: 0,
+                    usedPoint: 0,
+                    earnedPoint: 0,
+                    isDepositUsed: false,
+                    isPointUsed: false,
+                    currentBalance: activeCardData.balance,
+                    currentPoint: activeCardData.point,
+                    timestamp: new Date().toLocaleString()
+                };
+                sessionStorage.setItem('rapireji_last_payment', JSON.stringify(paymentResult));
                 window.location.href = 'payment.html';
                 return;
             }
@@ -682,6 +697,19 @@
                 alert('ポイント付与対象外の金額、または設定です。');
             }
 
+            const paymentResult = {
+                cardId: activeCardData.id,
+                cardName: activeCardData.name,
+                usedDeposit: 0,
+                usedPoint: 0,
+                earnedPoint: earnedPoints,
+                isDepositUsed: false,
+                isPointUsed: false,
+                currentBalance: activeCardData.balance,
+                currentPoint: activeCardData.point,
+                timestamp: new Date().toLocaleString()
+            };
+            sessionStorage.setItem('rapireji_last_payment', JSON.stringify(paymentResult));
             window.location.href = 'payment.html';
         }    
     </script>
