@@ -591,28 +591,50 @@
             }
             document.getElementById('backBtn').onclick = () => location.href = 'register.html';
             initSettings();
-
             const lastPaymentJson = sessionStorage.getItem('rapireji_last_payment');
             if (lastPaymentJson) {
                 try {
                     const paymentResult = JSON.parse(lastPaymentJson);
                     const totalUsed = (paymentResult.usedDeposit || 0) + (paymentResult.usedPoint || 0);
 
-                    if (totalUsed > 0) {
-                        // 支払い履歴に追加
+                    const hasDeposit = (paymentResult.usedDeposit || 0) > 0;
+                    const hasPoint = (paymentResult.usedPoint || 0) > 0;
+
+                    if (hasDeposit && hasPoint) {
                         paymentDetails.push({
-                            method: `QRカード決済 (${paymentResult.cardName})`,
-                            amount: totalUsed,
-                            cashReceived: totalUsed,
+                            method: `QRカード`,
+                            amount: paymentResult.usedDeposit,
+                            cashReceived: 0, // 【修正】現所以外はお預かりを0にする
                             change: 0
                         });
-                        // 状態を保存
-                        savePaymentState();
+                        paymentDetails.push({
+                            method: `ポイント利用`,
+                            amount: paymentResult.usedPoint,
+                            cashReceived: 0, // 【修正】
+                            change: 0
+                        });
+                    } else if (hasDeposit) {
+                        paymentDetails.push({
+                            method: `QRカード`,
+                            amount: paymentResult.usedDeposit,
+                            cashReceived: 0, // 【修正】
+                            change: 0
+                        });
+                    } else if (hasPoint) {
+                        paymentDetails.push({
+                            method: `ポイント利用`,
+                            amount: paymentResult.usedPoint,
+                            cashReceived: 0, // 【修正】
+                            change: 0
+                        });
                     }
+
+                    window.lastReceiptData = paymentResult;
+                    savePaymentState();
+
                 } catch (e) {
                     console.error("QR決済結果の読み込みエラー", e);
                 }
-                // 二重適用を防ぐため削除
                 sessionStorage.removeItem('rapireji_last_payment');
             }
 
@@ -640,6 +662,19 @@
                 });
             }
             setupKeypadConfirmLongPress();
+
+            const qrButtonSetting = JSON.parse(localStorage.getItem('rapireji_qr_button_config') || '{"enabled": false}');
+
+            // 対象のボタン要素を取得
+            const qrPaymentBtn = document.getElementById('qrPaymentBtn');
+
+            if (qrPaymentBtn) {
+                if (qrButtonSetting.enabled) {
+                    qrPaymentBtn.style.display = 'block'; // または inline-block など、元のCSSの表示形式に合わせてください
+                } else {
+                    qrPaymentBtn.style.display = 'none';  // デフォルト非表示
+                }
+            }
         });
 
         function initSettings() {
@@ -1096,7 +1131,16 @@
                 createdAt: now.toISOString(),
                 isVoided: false,
                 receiptIssued: false,
-                billIssued: false
+                billIssued: false,
+                memberInfo: window.lastReceiptData ? {
+                    cardId: window.lastReceiptData.cardId,
+                    cardName: window.lastReceiptData.cardName,
+                    earnedPoint: window.lastReceiptData.earnedPoint,
+                    usedDeposit: window.lastReceiptData.usedDeposit,
+                    usedPoint: window.lastReceiptData.usedPoint,
+                    currentBalance: window.lastReceiptData.currentBalance,
+                    currentPoint: window.lastReceiptData.currentPoint
+                } : null
             };
 
             let history = JSON.parse(localStorage.getItem(STORAGE_KEYS.HISTORY) || '[]');
@@ -1338,6 +1382,34 @@
                     t += formatLine("お預かり", `¥${new BigNumber(info.cashReceived).toNumber().toLocaleString()}`);
                     t += formatLine("お釣り", `¥${new BigNumber(info.change).toNumber().toLocaleString()}`);
                 }
+                // --- 【追加】QRカード / 会員情報のレシート印字 ---
+                const receiptData = window.lastReceiptData;
+                if (receiptData && receiptData.cardId) {
+                    t += line;
+                    // 会員番号の下4桁以外を * でマスク（例: "********1234"）
+                    const cardIdStr = String(receiptData.cardId);
+                    const maskedId = cardIdStr.length > 4
+                        ? "*".repeat(cardIdStr.length - 4) + cardIdStr.slice(-4)
+                        : cardIdStr;
+
+                    t += formatLine("会員番号", maskedId);
+
+                    // 今回の獲得ポイント（0より大きい場合のみ印字、または常に印字する場合は条件緩和）
+                    if (receiptData.earnedPoint !== undefined) {
+                        t += formatLine("今回獲得ポイント", `+${Number(receiptData.earnedPoint).toLocaleString()}pt`);
+                    }
+
+                    // 残高（デポジット残高が存在、または管理されている場合のみ表示）
+                    if (receiptData.currentBalance !== undefined && receiptData.currentBalance !== null) {
+                        t += formatLine("残高", `¥${Number(receiptData.currentBalance).toLocaleString()}`);
+                    }
+
+                    // ポイント残高（ポイント機能がある場合のみ表示）
+                    if (receiptData.currentPoint !== undefined && receiptData.currentPoint !== null) {
+                        t += formatLine("ポイント残高", `${Number(receiptData.currentPoint).toLocaleString()}pt`);
+                    }
+                }
+                // ----------------------------------------------------
                 if (needsStamp) t += `\n[[STAMP_HERE]]\n`;
                 t += line;
                 t += `※ *の後の数字は税率です\n`;
@@ -1478,6 +1550,7 @@
         }
 
         document.getElementById('qrPaymentBtn').addEventListener('click', () => {
+            playSnd('snd-beep1');
             // #finalTotal のテキスト（例: "¥1,500"）を取得
             const finalTotalText = document.getElementById('finalTotal').innerText;
 
