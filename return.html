@@ -1,172 +1,505 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>払い戻し | らぴレジ</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bignumber.js/9.1.2/bignumber.min.js"></script>
     <style>
         :root {
-            --black: #000000; --white: #ffffff; --gray-bg: #f8f9fa;
-            --gray-light: #e9ecef; --accent: #00ff00; --header-h: 60px;
+            --black: #000000;
+            --white: #ffffff;
+            --gray-bg: #f8f9fa;
+            --gray-light: #e9ecef;
+            --accent: #00ff00;
+            --header-h: 60px;
         }
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; touch-action: manipulation; }
-        body { background-color: var(--white); overflow: hidden; display: flex; flex-direction: column; height: 100vh; height:-webkit-fill-available; width: 100vw; }
-        
-        html{height: -webkit-fill-available;}
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: sans-serif;
+            touch-action: manipulation;
+        }
+
+        body {
+            background-color: var(--white);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            height: -webkit-fill-available;
+            width: 100vw;
+        }
+
+        html {
+            height: -webkit-fill-available;
+        }
 
         header {
-            height: calc(var(--header-h) + env(safe-area-inset-top)); 
+            height: calc(var(--header-h) + env(safe-area-inset-top));
             border-bottom: 3px solid var(--black);
-            display: flex; 
-            align-items: center; 
-            padding: env(safe-area-inset-top) 20px 0 20px; 
+            display: flex;
+            align-items: center;
+            padding: env(safe-area-inset-top) 20px 0 20px;
             background: var(--white);
-            position: sticky; 
-            top: 0; 
+            position: sticky;
+            top: 0;
             z-index: 1100;
             justify-content: space-between;
         }
-        .header-left { display: flex; align-items: center; }
-        header h1 { font-size: 1.2rem; font-weight: 900; margin-left: 20px; white-space: nowrap; }
-        .header-ad-space { flex: 1; margin-left: 20px; height: 45px; background: #fff; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 1px dashed #ccc; }
 
-        .menu-trigger { width: 30px; height: 22px; cursor: pointer; position: relative; }
-        .menu-trigger span { display: block; width: 100%; height: 4px; background: var(--black); position: absolute; left: 0; transition: all 0.3s; }
-        .menu-trigger span:nth-child(1) { top: 0; }
-        .menu-trigger span:nth-child(2) { top: 9px; }
-        .menu-trigger span:nth-child(3) { top: 18px; }
-        .menu-trigger.open span:nth-child(1) { transform: translateY(9px) rotate(45deg); }
-        .menu-trigger.open span:nth-child(2) { opacity: 0; }
-        .menu-trigger.open span:nth-child(3) { transform: translateY(-9px) rotate(-45deg); }
-        .menu-link.active { background-color: transparent; color: var(--black); font-weight: 900; font-size: 1.1rem; border-left: 8px solid var(--black); padding-left: 7px; }
-        
-        .side-nav { 
-            position: fixed; 
-            top: var(--header-h); 
-            left: 0; 
-            width: 250px; 
-            height: calc(100% - var(--header-h)); 
-            padding-bottom: env(safe-area-inset-bottom); 
-            background: var(--white); 
-            border-right: 3px solid var(--black); 
-            z-index: 1050; 
-            transition: transform 0.3s; 
+        .header-left {
+            display: flex;
+            align-items: center;
+        }
+
+        header h1 {
+            font-size: 1.2rem;
+            font-weight: 900;
+            margin-left: 20px;
+            white-space: nowrap;
+        }
+
+        .header-ad-space {
+            flex: 1;
+            margin-left: 20px;
+            height: 45px;
+            background: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            border: 1px dashed #ccc;
+        }
+
+        .menu-trigger {
+            width: 30px;
+            height: 22px;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .menu-trigger span {
+            display: block;
+            width: 100%;
+            height: 4px;
+            background: var(--black);
+            position: absolute;
+            left: 0;
+            transition: all 0.3s;
+        }
+
+        .menu-trigger span:nth-child(1) {
+            top: 0;
+        }
+
+        .menu-trigger span:nth-child(2) {
+            top: 9px;
+        }
+
+        .menu-trigger span:nth-child(3) {
+            top: 18px;
+        }
+
+        .menu-trigger.open span:nth-child(1) {
+            transform: translateY(9px) rotate(45deg);
+        }
+
+        .menu-trigger.open span:nth-child(2) {
+            opacity: 0;
+        }
+
+        .menu-trigger.open span:nth-child(3) {
+            transform: translateY(-9px) rotate(-45deg);
+        }
+
+        .menu-link.active {
+            background-color: transparent;
+            color: var(--black);
+            font-weight: 900;
+            font-size: 1.1rem;
+            border-left: 8px solid var(--black);
+            padding-left: 7px;
+        }
+
+        .side-nav {
+            position: fixed;
+            top: var(--header-h);
+            left: 0;
+            width: 250px;
+            height: calc(100% - var(--header-h));
+            padding-bottom: env(safe-area-inset-bottom);
+            background: var(--white);
+            border-right: 3px solid var(--black);
+            z-index: 1050;
+            transition: transform 0.3s;
             padding-left: 20px;
             padding-right: 20px;
             padding-top: 20px;
         }
-        .side-nav.hidden { transform: translateX(-100%); }
-        .menu-link { display: block; padding: 15px; color: var(--black); font-weight: 800; text-decoration: none; border-bottom: 1px solid var(--gray-light); }
 
-        .main-layout { display: flex; flex: 1; overflow: hidden; width: 100%; margin-bottom:0; }
-        .product-section { flex: 7.5; display: flex; flex-direction: column; background: var(--gray-bg); padding: 10px; overflow: visible; }
-        .category-bar { 
-            display: flex; gap: 8px; margin-bottom: 10px; overflow: visible; padding: 2px; flex-shrink: 0; 
-            position: relative; align-items: center; min-height: 50px;
+        .side-nav.hidden {
+            transform: translateX(-100%);
         }
-        .cat-tab { padding: 8px 16px; background: var(--white); border: 2px solid var(--black); font-weight: 800; font-size: 0.8rem; cursor: pointer; white-space: nowrap; box-shadow: 2px 2px 0px var(--black); border-radius: 0; }
-        .cat-tab.active { background: var(--black); color: var(--white); transform: translate(1px, 1px); box-shadow: none; }
-        
-        .product-grid { 
-            display: grid; 
-            grid-template-columns: repeat(6, 1fr); 
-            grid-auto-rows: min-content; 
-            gap: 8px; 
-            overflow-y: auto; 
-            align-content: start; 
-            flex: 1; 
-        }
-        
-        .product-card { 
-            height: auto; 
-            min-height: 110px; 
-            background: var(--white); 
-            border: 2px solid var(--black); 
-            display: flex; 
-            flex-direction: column; 
-            cursor: pointer; 
-            box-shadow: 2px 2px 0px var(--black); 
-            position: relative; 
-            overflow: visible; 
-        }
-        .product-card:active { transform: translate(1px, 1px); box-shadow: none; }
-        .product-card.out-of-stock { opacity: 0.5; cursor: not-allowed; background: #eee; }
-        .out-of-stock-label { position: absolute; top: 20px; left: 50%; transform: translate(-50%, -50%); background: red; color: white; padding: 2px 5px; font-size: 0.7rem; font-weight: 900; z-index: 10; pointer-events: none; }
 
-        .empty-slot { height: 110px; border: 1px solid transparent; }
-        
-        .p-img { width: 100%; height: 55px; object-fit: cover; border-bottom: 1px solid var(--black); flex-shrink: 0; }
-        
-        .p-info { 
-            flex: 1; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            justify-content: space-between; 
-            font-weight: 800; 
-            font-size: 0.7rem; 
-            padding: 6px 2px; 
-            text-align: center; 
-            line-height: 1.2; 
+        .menu-link {
+            display: block;
+            padding: 15px;
+            color: var(--black);
+            font-weight: 800;
+            text-decoration: none;
+            border-bottom: 1px solid var(--gray-light);
         }
-        .p-info strong { 
-            display: block; 
-            word-break: break-all; 
+
+        .main-layout {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            width: 100%;
+            margin-bottom: 0;
+        }
+
+        .product-section {
+            flex: 7.5;
+            display: flex;
+            flex-direction: column;
+            background: var(--gray-bg);
+            padding: 10px;
+            overflow: visible;
+        }
+
+        .category-bar {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+            overflow: visible;
+            padding: 2px;
+            flex-shrink: 0;
+            position: relative;
+            align-items: center;
+            min-height: 50px;
+        }
+
+        .cat-tab {
+            padding: 8px 16px;
+            background: var(--white);
+            border: 2px solid var(--black);
+            font-weight: 800;
+            font-size: 0.8rem;
+            cursor: pointer;
+            white-space: nowrap;
+            box-shadow: 2px 2px 0px var(--black);
+            border-radius: 0;
+        }
+
+        .cat-tab.active {
+            background: var(--black);
+            color: var(--white);
+            transform: translate(1px, 1px);
+            box-shadow: none;
+        }
+
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            grid-auto-rows: min-content;
+            gap: 8px;
+            overflow-y: auto;
+            align-content: start;
+            flex: 1;
+        }
+
+        .product-card {
+            height: auto;
+            min-height: 110px;
+            background: var(--white);
+            border: 2px solid var(--black);
+            display: flex;
+            flex-direction: column;
+            cursor: pointer;
+            box-shadow: 2px 2px 0px var(--black);
+            position: relative;
+            overflow: visible;
+        }
+
+        .product-card:active {
+            transform: translate(1px, 1px);
+            box-shadow: none;
+        }
+
+        .product-card.out-of-stock {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: #eee;
+        }
+
+        .out-of-stock-label {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: red;
+            color: white;
+            padding: 2px 5px;
+            font-size: 0.7rem;
+            font-weight: 900;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .empty-slot {
+            height: 110px;
+            border: 1px solid transparent;
+        }
+
+        .p-img {
+            width: 100%;
+            height: 55px;
+            object-fit: cover;
+            border-bottom: 1px solid var(--black);
+            flex-shrink: 0;
+        }
+
+        .p-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            font-weight: 800;
+            font-size: 0.7rem;
+            padding: 6px 2px;
+            text-align: center;
+            line-height: 1.2;
+        }
+
+        .p-info strong {
+            display: block;
+            word-break: break-all;
             margin-bottom: 4px;
             width: 100%;
         }
-        .p-price { display: block; margin-top: auto; padding-top: 2px; }
-        .p-stock { font-size: 0.6rem; color: #666; margin-top: 1px; }
-        .stock-alert { color: #ff0000 !important; font-weight: 900 !important; }
 
-        .cart-section { flex: 2.5; border-left: 3px solid var(--black); display: flex; flex-direction: column; background: var(--white); overflow: hidden; }
-        .drag-handle { padding: 10px 10px; border-bottom: 2px solid var(--black); font-weight: 900; background: #eee; font-size: 0.8rem; display: flex; flex-direction: column; align-items: center; }
-        .handle-bar { display: none; width: 40px; height: 4px; background: #ccc; border-radius: 2px; margin-bottom: 5px; }
+        .p-price {
+            display: block;
+            margin-top: auto;
+            padding-top: 2px;
+        }
 
-        .cart-list { flex: 1; overflow-y: auto; padding: 10px; }
-        .cart-item { display: flex; flex-direction: column; padding: 8px 0; border-bottom: 1px solid #000; font-weight: 800; font-size: 0.85rem; }
-        .cart-item-top { display: flex; justify-content: space-between; margin-bottom: 5px; }
-        .cart-item-controls { display: flex; align-items: center; gap: 10px; }
-        .qty-btn { width: 28px; height: 28px; background: #fff; border: 2px solid #000; font-weight: 900; cursor: pointer; display: flex; align-items: center; justify-content: center; border-radius: 0; }
-        
-        .cart-total { padding: 15px; border-top: calc(15px+env(safe-area-inset-bottom)); border-top: 3px solid var(--black); background: var(--white); flex-shrink: 0; z-index: 100; }
-        .total-row { display: flex; justify-content: space-between; font-size: 1.3rem; font-weight: 900; margin-bottom: 10px; }
-        .checkout-btn { width: 100%; background: var(--black); color: var(--white); border: none; padding: 15px; font-size: 1.1rem; font-weight: 900; cursor: pointer; border-radius: 0; }
+        .p-stock {
+            font-size: 0.6rem;
+            color: #666;
+            margin-top: 1px;
+        }
 
-        .confirm-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 30000; }
-        .confirm-content { background: #fff; padding: 30px; width: 90%; max-width: 400px; text-align: center; box-shadow: 0 #000; }
-        .hidden { display: none !important; }
+        .stock-alert {
+            color: #ff0000 !important;
+            font-weight: 900 !important;
+        }
+
+        .cart-section {
+            flex: 2.5;
+            border-left: 3px solid var(--black);
+            display: flex;
+            flex-direction: column;
+            background: var(--white);
+            overflow: hidden;
+        }
+
+        .drag-handle {
+            padding: 10px 10px;
+            border-bottom: 2px solid var(--black);
+            font-weight: 900;
+            background: #eee;
+            font-size: 0.8rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .handle-bar {
+            display: none;
+            width: 40px;
+            height: 4px;
+            background: #ccc;
+            border-radius: 2px;
+            margin-bottom: 5px;
+        }
+
+        .cart-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .cart-item {
+            display: flex;
+            flex-direction: column;
+            padding: 8px 0;
+            border-bottom: 1px solid #000;
+            font-weight: 800;
+            font-size: 0.85rem;
+        }
+
+        .cart-item-top {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+
+        .cart-item-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .qty-btn {
+            width: 28px;
+            height: 28px;
+            background: #fff;
+            border: 2px solid #000;
+            font-weight: 900;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 0;
+        }
+
+        .cart-total {
+            padding: 15px;
+            border-top: calc(15px+env(safe-area-inset-bottom));
+            border-top: 3px solid var(--black);
+            background: var(--white);
+            flex-shrink: 0;
+            z-index: 100;
+        }
+
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 1.3rem;
+            font-weight: 900;
+            margin-bottom: 10px;
+        }
+
+        .checkout-btn {
+            width: 100%;
+            background: var(--black);
+            color: var(--white);
+            border: none;
+            padding: 15px;
+            font-size: 1.1rem;
+            font-weight: 900;
+            cursor: pointer;
+            border-radius: 0;
+        }
+
+        .confirm-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 30000;
+        }
+
+        .confirm-content {
+            background: #fff;
+            padding: 30px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 #000;
+        }
+
+        .hidden {
+            display: none !important;
+        }
 
         /* 検索バーのレイアウト調整 */
-        .search-btn { 
-            background: none; border: none; font-size: 1.2rem; cursor: pointer; 
-            flex-shrink: 0; padding: 0 10px; box-shadow: none; /* 影を消去 */
+        .search-btn {
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            flex-shrink: 0;
+            padding: 0 10px;
+            box-shadow: none;
+            /* 影を消去 */
         }
+
         /* クリック時の挙動も無効化 */
-        .search-btn:active { transform: none; }
-        .search-container { 
-            display: none; position: absolute; left: 45px; right: 0; top: 0; bottom: -5px; 
-            background: var(--gray-bg); z-index: 100; align-items: center; gap: 5px;
+        .search-btn:active {
+            transform: none;
         }
-        .search-container.open { display: flex; }
-        .search-input { 
-            flex: 1; height: 35px; border: 2px solid var(--black); padding: 0 10px; 
-            font-weight: 800; font-size: 0.9rem; outline: none;
+
+        .search-container {
+            display: none;
+            position: absolute;
+            left: 45px;
+            right: 0;
+            top: 0;
+            bottom: -5px;
+            background: var(--gray-bg);
+            z-index: 100;
+            align-items: center;
+            gap: 5px;
         }
-        .search-close { cursor: pointer; font-weight: 900; padding: 0 10px; }
+
+        .search-container.open {
+            display: flex;
+        }
+
+        .search-input {
+            flex: 1;
+            height: 35px;
+            border: 2px solid var(--black);
+            padding: 0 10px;
+            font-weight: 800;
+            font-size: 0.9rem;
+            outline: none;
+        }
+
+        .search-close {
+            cursor: pointer;
+            font-weight: 900;
+            padding: 0 10px;
+        }
 
         /* 検索候補リスト */
         .search-results {
-            position: absolute; top: 40px; left: 45px; right: 0; 
-            background: white; border: 2px solid var(--black); 
-            z-index: 2000; max-height: 200px; overflow-y: auto; box-shadow: 4px 4px 0px rgba(0,0,0,0.2);
+            position: absolute;
+            top: 40px;
+            left: 45px;
+            right: 0;
+            background: white;
+            border: 2px solid var(--black);
+            z-index: 2000;
+            max-height: 200px;
+            overflow-y: auto;
+            box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.2);
         }
+
         .search-result-item {
-            padding: 10px; border-bottom: 1px solid var(--gray-light); 
-            cursor: pointer; font-weight: 800; font-size: 0.85rem;
+            padding: 10px;
+            border-bottom: 1px solid var(--gray-light);
+            cursor: pointer;
+            font-weight: 800;
+            font-size: 0.85rem;
         }
-        .search-result-item:hover { background: var(--gray-light); }
+
+        .search-result-item:hover {
+            background: var(--gray-light);
+        }
 
         /* CSS: 割引ボタンのスタイル追加 */
         .discount-btn {
@@ -178,729 +511,836 @@
             font-weight: 900;
             cursor: pointer;
         }
+
         /* キーパッド用のモーダル（未実装だった場合のための基本構造） */
         /* --- テンキー（keypadModal）のデザイン修正 --- */
-#keypadModal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.8);
-    display: flex;
-    align-items: center; /* 垂直中央 */
-    justify-content: center; /* 水平中央 */
-    z-index: 30000;
-}
+        #keypadModal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            /* 垂直中央 */
+            justify-content: center;
+            /* 水平中央 */
+            z-index: 30000;
+        }
 
-#keypadModal .modal-content {
-    background: #fff;
-    padding: 20px;
-    border: 4px solid #000;
-    width: 90%;
-    max-width: 320px; /* サイズを少しコンパクトに調整 */
-    box-shadow: 10px 10px 0 #000;
-    position: relative;
-}
+        #keypadModal .modal-content {
+            background: #fff;
+            padding: 20px;
+            border: 4px solid #000;
+            width: 90%;
+            max-width: 320px;
+            /* サイズを少しコンパクトに調整 */
+            box-shadow: 10px 10px 0 #000;
+            position: relative;
+        }
 
-#keypadModal .numpad-display {
-    width: 100%;
-    padding: 10px;
-    font-size: 1.5rem;
-    border: 3px solid #000;
-    text-align: right;
-    font-weight: 900;
-    margin-bottom: 10px;
-    background: #eee;
-    box-sizing: border-box;
-}
+        #keypadModal .numpad-display {
+            width: 100%;
+            padding: 10px;
+            font-size: 1.5rem;
+            border: 3px solid #000;
+            text-align: right;
+            font-weight: 900;
+            margin-bottom: 10px;
+            background: #eee;
+            box-sizing: border-box;
+        }
 
-#keypadModal .numpad-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
-}
+        #keypadModal .numpad-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
 
-#keypadModal .num-btn {
-    padding: 10px;
-    border: 2px solid #000;
-    background: #fff;
-    font-size: 1.2rem;
-    font-weight: 900;
-    cursor: pointer;
-}
+        #keypadModal .num-btn {
+            padding: 10px;
+            border: 2px solid #000;
+            background: #fff;
+            font-size: 1.2rem;
+            font-weight: 900;
+            cursor: pointer;
+        }
 
-#keypadModal .num-btn:active {
-    background: #eee;
-    transform: translate(2px, 2px);
-}
+        #keypadModal .num-btn:active {
+            background: #eee;
+            transform: translate(2px, 2px);
+        }
 
-/* プリセットボタンのデザイン */
-#keypadModal .discount-presets {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 5px;
-    margin-top: 10px;
-}
+        /* プリセットボタンのデザイン */
+        #keypadModal .discount-presets {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 5px;
+            margin-top: 10px;
+        }
 
-#keypadModal .preset-btn {
-    background: #fff;
-    border: 2px solid #ff0000; /* --danger相当 */
-    color: #ff0000;
-    padding: 8px 5px;
-    font-weight: 800;
-    font-size: 0.8rem;
-    cursor: pointer;
-}
+        #keypadModal .preset-btn {
+            background: #fff;
+            border: 2px solid #ff0000;
+            /* --danger相当 */
+            color: #ff0000;
+            padding: 8px 5px;
+            font-weight: 800;
+            font-size: 0.8rem;
+            cursor: pointer;
+        }
 
-/* 確定・キャンセルボタン */
-#keypadModal .btn-black {
-    width: 100%;
-    background: #000;
-    color: #fff;
-    padding: 12px;
-    border: none;
-    font-weight: 900;
-    cursor: pointer;
-    font-size: 1rem;
-    margin-top: 8px;
-}
+        /* 確定・キャンセルボタン */
+        #keypadModal .btn-black {
+            width: 100%;
+            background: #000;
+            color: #fff;
+            padding: 12px;
+            border: none;
+            font-weight: 900;
+            cursor: pointer;
+            font-size: 1rem;
+            margin-top: 8px;
+        }
 
-#keypadModal .btn-outline {
-    width: 100%;
-    background: #fff;
-    color: #000;
-    padding: 12px;
-    border: 2px solid #000;
-    font-weight: 900;
-    cursor: pointer;
-    margin-top: 8px;
-}
+        #keypadModal .btn-outline {
+            width: 100%;
+            background: #fff;
+            color: #000;
+            padding: 12px;
+            border: 2px solid #000;
+            font-weight: 900;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+
         @media screen and (max-width: 768px) {
-            header { padding: 0 10px; }
-            header h1 { font-size: 0.9rem; margin-left: 10px; }
-            .header-ad-space { margin-left: 10px; height: 35px; min-width: 80px; font-size: 8px; }
-            .main-layout { flex-direction: column; }
-            .product-section { flex: none; height: 45vh; }
-            .product-grid { grid-template-columns: repeat(4, 1fr); }
-            .product-card { min-height: 95px; height: auto; }
-            .p-img { height: 40px; } 
-            .p-info { padding: 4px 2px; }
-            .empty-slot { height: 95px; border:1px solid transparent; display: block; }
-            .cart-section { flex: 1; border-left: none; border-top: 3px solid var(--black); z-index: 1000; background: var(--white); }
-            .drag-handle { cursor: row-resize; touch-action: none; padding: 5px 10px 10px 10px; }
-            .handle-bar { display: block; }
-            .total-row { font-size: 1.1rem; }
-            .checkout-btn { padding: 12px; font-size: 1rem; }
+            header {
+                padding: 0 10px;
+            }
+
+            header h1 {
+                font-size: 0.9rem;
+                margin-left: 10px;
+            }
+
+            .header-ad-space {
+                margin-left: 10px;
+                height: 35px;
+                min-width: 80px;
+                font-size: 8px;
+            }
+
+            .main-layout {
+                flex-direction: column;
+            }
+
+            .product-section {
+                flex: none;
+                height: 45vh;
+            }
+
+            .product-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+
+            .product-card {
+                min-height: 95px;
+                height: auto;
+            }
+
+            .p-img {
+                height: 40px;
+            }
+
+            .p-info {
+                padding: 4px 2px;
+            }
+
+            .empty-slot {
+                height: 95px;
+                border: 1px solid transparent;
+                display: block;
+            }
+
+            .cart-section {
+                flex: 1;
+                border-left: none;
+                border-top: 3px solid var(--black);
+                z-index: 1000;
+                background: var(--white);
+            }
+
+            .drag-handle {
+                cursor: row-resize;
+                touch-action: none;
+                padding: 5px 10px 10px 10px;
+            }
+
+            .handle-bar {
+                display: block;
+            }
+
+            .total-row {
+                font-size: 1.1rem;
+            }
+
+            .checkout-btn {
+                padding: 12px;
+                font-size: 1rem;
+            }
         }
 
         #categoryTabs {
-            display: flex; 
-            gap: 8px; 
-            overflow-x: auto; 
-            padding: 5px 0;    /* ボタンの影が切れないように上下パディング */
-            scrollbar-width: none; /* Firefox用：スクロールバーを隠す */
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding: 5px 0;
+            /* ボタンの影が切れないように上下パディング */
+            scrollbar-width: none;
+            /* Firefox用：スクロールバーを隠す */
         }
 
         #categoryTabs::-webkit-scrollbar {
-            display: none; /* Chrome, Safari用：スクロールバーを隠す */
+            display: none;
+            /* Chrome, Safari用：スクロールバーを隠す */
         }
 
         /* 払い戻し警告アラート（上部固定） */
-.refund-alert-top {
-    position: fixed;
-    top: calc(var(--header-h) + env(safe-area-inset-top) + 10px); /* ヘッダーの下 */
-    left: 50%;
-    transform: translateX(-50%);
-    width: auto;
-    max-width: 90%;
-    padding: 10px 20px;
-    background-color: rgba(255, 0, 0, 0.95); /* 濃い赤 */
-    color: white;
-    font-weight: 900;
-    font-size: 1.1rem;
-    border: 2px solid white;
-    border-radius: 8px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-    z-index: 10000; /* 最前面 */
-    text-align: center;
-    pointer-events: none; /* 操作を邪魔しない */
-    animation: fadeOutTop 1.5s forwards; /* 1.5秒かけて消える */
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-.refund-alert-top span { font-size: 1.3rem; }
+        .refund-alert-top {
+            position: fixed;
+            top: calc(var(--header-h) + env(safe-area-inset-top) + 10px);
+            /* ヘッダーの下 */
+            left: 50%;
+            transform: translateX(-50%);
+            width: auto;
+            max-width: 90%;
+            padding: 10px 20px;
+            background-color: rgba(255, 0, 0, 0.95);
+            /* 濃い赤 */
+            color: white;
+            font-weight: 900;
+            font-size: 1.1rem;
+            border: 2px solid white;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+            z-index: 10000;
+            /* 最前面 */
+            text-align: center;
+            pointer-events: none;
+            /* 操作を邪魔しない */
+            animation: fadeOutTop 1.5s forwards;
+            /* 1.5秒かけて消える */
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
 
-@keyframes fadeOutTop {
-    0% { opacity: 0; transform: translate(-50%, -20px); } /* 上から登場 */
-    15% { opacity: 1; transform: translate(-50%, 0); } /* 定位置 */
-    80% { opacity: 1; transform: translate(-50%, 0); } /* 保持 */
-    100% { opacity: 0; transform: translate(-50%, -10px); visibility: hidden; } /* フェードアウト */
-}
+        .refund-alert-top span {
+            font-size: 1.3rem;
+        }
 
-@media screen and (max-width: 768px) {
-    .refund-alert-top {
-        font-size: 0.9rem;
-        padding: 8px 15px;
-    }
-}
+        @keyframes fadeOutTop {
+            0% {
+                opacity: 0;
+                transform: translate(-50%, -20px);
+            }
+
+            /* 上から登場 */
+            15% {
+                opacity: 1;
+                transform: translate(-50%, 0);
+            }
+
+            /* 定位置 */
+            80% {
+                opacity: 1;
+                transform: translate(-50%, 0);
+            }
+
+            /* 保持 */
+            100% {
+                opacity: 0;
+                transform: translate(-50%, -10px);
+                visibility: hidden;
+            }
+
+            /* フェードアウト */
+        }
+
+        @media screen and (max-width: 768px) {
+            .refund-alert-top {
+                font-size: 0.9rem;
+                padding: 8px 15px;
+            }
+        }
     </style>
 </head>
+
 <body>
 
-<audio id="reg-sound" src="beep1.mp3" preload="auto"></audio>
+    <audio id="reg-sound" src="beep1.mp3" preload="auto"></audio>
 
-<header>
-    <div class="header-left">
-        <div class="menu-trigger" id="menu-btn"><span></span><span></span><span></span></div>
-        <h1>払い戻し</h1>
-    </div>
-    <div class="header-ad-space" id="ad-top">
-        <span style="color:#ccc; font-size: 8px; font-weight: 900;">AD</span>
-    </div>
-</header>
-
-<nav class="side-nav hidden" id="side-menu">
-    <a href="register.html" class="menu-link">レジ操作</a>
-    <a href="product.html" class="menu-link">商品管理</a>
-    <a href="stock.html" class="menu-link">在庫管理</a>
-    <a href="history.html" class="menu-link">販売履歴</a>
-    <a href="return.html" class="menu-link">払い戻し</a>
-    <a href="discount.html" class="menu-link">自動割引</a>
-    <a href="settings.html" class="menu-link">設定</a>
-    <a href="qrcard.html" class="menu-link">QRカード</a>
-    <a href="extend.html" class="menu-link">拡張アプリ</a>
-</nav>
-
-<div class="refund-alert-top" id="refundAlertTop">
-    払い戻しモード
-</div>
-
-<div id="tagConfirmModal" class="confirm-modal hidden">
-    <div class="confirm-content">
-        <h2 id="tagTitle" style="margin-bottom: 10px; font-weight: 900;"></h2>
-        <p id="tagDesc" style="margin-bottom: 25px; font-weight: 800; color: #ff0000; font-size: 1.3rem;"></p>
-        <div style="display: flex; gap: 10px;">
-            <button id="tag-ok" class="checkout-btn" style="flex:1; padding:12px;">確認</button>
-            <button id="tag-cancel" style="flex:1; background:#fff; border:2px solid #000; font-weight:900; cursor:pointer;">戻る</button>
+    <header>
+        <div class="header-left">
+            <div class="menu-trigger" id="menu-btn"><span></span><span></span><span></span></div>
+            <h1>払い戻し</h1>
         </div>
-    </div>
-</div>
-
-<main class="main-layout">
-    <section class="product-section">
-         <div class="category-bar">
-            <button class="search-btn" id="openSearch">🔍</button>
-            <div id="categoryTabs" style="display: flex; gap: 8px; overflow-x: auto;"></div>
-    
-            <div class="search-container" id="searchWrapper">
-                <input type="text" class="search-input" id="searchInput" placeholder="商品名・JANコード入力...">
-                <span class="search-close" id="closeSearch">✕</span>
-            </div>
-            <div id="searchResults" class="search-results hidden"></div>
+        <div class="header-ad-space" id="ad-top">
+            <span style="color:#ccc; font-size: 8px; font-weight: 900;">AD</span>
         </div>
-        <div class="product-grid" id="productGrid"></div>
-    </section>
+    </header>
 
-    <section class="cart-section">
-        <div id="drag-handle" class="drag-handle">
-            <div class="handle-bar"></div>
-            <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
-                <span>払い戻しリスト</span>
-                <span id="scan-btn-container" onclick="goToScanFromRegister()" style="cursor: pointer; font-size: 0.9rem; color: var(--black)">📷</span>
+    <nav class="side-nav hidden" id="side-menu">
+        <a href="register.html" class="menu-link">レジ操作</a>
+        <a href="product.html" class="menu-link">商品管理</a>
+        <a href="stock.html" class="menu-link">在庫管理</a>
+        <a href="history.html" class="menu-link">販売履歴</a>
+        <a href="return.html" class="menu-link">払い戻し</a>
+        <a href="discount.html" class="menu-link">自動割引</a>
+        <a href="settings.html" class="menu-link">設定</a>
+        <a href="qrcard.html" class="menu-link">QRカード</a>
+        <a href="extend.html" class="menu-link">拡張アプリ</a>
+    </nav>
+
+    <div class="refund-alert-top" id="refundAlertTop">
+        払い戻しモード
+    </div>
+
+    <div id="tagConfirmModal" class="confirm-modal hidden">
+        <div class="confirm-content">
+            <h2 id="tagTitle" style="margin-bottom: 10px; font-weight: 900;"></h2>
+            <p id="tagDesc" style="margin-bottom: 25px; font-weight: 800; color: #ff0000; font-size: 1.3rem;"></p>
+            <div style="display: flex; gap: 10px;">
+                <button id="tag-ok" class="checkout-btn" style="flex:1; padding:12px;">確認</button>
+                <button id="tag-cancel"
+                    style="flex:1; background:#fff; border:2px solid #000; font-weight:900; cursor:pointer;">戻る</button>
             </div>
         </div>
-        <div class="cart-list" id="cartList"></div>
-        <div class="cart-total">
-            <div class="total-row">
-                <span>返金合計</span>
-                <span id="totalAmount">¥0</span>
-            </div>
-            <button class="checkout-btn" id="checkoutBtn">払い戻し画面へ</button>
-        </div>
-    </section>
-</main>
-
-<div id="keypadModal" class="modal hidden">
-    <div class="modal-content">
-        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-        <h3 id="keypadTitle" style="margin-bottom: 10px; font-weight: 900;">金額入力</h3>
-        <div id="discountModeSelector" style="display: none; gap: 5px;">
-            <button id="mode-unit" class="cat-tab" onclick="setDiscountMode('unit')" style="padding: 4px 8px; font-size: 0.7rem;">バラ</button>
-            <button id="mode-total" class="cat-tab active" onclick="setDiscountMode('total')" style="padding: 4px 8px; font-size: 0.7rem;">まとめ</button>
-        </div>
-        </div>
-        <div id="keypadDisplay" class="numpad-display">0</div>
-        <div class="numpad-grid">
-            <button class="num-btn" onclick="pressNum('7')">7</button>
-            <button class="num-btn" onclick="pressNum('8')">8</button>
-            <button class="num-btn" onclick="pressNum('9')">9</button>
-            <button class="num-btn" onclick="pressNum('4')">4</button>
-            <button class="num-btn" onclick="pressNum('5')">5</button>
-            <button class="num-btn" onclick="pressNum('6')">6</button>
-            <button class="num-btn" onclick="pressNum('1')">1</button>
-            <button class="num-btn" onclick="pressNum('2')">2</button>
-            <button class="num-btn" onclick="pressNum('3')">3</button>
-            <button class="num-btn" onclick="pressNum('0')">0</button>
-            <button class="num-btn" onclick="pressNum('00')">00</button>
-            <button id="discountUnitBtn" class="num-btn" onclick="toggleDiscountUnit()" style="background: #eee; border-color: #000;">¥</button>
-        </div>
-        <div id="discountPresetArea" class="discount-presets"></div>
-        <button id="keypadConfirmBtn" class="btn-black">確定</button>
-        <button onclick="closeModal('keypadModal')" class="btn-outline">キャンセル</button>
     </div>
-</div>
 
-<script>
-    const STORAGE_KEYS = {
-        PRODUCTS: 'rapireji_products',
-        CATEGORIES: 'rapireji_categories',
-        STOCK_CONFIG: 'rapireji_stock_config',
-        DISCOUNTS: 'rapireji_discounts'
-    };
+    <main class="main-layout">
+        <section class="product-section">
+            <div class="category-bar">
+                <button class="search-btn" id="openSearch">🔍</button>
+                <div id="categoryTabs" style="display: flex; gap: 8px; overflow-x: auto;"></div>
 
-    let allProducts = [], cart = [], currentCategory = "", pendingItem = null;
-    let isStockEnabled = false, alertThreshold = 0;
-    let alertedStatus = {};
-    let keypadBuffer = "0", keypadMode = "";
-    let editingItemIndex = null;
-    let currentDiscountMode = 'total';
+                <div class="search-container" id="searchWrapper">
+                    <input type="text" class="search-input" id="searchInput" placeholder="商品名・JANコード入力...">
+                    <span class="search-close" id="closeSearch">✕</span>
+                </div>
+                <div id="searchResults" class="search-results hidden"></div>
+            </div>
+            <div class="product-grid" id="productGrid"></div>
+        </section>
 
-    function playRegisterSound() {
-        const sounds = JSON.parse(localStorage.getItem('rapireji_sounds') || '{"btn": true, "pay": true}');
-        
-        if (sounds.btn) {
-            const sound = document.getElementById('reg-sound');
-            sound.currentTime = 0; 
-            sound.play().catch(e => console.log("Sound play blocked"));
-        }
-    }
+        <section class="cart-section">
+            <div id="drag-handle" class="drag-handle">
+                <div class="handle-bar"></div>
+                <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+                    <span>払い戻しリスト</span>
+                    <span id="scan-btn-container" onclick="goToScanFromRegister()"
+                        style="cursor: pointer; font-size: 0.9rem; color: var(--black)">📷</span>
+                </div>
+            </div>
+            <div class="cart-list" id="cartList"></div>
+            <div class="cart-total">
+                <div class="total-row">
+                    <span>返金合計</span>
+                    <span id="totalAmount">¥0</span>
+                </div>
+                <button class="checkout-btn" id="checkoutBtn">払い戻し画面へ</button>
+            </div>
+        </section>
+    </main>
 
-    window.addEventListener('DOMContentLoaded', () => {
-        initDragResize();
-        loadData();
-        restoreCart();
-    });
+    <div id="keypadModal" class="modal hidden">
+        <div class="modal-content">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                <h3 id="keypadTitle" style="margin-bottom: 10px; font-weight: 900;">金額入力</h3>
+                <div id="discountModeSelector" style="display: none; gap: 5px;">
+                    <button id="mode-unit" class="cat-tab" onclick="setDiscountMode('unit')"
+                        style="padding: 4px 8px; font-size: 0.7rem;">バラ</button>
+                    <button id="mode-total" class="cat-tab active" onclick="setDiscountMode('total')"
+                        style="padding: 4px 8px; font-size: 0.7rem;">まとめ</button>
+                </div>
+            </div>
+            <div id="keypadDisplay" class="numpad-display">0</div>
+            <div class="numpad-grid">
+                <button class="num-btn" onclick="pressNum('7')">7</button>
+                <button class="num-btn" onclick="pressNum('8')">8</button>
+                <button class="num-btn" onclick="pressNum('9')">9</button>
+                <button class="num-btn" onclick="pressNum('4')">4</button>
+                <button class="num-btn" onclick="pressNum('5')">5</button>
+                <button class="num-btn" onclick="pressNum('6')">6</button>
+                <button class="num-btn" onclick="pressNum('1')">1</button>
+                <button class="num-btn" onclick="pressNum('2')">2</button>
+                <button class="num-btn" onclick="pressNum('3')">3</button>
+                <button class="num-btn" onclick="pressNum('0')">0</button>
+                <button class="num-btn" onclick="pressNum('00')">00</button>
+                <button id="discountUnitBtn" class="num-btn" onclick="toggleDiscountUnit()"
+                    style="background: #eee; border-color: #000;">¥</button>
+            </div>
+            <div id="discountPresetArea" class="discount-presets"></div>
+            <button id="keypadConfirmBtn" class="btn-black">確定</button>
+            <button onclick="closeModal('keypadModal')" class="btn-outline">キャンセル</button>
+        </div>
+    </div>
 
-    function initDragResize() {
-        const handle = document.getElementById('drag-handle');
-        const productSection = document.querySelector('.product-section');
-        let isDragging = false;
-        const startDrag = (e) => {
-            if (window.innerWidth > 768) return;
-            isDragging = true;
-            document.body.style.userSelect = 'none';
+    <script>
+        const STORAGE_KEYS = {
+            PRODUCTS: 'rapireji_products',
+            CATEGORIES: 'rapireji_categories',
+            STOCK_CONFIG: 'rapireji_stock_config',
+            DISCOUNTS: 'rapireji_discounts'
         };
-        const doDrag = (e) => {
-            if (!isDragging) return;
-            const touchY = e.touches ? e.touches[0].clientY : e.clientY;
-            const headerH = 60;
-            let newHeight = touchY - headerH;
-            if (newHeight < 0) newHeight = 0; 
-            const minCartHeight = 150; 
-            if (newHeight > window.innerHeight - headerH - minCartHeight) {
-                newHeight = window.innerHeight - headerH - minCartHeight;
+
+        let allProducts = [], cart = [], currentCategory = "", pendingItem = null;
+        let isStockEnabled = false, alertThreshold = 0;
+        let alertedStatus = {};
+        let keypadBuffer = "0", keypadMode = "";
+        let editingItemIndex = null;
+        let currentDiscountMode = 'total';
+
+        function playRegisterSound() {
+            const sounds = JSON.parse(localStorage.getItem('rapireji_sounds') || '{"btn": true, "pay": true}');
+
+            if (sounds.btn) {
+                const sound = document.getElementById('reg-sound');
+                sound.currentTime = 0;
+                sound.play().catch(e => console.log("Sound play blocked"));
             }
-            productSection.style.height = newHeight + 'px';
-            e.preventDefault();
-        };
-        const stopDrag = () => {
-            isDragging = false;
-            document.body.style.userSelect = 'auto';
-        };
-        handle.addEventListener('touchstart', startDrag);
-        window.addEventListener('touchmove', doDrag, { passive: false });
-        window.addEventListener('touchend', stopDrag);
-    }
-
-    function loadData() {
-        const config = JSON.parse(localStorage.getItem(STORAGE_KEYS.STOCK_CONFIG) || '{"enabled":false, "threshold":0}');
-        isStockEnabled = config.enabled;
-        alertThreshold = Number(config.threshold);
-        const scanConfig = JSON.parse(localStorage.getItem('rapireji_scanner_config') || '{"enabled":true}');
-        const scanBtn = document.getElementById('scan-btn-container');
-        if (scanBtn) {
-            scanBtn.style.display = scanConfig.enabled ? 'inline' : 'none';
         }
-        const categories = JSON.parse(localStorage.getItem(STORAGE_KEYS.CATEGORIES) || '[]');
-        const bar = document.getElementById('categoryTabs');
-        bar.innerHTML = "";
-        let firstCat = "";
-        categories.forEach((cat, idx) => {
-            if(idx === 0) firstCat = cat.name;
-            const btn = document.createElement('button');
-            btn.className = "cat-tab"; 
-            btn.textContent = cat.name;
-            btn.onclick = () => switchCategory(cat.name);
-            bar.appendChild(btn);
+
+        window.addEventListener('DOMContentLoaded', () => {
+            initDragResize();
+            loadData();
+            restoreCart();
         });
-        allProducts = JSON.parse(localStorage.getItem(STORAGE_KEYS.PRODUCTS) || '[]');
-        if (!currentCategory && firstCat) {
-            switchCategory(firstCat);
-        } else if (currentCategory) {
-            switchCategory(currentCategory);
-        } else {
+
+        function initDragResize() {
+            const handle = document.getElementById('drag-handle');
+            const productSection = document.querySelector('.product-section');
+            let isDragging = false;
+            const startDrag = (e) => {
+                if (window.innerWidth > 768) return;
+                isDragging = true;
+                document.body.style.userSelect = 'none';
+            };
+            const doDrag = (e) => {
+                if (!isDragging) return;
+                const touchY = e.touches ? e.touches[0].clientY : e.clientY;
+                const headerH = 60;
+                let newHeight = touchY - headerH;
+                if (newHeight < 0) newHeight = 0;
+                const minCartHeight = 150;
+                if (newHeight > window.innerHeight - headerH - minCartHeight) {
+                    newHeight = window.innerHeight - headerH - minCartHeight;
+                }
+                productSection.style.height = newHeight + 'px';
+                e.preventDefault();
+            };
+            const stopDrag = () => {
+                isDragging = false;
+                document.body.style.userSelect = 'auto';
+            };
+            handle.addEventListener('touchstart', startDrag);
+            window.addEventListener('touchmove', doDrag, { passive: false });
+            window.addEventListener('touchend', stopDrag);
+        }
+
+        function loadData() {
+            const config = JSON.parse(localStorage.getItem(STORAGE_KEYS.STOCK_CONFIG) || '{"enabled":false, "threshold":0}');
+            isStockEnabled = config.enabled;
+            alertThreshold = Number(config.threshold);
+            const scanConfig = JSON.parse(localStorage.getItem('rapireji_scanner_config') || '{"enabled":true}');
+            const scanBtn = document.getElementById('scan-btn-container');
+            if (scanBtn) {
+                scanBtn.style.display = scanConfig.enabled ? 'inline' : 'none';
+            }
+            const categories = JSON.parse(localStorage.getItem(STORAGE_KEYS.CATEGORIES) || '[]');
+            const bar = document.getElementById('categoryTabs');
+            bar.innerHTML = "";
+            let firstCat = "";
+            categories.forEach((cat, idx) => {
+                if (idx === 0) firstCat = cat.name;
+                const btn = document.createElement('button');
+                btn.className = "cat-tab";
+                btn.textContent = cat.name;
+                btn.onclick = () => switchCategory(cat.name);
+                bar.appendChild(btn);
+            });
+            allProducts = JSON.parse(localStorage.getItem(STORAGE_KEYS.PRODUCTS) || '[]');
+            if (!currentCategory && firstCat) {
+                switchCategory(firstCat);
+            } else if (currentCategory) {
+                switchCategory(currentCategory);
+            } else {
+                renderProducts();
+            }
+        }
+
+        function switchCategory(name) {
+            currentCategory = name;
+            document.querySelectorAll('.cat-tab').forEach(t => t.classList.toggle('active', t.textContent === name));
             renderProducts();
         }
-    }
 
-    function switchCategory(name) {
-        currentCategory = name;
-        document.querySelectorAll('.cat-tab').forEach(t => t.classList.toggle('active', t.textContent === name));
-        renderProducts();
-    }
+        function renderProducts() {
+            const grid = document.getElementById('productGrid');
+            grid.innerHTML = "";
+            const filtered = allProducts.filter(p => p.category === currentCategory && p.isActive !== false);
 
-    function renderProducts() {
-        const grid = document.getElementById('productGrid');
-        grid.innerHTML = "";
-        const filtered = allProducts.filter(p => p.category === currentCategory && p.isActive !== false);
-        
-        for (let i = 0; i < 48; i++) {
-            const p = filtered.find(item => item.index === i);
-            if (p) {
-                const inCart = cart.find(c => c.id === p.id);
-                const cartQty = inCart ? inCart.qty : 0;
-                const displayStock = (Number(p.stock) || 0) + cartQty;
-                
-                // 商品ごとの税込価格を計算（表示用）
-                const taxRate = Number(p.taxRate || 0);
-                const priceInclTax = Math.floor(Number(p.price) * (1 + taxRate / 100));
+            for (let i = 0; i < 48; i++) {
+                const p = filtered.find(item => item.index === i);
+                if (p) {
+                    const inCart = cart.find(c => c.id === p.id);
+                    const cartQty = inCart ? inCart.qty : 0;
+                    const displayStock = (Number(p.stock) || 0) + cartQty;
 
-                const card = document.createElement('div');
-                card.className = "product-card";
-                card.innerHTML = `
+                    // 商品ごとの税込価格を計算（表示用）
+                    const taxRate = Number(p.taxRate || 0);
+                    const priceInclTax = Math.floor(Number(p.price) * (1 + taxRate / 100));
+
+                    const card = document.createElement('div');
+                    card.className = "product-card";
+                    card.innerHTML = `
                     <img src="${p.imageUrl || ''}" class="p-img" onerror="this.style.visibility='hidden'">
                     <div class="p-info">
                         <strong>${p.name}</strong>
                         <span class="p-price">¥${priceInclTax.toLocaleString()} <small style="font-size:0.5rem;">(税込)</small></span>
                         ${isStockEnabled ? `<span class="p-stock">残:${displayStock}</span>` : ""}
                     </div>`;
-                card.onclick = () => { playRegisterSound(); handleProductClick(p); };
+                    card.onclick = () => { playRegisterSound(); handleProductClick(p); };
 
-grid.appendChild(card);
-                grid.appendChild(card);
-            } else {
-                grid.appendChild(Object.assign(document.createElement('div'), {className: "empty-slot"}));
+                    grid.appendChild(card);
+                    grid.appendChild(card);
+                } else {
+                    grid.appendChild(Object.assign(document.createElement('div'), { className: "empty-slot" }));
+                }
             }
         }
-    }
 
-    function handleProductClick(p) {
-        if (p.tag) {
-            pendingItem = p;
-            document.getElementById('tagTitle').innerText = p.name;
-            document.getElementById('tagDesc').innerText = p.tag;
-            document.getElementById('tagConfirmModal').classList.remove('hidden');
-        } else { 
-            addToCart(p); 
+        function handleProductClick(p) {
+            if (p.tag) {
+                pendingItem = p;
+                document.getElementById('tagTitle').innerText = p.name;
+                document.getElementById('tagDesc').innerText = p.tag;
+                document.getElementById('tagConfirmModal').classList.remove('hidden');
+            } else {
+                addToCart(p);
+            }
         }
-    }
 
-    document.getElementById('tag-ok').onclick = () => { if(pendingItem) addToCart(pendingItem); closeTagModal(); };
-    document.getElementById('tag-cancel').onclick = closeTagModal;
-    function closeTagModal() { document.getElementById('tagConfirmModal').classList.add('hidden'); pendingItem = null; }
+        document.getElementById('tag-ok').onclick = () => { if (pendingItem) addToCart(pendingItem); closeTagModal(); };
+        document.getElementById('tag-cancel').onclick = closeTagModal;
+        function closeTagModal() { document.getElementById('tagConfirmModal').classList.add('hidden'); pendingItem = null; }
 
-    // 在庫警告チェック共通関数
-    function checkStockAlert(product, currentQty) {
-        if (!isStockEnabled) return;
-        const remaining = Number(product.stock) - currentQty;
-        if (remaining < alertThreshold && remaining >= 0 && !alertedStatus[product.id]) {
-            setTimeout(() => {
-                window.alert(`【在庫警告】\n「${product.name}」の残数が設定値（${alertThreshold}個）未満になりました。\n（残り ${remaining} 個）`);
-            }, 100);
-            alertedStatus[product.id] = true;
+        // 在庫警告チェック共通関数
+        function checkStockAlert(product, currentQty) {
+            if (!isStockEnabled) return;
+            const remaining = Number(product.stock) - currentQty;
+            if (remaining < alertThreshold && remaining >= 0 && !alertedStatus[product.id]) {
+                setTimeout(() => {
+                    window.alert(`【在庫警告】\n「${product.name}」の残数が設定値（${alertThreshold}個）未満になりました。\n（残り ${remaining} 個）`);
+                }, 100);
+                alertedStatus[product.id] = true;
+            }
         }
-    }
 
-    // 在庫チェックを無効化（または戻す方向で調整）し、数量を加算
-    function addToCart(p) {
-        const existing = cart.find(item => item.id === p.id);
-        let nextQty = existing ? existing.qty + 1 : 1;
-    
-        // 払い戻しなので在庫上限チェックは不要（むしろ在庫を戻すため）
-        if (existing) { 
-            existing.qty = nextQty; 
-        } else { 
-            cart.push({ id: p.id, name: p.name, price: Number(p.price), qty: 1, taxRate: Number(p.taxRate || 0) }); 
+        // 在庫チェックを無効化（または戻す方向で調整）し、数量を加算
+        function addToCart(p) {
+            const existing = cart.find(item => item.id === p.id);
+            let nextQty = existing ? existing.qty + 1 : 1;
+
+            // 払い戻しなので在庫上限チェックは不要（むしろ在庫を戻すため）
+            if (existing) {
+                existing.qty = nextQty;
+            } else {
+                cart.push({ id: p.id, name: p.name, price: Number(p.price), qty: 1, taxRate: Number(p.taxRate || 0) });
+            }
+            // 警告チェックも不要なため削除
+            updateCartUI();
+            renderProducts();
         }
-        // 警告チェックも不要なため削除
-        updateCartUI(); 
-        renderProducts();
-    }
 
-    //ここから追加済み
-    let discountUnit = "¥";
+        //ここから追加済み
+        let discountUnit = "¥";
 
-    // openKeypad 関数の中、もしくは割引入力モードの初期化処理に追加してください
-const discArea = document.getElementById('discountPresetArea');
-if (discArea) {
-    discArea.innerHTML = "";
-    const savedDiscounts = JSON.parse(localStorage.getItem('rapireji_discounts')) || [];
+        // openKeypad 関数の中、もしくは割引入力モードの初期化処理に追加してください
+        const discArea = document.getElementById('discountPresetArea');
+        if (discArea) {
+            discArea.innerHTML = "";
+            const savedDiscounts = JSON.parse(localStorage.getItem('rapireji_discounts')) || [];
 
-    savedDiscounts.forEach(item => {
-        if (item.name) {
-            const b = document.createElement('button');
-            b.className = 'preset-btn';
-            const displayVal = item.isPercent ? `${item.value}%` : `¥${item.value}`;
-            b.innerText = `${item.name}\n${displayVal}`;
-
-            b.onclick = () => {
-                playRegisterSound();
-                const item = cart[editingItemIndex];
-    if (item) {
-        if (!item.appliedPresets) item.appliedPresets = {};
-        // プリセットの名前（例: "学割"）をキーにして回数を加算
-        const pName = preset.name || "割引";
-        item.appliedPresets[pName] = (item.appliedPresets[pName] || 0) + 1;
-    }
-                const newUnit = item.isPercent ? "%" : "¥";
-                if (discountUnit !== newUnit) {
-                    discountUnit = newUnit;
-                    keypadBuffer = "0";
-                    const unitBtn = document.getElementById('discountUnitBtn');
-                    if (unitBtn) unitBtn.innerText = discountUnit;
-                }
-                keypadBuffer = String(Number(keypadBuffer) + Number(item.value));
-                updateKeypadDisplay();
-            };
-            discArea.appendChild(b);
-        }
-    });
-}
-
-window.setDiscountMode = (mode) => {
-    playRegisterSound();
-    currentDiscountMode = mode;
-    document.getElementById('mode-unit').classList.toggle('active', mode === 'unit');
-    document.getElementById('mode-total').classList.toggle('active', mode === 'total');
-};
-
-    window.openKeypad = (mode, index = null) => {
-        playRegisterSound();
-        keypadMode = mode;
-        keypadBuffer = "0";
-        editingItemIndex = index;
-
-        const selector = document.getElementById('discountModeSelector');
-        const unitBtn = document.getElementById('discountUnitBtn');
-        const presets = document.getElementById('discountPresetArea');
-        const item = cart[index];
-        const title = document.getElementById('keypadTitle');
-        /*const savedDiscounts = JSON.parse(localStorage.getItem(STORAGE_KEYS.DISCOUNTS) || '[]');*/
-
-        if (mode === 'qty') {
-            title.innerText = "数量入力";
-            selector.style.display = 'none';
-            unitBtn.style.visibility = 'hidden'; 
-            presets.style.display = 'none';
-        } else {
-            title.innerText = "調整額入力";
-            if (item) {
-            item.appliedPresets = {}; 
-            item.discountValue = 0; // 金額も一旦0に
-        }
-            selector.style.display = 'flex';
-            unitBtn.style.visibility = 'visible';
-            discountUnit = "¥";
-            unitBtn.innerText = discountUnit;
-            presets.style.display = 'grid';
-            setDiscountMode('total');
-            const savedDiscounts = JSON.parse(localStorage.getItem(STORAGE_KEYS.DISCOUNTS) || '[]');
-            presets.innerHTML = "";
             savedDiscounts.forEach(item => {
                 if (item.name) {
                     const b = document.createElement('button');
                     b.className = 'preset-btn';
-                    const displayVal = item.isPercent ? `${item.value}%` : `¥${Number(item.value).toLocaleString()}`;
+                    const displayVal = item.isPercent ? `${item.value}%` : `¥${item.value}`;
                     b.innerText = `${item.name}\n${displayVal}`;
-                    b.onclick = () => applyPreset(item.value, item.isPercent ? "%" : "¥", item.name);
-                    presets.appendChild(b);
+
+                    b.onclick = () => {
+                        playRegisterSound();
+                        const item = cart[editingItemIndex];
+                        if (item) {
+                            if (!item.appliedPresets) item.appliedPresets = {};
+                            // プリセットの名前（例: "学割"）をキーにして回数を加算
+                            const pName = preset.name || "割引";
+                            item.appliedPresets[pName] = (item.appliedPresets[pName] || 0) + 1;
+                        }
+                        const newUnit = item.isPercent ? "%" : "¥";
+                        if (discountUnit !== newUnit) {
+                            discountUnit = newUnit;
+                            keypadBuffer = "0";
+                            const unitBtn = document.getElementById('discountUnitBtn');
+                            if (unitBtn) unitBtn.innerText = discountUnit;
+                        }
+                        keypadBuffer = String(Number(keypadBuffer) + Number(item.value));
+                        updateKeypadDisplay();
+                    };
+                    discArea.appendChild(b);
                 }
             });
         }
-    
-        updateKeypadDisplay(); 
-        document.getElementById('keypadModal').classList.remove('hidden');
-    };
 
-    window.applyPreset = (val, unit, presetName) => {
-        playRegisterSound();
-        // 現在編集中のアイテムを取得
-    const item = cart[editingItemIndex];
-    if (!item) return;
+        window.setDiscountMode = (mode) => {
+            playRegisterSound();
+            currentDiscountMode = mode;
+            document.getElementById('mode-unit').classList.toggle('active', mode === 'unit');
+            document.getElementById('mode-total').classList.toggle('active', mode === 'total');
+        };
 
-    // 回数記録用のオブジェクトがなければ作成
-    if (!item.appliedPresets) item.appliedPresets = {};
-    
-    // プリセット名ごとにカウントアップ
-    const name = presetName || "割引";
-    item.appliedPresets[name] = (item.appliedPresets[name] || 0) + 1;
-        if (discountUnit !== unit) {
-            discountUnit = unit;
-            keypadBuffer = "0"; 
-            const unitBtn = document.getElementById('discountUnitBtn');
-            if (unitBtn) unitBtn.innerText = discountUnit;
-        }
-
-        const currentVal = new BigNumber(keypadBuffer);
-    const addedVal = new BigNumber(val);
-    // 加算して整数に丸める
-    keypadBuffer = currentVal.plus(addedVal).integerValue(BigNumber.ROUND_HALF_UP).toString();
-    updateKeypadDisplay();
-    };
-
-    window.toggleDiscountUnit = () => {
-        playRegisterSound();
-        discountUnit = (discountUnit === "¥") ? "%" : "¥";
-        document.getElementById('discountUnitBtn').innerText = discountUnit;
-        updateKeypadDisplay();
-    };
-
-    function updateKeypadDisplay() {
-        const display = document.getElementById('keypadDisplay');
-        if (keypadMode === 'qty') {
-            display.innerText = keypadBuffer;
-        } else {
-            display.innerText = (discountUnit === "%") ? keypadBuffer + "%" : "¥" + Number(keypadBuffer).toLocaleString();
-        }
-    }  
-
-window.confirmKeypad = () => {
-    playRegisterSound();
-    const val = new BigNumber(keypadBuffer);
-    const item = cart[editingItemIndex];
-
-    if (keypadMode === 'qty') {
-        if (val.gt(0)) {
-            item.qty = val.toNumber();
-        } else {
-            alert("1以上の数値を入力してください。"); 
-            return;
-        }
-    } else {
-        const currentSubtotalExclTax = new BigNumber(item.price).times(item.qty); 
-        
-        if (discountUnit === "%") {
-            if (val.gt(100)) {
-                alert("金額調整率が100%を超えています。");
-                return;
-            }
-        } else {
-            let totalDiscountCheck = (currentDiscountMode === 'unit') ? val.times(item.qty) : val;
-            if (currentDiscountMode === 'unit') {
-                totalDiscountCheck = val * item.qty; 
-            } else {
-                totalDiscountCheck = val; 
-            }
-
-            if (totalDiscountCheck.gt(currentSubtotalExclTax)) {
-                alert("調整額が商品の合計金額を超えています。");
-                return;
-            }
-        }
-
-        item.discountValue = val.toNumber();
-        item.discountUnit = discountUnit;
-        item.discountMode = currentDiscountMode;
-    }
-
-    closeKeypad();
-    updateCartUI();
-    renderProducts();
-};
-
-    window.closeModal = (id) => {
-    if (id === 'keypadModal') window.closeKeypad();
-};
-
-// --- キー入力処理の統合（pressNumに統一） ---
-window.pressNum = (key) => {
-    playRegisterSound();
-    if (editingItemIndex !== null && cart[editingItemIndex]) {
-        cart[editingItemIndex].hasManualInput = true;
-    }
-    if (keypadBuffer === "0") {
-        // 最初の入力が 0 または 00 の場合は 0 のまま維持、それ以外は上書き
-        if (key === '0' || key === '00') {
+        window.openKeypad = (mode, index = null) => {
+            playRegisterSound();
+            keypadMode = mode;
             keypadBuffer = "0";
-        } else {
-            keypadBuffer = String(key);
-        }
-    } else {
-        // 既に数字がある場合は末尾に追加
-        keypadBuffer += String(key);
-    }
-    updateKeypadDisplay();
-};
+            editingItemIndex = index;
 
-// --- テンキーを閉じる処理 ---
-window.closeKeypad = () => {
-    playRegisterSound();
-    document.getElementById('keypadModal').classList.add('hidden');
-    keypadBuffer = "0";
-};
+            const selector = document.getElementById('discountModeSelector');
+            const unitBtn = document.getElementById('discountUnitBtn');
+            const presets = document.getElementById('discountPresetArea');
+            const item = cart[index];
+            const title = document.getElementById('keypadTitle');
+            /*const savedDiscounts = JSON.parse(localStorage.getItem(STORAGE_KEYS.DISCOUNTS) || '[]');*/
 
-// --- モーダルを閉じる汎用関数（closeKeypadを呼び出すよう統合） ---
-window.closeModal = (id) => {
-    if (id === 'keypadModal') {
-        window.closeKeypad();
-    } else {
-        const modal = document.getElementById(id);
-        if (modal) modal.classList.add('hidden');
-    }
-};
-
-// --- 確定ボタンのイベント紐付け ---
-document.getElementById('keypadConfirmBtn').onclick = () => {
-    window.confirmKeypad();
-};
-
-//ここまで追加済み
-
-    function updateCartUI() {
-        const list = document.getElementById('cartList'), totalDisp = document.getElementById('totalAmount');
-        list.innerHTML = "";
-
-        let finalRefundTotal = new BigNumber(0);
-    const subtotalByRate = {}; 
-
-        cart.forEach((item, index) => {
-            const pInfo = allProducts.find(p => p.id === item.id);
-        const rate = new BigNumber(pInfo ? (pInfo.taxRate || 0) : 0);
-        
-        const price = new BigNumber(item.price);
-        const qty = new BigNumber(item.qty);
-        let itemTotalBeforeTax = price.times(qty);
-        let discountAmount = new BigNumber(0);
-
-        if (item.discountValue) {
-            const dVal = new BigNumber(item.discountValue);
-            if (item.discountUnit === "%") {
-                // 割引額 = 税抜合計 * (割引率 / 100) -> 四捨五入
-                discountAmount = itemTotalBeforeTax.times(dVal.div(100)).integerValue(BigNumber.ROUND_HALF_UP);
+            if (mode === 'qty') {
+                title.innerText = "数量入力";
+                selector.style.display = 'none';
+                unitBtn.style.visibility = 'hidden';
+                presets.style.display = 'none';
             } else {
-                // 単価調整か合計調整か
-                discountAmount = (item.discountMode === 'unit') ? dVal.times(qty) : dVal;
+                title.innerText = "調整額入力";
+                if (item) {
+                    item.appliedPresets = {};
+                    item.discountValue = 0; // 金額も一旦0に
+                }
+                selector.style.display = 'flex';
+                unitBtn.style.visibility = 'visible';
+                discountUnit = "¥";
+                unitBtn.innerText = discountUnit;
+                presets.style.display = 'grid';
+                setDiscountMode('total');
+                const savedDiscounts = JSON.parse(localStorage.getItem(STORAGE_KEYS.DISCOUNTS) || '[]');
+                presets.innerHTML = "";
+                savedDiscounts.forEach(item => {
+                    if (item.name) {
+                        const b = document.createElement('button');
+                        b.className = 'preset-btn';
+                        const displayVal = item.isPercent ? `${item.value}%` : `¥${Number(item.value).toLocaleString()}`;
+                        b.innerText = `${item.name}\n${displayVal}`;
+                        b.onclick = () => applyPreset(item.value, item.isPercent ? "%" : "¥", item.name);
+                        presets.appendChild(b);
+                    }
+                });
+            }
+
+            updateKeypadDisplay();
+            document.getElementById('keypadModal').classList.remove('hidden');
+        };
+
+        window.applyPreset = (val, unit, presetName) => {
+            playRegisterSound();
+            // 現在編集中のアイテムを取得
+            const item = cart[editingItemIndex];
+            if (!item) return;
+
+            // 回数記録用のオブジェクトがなければ作成
+            if (!item.appliedPresets) item.appliedPresets = {};
+
+            // プリセット名ごとにカウントアップ
+            const name = presetName || "割引";
+            item.appliedPresets[name] = (item.appliedPresets[name] || 0) + 1;
+            if (discountUnit !== unit) {
+                discountUnit = unit;
+                keypadBuffer = "0";
+                const unitBtn = document.getElementById('discountUnitBtn');
+                if (unitBtn) unitBtn.innerText = discountUnit;
+            }
+
+            const currentVal = new BigNumber(keypadBuffer);
+            const addedVal = new BigNumber(val);
+            // 加算して整数に丸める
+            keypadBuffer = currentVal.plus(addedVal).integerValue(BigNumber.ROUND_HALF_UP).toString();
+            updateKeypadDisplay();
+        };
+
+        window.toggleDiscountUnit = () => {
+            playRegisterSound();
+            discountUnit = (discountUnit === "¥") ? "%" : "¥";
+            document.getElementById('discountUnitBtn').innerText = discountUnit;
+            updateKeypadDisplay();
+        };
+
+        function updateKeypadDisplay() {
+            const display = document.getElementById('keypadDisplay');
+            if (keypadMode === 'qty') {
+                display.innerText = keypadBuffer;
+            } else {
+                display.innerText = (discountUnit === "%") ? keypadBuffer + "%" : "¥" + Number(keypadBuffer).toLocaleString();
             }
         }
-    
-        // 調整後税抜金額 (0未満にならないよう処理)
-        const subtotalAfterDiscount = BigNumber.max(0, itemTotalBeforeTax.minus(discountAmount));
-        // 消費税計算 (切捨て)
-        const tax = subtotalAfterDiscount.times(rate.div(100)).integerValue(BigNumber.ROUND_FLOOR);
-        // 税込合計
-        const rowTotalInclTax = subtotalAfterDiscount.plus(tax);
 
-        finalRefundTotal = finalRefundTotal.plus(rowTotalInclTax);
+        window.confirmKeypad = () => {
+            playRegisterSound();
+            const val = new BigNumber(keypadBuffer);
+            const item = cart[editingItemIndex];
 
-        const rateStr = rate.toString();
-        if (!subtotalByRate[rateStr]) subtotalByRate[rateStr] = new BigNumber(0);
-        subtotalByRate[rateStr] = subtotalByRate[rateStr].plus(subtotalAfterDiscount);
+            if (keypadMode === 'qty') {
+                if (val.gt(0)) {
+                    item.qty = val.toNumber();
+                } else {
+                    alert("1以上の数値を入力してください。");
+                    return;
+                }
+            } else {
+                const currentSubtotalExclTax = new BigNumber(item.price).times(item.qty);
 
-        const div = document.createElement('div');
-        div.className = "cart-item";
-        div.innerHTML = `
+                if (discountUnit === "%") {
+                    if (val.gt(100)) {
+                        alert("金額調整率が100%を超えています。");
+                        return;
+                    }
+                } else {
+                    let totalDiscountCheck = (currentDiscountMode === 'unit') ? val.times(item.qty) : val;
+                    if (currentDiscountMode === 'unit') {
+                        totalDiscountCheck = val * item.qty;
+                    } else {
+                        totalDiscountCheck = val;
+                    }
+
+                    if (totalDiscountCheck.gt(currentSubtotalExclTax)) {
+                        alert("調整額が商品の合計金額を超えています。");
+                        return;
+                    }
+                }
+
+                item.discountValue = val.toNumber();
+                item.discountUnit = discountUnit;
+                item.discountMode = currentDiscountMode;
+            }
+
+            closeKeypad();
+            updateCartUI();
+            renderProducts();
+        };
+
+        window.closeModal = (id) => {
+            if (id === 'keypadModal') window.closeKeypad();
+        };
+
+        // --- キー入力処理の統合（pressNumに統一） ---
+        window.pressNum = (key) => {
+            playRegisterSound();
+            if (editingItemIndex !== null && cart[editingItemIndex]) {
+                cart[editingItemIndex].hasManualInput = true;
+            }
+            if (keypadBuffer === "0") {
+                // 最初の入力が 0 または 00 の場合は 0 のまま維持、それ以外は上書き
+                if (key === '0' || key === '00') {
+                    keypadBuffer = "0";
+                } else {
+                    keypadBuffer = String(key);
+                }
+            } else {
+                // 既に数字がある場合は末尾に追加
+                keypadBuffer += String(key);
+            }
+            updateKeypadDisplay();
+        };
+
+        // --- テンキーを閉じる処理 ---
+        window.closeKeypad = () => {
+            playRegisterSound();
+            document.getElementById('keypadModal').classList.add('hidden');
+            keypadBuffer = "0";
+        };
+
+        // --- モーダルを閉じる汎用関数（closeKeypadを呼び出すよう統合） ---
+        window.closeModal = (id) => {
+            if (id === 'keypadModal') {
+                window.closeKeypad();
+            } else {
+                const modal = document.getElementById(id);
+                if (modal) modal.classList.add('hidden');
+            }
+        };
+
+        // --- 確定ボタンのイベント紐付け ---
+        document.getElementById('keypadConfirmBtn').onclick = () => {
+            window.confirmKeypad();
+        };
+
+        //ここまで追加済み
+
+        function updateCartUI() {
+            const list = document.getElementById('cartList'), totalDisp = document.getElementById('totalAmount');
+            list.innerHTML = "";
+
+            let finalRefundTotal = new BigNumber(0);
+            const subtotalByRate = {};
+
+            cart.forEach((item, index) => {
+                const pInfo = allProducts.find(p => p.id === item.id);
+                const rate = new BigNumber(pInfo ? (pInfo.taxRate || 0) : 0);
+
+                const price = new BigNumber(item.price);
+                const qty = new BigNumber(item.qty);
+                let itemTotalBeforeTax = price.times(qty);
+                let discountAmount = new BigNumber(0);
+
+                if (item.discountValue) {
+                    const dVal = new BigNumber(item.discountValue);
+                    if (item.discountUnit === "%") {
+                        // 割引額 = 税抜合計 * (割引率 / 100) -> 四捨五入
+                        discountAmount = itemTotalBeforeTax.times(dVal.div(100)).integerValue(BigNumber.ROUND_HALF_UP);
+                    } else {
+                        // ★ ここで 'unit'（バラ）のときは「1個あたりの調整額 × 数量」にする
+                        if (item.discountMode === 'unit') {
+                            discountAmount = dVal.times(qty);
+                        } else {
+                            discountAmount = dVal;
+                        }
+                    }
+                }
+
+                // 調整後税抜金額 (0未満にならないよう処理)
+                const subtotalAfterDiscount = BigNumber.max(0, itemTotalBeforeTax.minus(discountAmount));
+                // 消費税計算 (切捨て)
+                const tax = subtotalAfterDiscount.times(rate.div(100)).integerValue(BigNumber.ROUND_FLOOR);
+                // 税込合計
+                const rowTotalInclTax = subtotalAfterDiscount.plus(tax);
+
+                finalRefundTotal = finalRefundTotal.plus(rowTotalInclTax);
+
+                const rateStr = rate.toString();
+                if (!subtotalByRate[rateStr]) subtotalByRate[rateStr] = new BigNumber(0);
+                subtotalByRate[rateStr] = subtotalByRate[rateStr].plus(subtotalAfterDiscount);
+
+                const div = document.createElement('div');
+                div.className = "cart-item";
+                div.innerHTML = `
             <div class="cart-item-top">
                 <span>${item.name} <small>(${rateStr}%)</small></span>
                 <span>¥-${rowTotalInclTax.toNumber().toLocaleString()}</span>
@@ -913,191 +1353,192 @@ document.getElementById('keypadConfirmBtn').onclick = () => {
                 ${item.discountValue ? `<small style="color:red; margin-left:5px;">調整額:${discountAmount.toNumber().toLocaleString()}円</small>` : ''}
                 <button onclick="removeItem(${index})" style="margin-left:auto; background:none; border:none; color:red; font-weight:bold; cursor:pointer;">削除</button>
             </div>`;
-        list.appendChild(div);
-        });
+                list.appendChild(div);
+            });
 
-        totalDisp.innerText = `¥${finalRefundTotal.toNumber().toLocaleString()}`;
-    
-    // sessionStorageへの保存用データ整形（JSON化のため数値に戻す）
-    const taxDetailsForStorage = {};
-    for (const r in subtotalByRate) {
-        taxDetailsForStorage[r] = subtotalByRate[r].toNumber();
-    }
+            totalDisp.innerText = `¥${finalRefundTotal.toNumber().toLocaleString()}`;
 
-    sessionStorage.setItem('currentOrder', JSON.stringify({ 
-        items: cart.map(item => {
-            const priceBN = new BigNumber(item.price);
-            const qtyBN = new BigNumber(item.qty);
-            const dValBN = new BigNumber(item.discountValue || 0);
-            
-            let dAmt;
-            if (item.discountUnit === "%") {
-                dAmt = priceBN.times(qtyBN).times(dValBN.div(100)).integerValue(BigNumber.ROUND_FLOOR).toNumber();
-            } else {
-                dAmt = (item.discountMode === 'unit' ? dValBN.times(qtyBN) : dValBN).toNumber();
+            // sessionStorageへの保存用データ整形（JSON化のため数値に戻す）
+            const taxDetailsForStorage = {};
+            for (const r in subtotalByRate) {
+                taxDetailsForStorage[r] = subtotalByRate[r].toNumber();
             }
 
-            return {
-                ...item,
-                appliedDiscount: {
-                    amount: dAmt || 0,
-                    mode: item.discountMode || 'total'
-                },
-                appliedPresets: item.appliedPresets || {},
-                hasManualInput: item.hasManualInput || false
-            };
-        }),
-        totalAmount: finalRefundTotal.toNumber(),
-        taxDetails: taxDetailsForStorage,
-        isRefund: true,
-    }));
-    
-    list.scrollTop = list.scrollHeight;
-    }
+            sessionStorage.setItem('currentOrder', JSON.stringify({
+                items: cart.map(item => {
+                    const priceBN = new BigNumber(item.price);
+                    const qtyBN = new BigNumber(item.qty);
+                    const dValBN = new BigNumber(item.discountValue || 0);
 
-    window.changeQty = (index, diff) => {
-        playRegisterSound();
-        const item = cart[index];
-        const newQty = item.qty + diff;
-        item.qty = newQty;
-        if (item.qty <= 0) {
-            cart.splice(index, 1);
+                    let dAmt;
+                    if (item.discountUnit === "%") {
+                        dAmt = priceBN.times(qtyBN).times(dValBN.div(100)).integerValue(BigNumber.ROUND_FLOOR).toNumber();
+                    } else {
+                        dAmt = (item.discountMode === 'unit' ? dValBN.times(qtyBN) : dValBN).toNumber();
+                    }
+
+                    return {
+                        ...item,
+                        appliedDiscount: {
+                            amount: dAmt || 0,
+                            mode: item.discountMode || 'total'
+                        },
+                        appliedPresets: item.appliedPresets || {},
+                        hasManualInput: item.hasManualInput || false
+                    };
+                }),
+                totalAmount: finalRefundTotal.toNumber(),
+                taxDetails: taxDetailsForStorage,
+                isRefund: true,
+            }));
+
+            list.scrollTop = list.scrollHeight;
         }
-        updateCartUI();
-        renderProducts();
-    };
 
-    window.removeItem = (index) => { 
-        const item = cart[index];
-        delete alertedStatus[item.id];
-        cart.splice(index, 1); 
-        updateCartUI(); 
-        renderProducts();
-    };
-
-    function restoreCart() {
-        const storedOrder = sessionStorage.getItem('currentOrder');
-        if (storedOrder) {
-            const orderData = JSON.parse(storedOrder);
-            cart = orderData.items || [];
+        window.changeQty = (index, diff) => {
+            playRegisterSound();
+            const item = cart[index];
+            const newQty = item.qty + diff;
+            item.qty = newQty;
+            if (item.qty <= 0) {
+                cart.splice(index, 1);
+            }
             updateCartUI();
             renderProducts();
-        }
-    }
+        };
 
-    document.getElementById('checkoutBtn').onclick = () => { 
-        if (cart.length === 0) return alert("カートが空です"); 
-        playRegisterSound();
-        setTimeout(() => {
-            location.href = 'returnpay.html'; 
-        }, 150);
-    };
-    
-    const menuBtn = document.getElementById('menu-btn');
-    const sideMenu = document.getElementById('side-menu');
+        window.removeItem = (index) => {
+            const item = cart[index];
+            delete alertedStatus[item.id];
+            cart.splice(index, 1);
+            updateCartUI();
+            renderProducts();
+        };
 
-    menuBtn.onclick = () => { 
-        menuBtn.classList.toggle('open'); 
-        sideMenu.classList.toggle('hidden'); 
-    };
-
-    // --- 現在のページをメニューで強調表示する処理 ---
-    document.addEventListener('DOMContentLoaded', () => {
-        const currentPath = window.location.pathname.split("/").pop();
-        const menuLinks = document.querySelectorAll('.menu-link');
-
-        const alertOverlay = document.getElementById('refundAlert');
-        if (alertOverlay) {
-            // アニメーション終了後に要素を完全に削除してメモリを解放
-            alertOverlay.addEventListener('animationend', () => {
-                alertOverlay.remove();
-            });
-        }
-
-        menuLinks.forEach(link => {
-            const linkPath = link.getAttribute('href');
-            // 現在のファイル名と href が一致したら 'active' クラスをつける
-            if (currentPath === linkPath) {
-                link.classList.add('active');
+        function restoreCart() {
+            const storedOrder = sessionStorage.getItem('currentOrder');
+            if (storedOrder) {
+                const orderData = JSON.parse(storedOrder);
+                cart = orderData.items || [];
+                updateCartUI();
+                renderProducts();
             }
-        });
-    });
-
-    function goToScanFromRegister() {
-        // 現在のカート状態（中身、合計金額、税計算すべて）をそのまま保持して移動
-        const orderData = JSON.parse(sessionStorage.getItem('currentOrder') || '{"items":[]}');
-        sessionStorage.setItem('currentOrder', JSON.stringify(orderData));
-        location.href = 'scan.html?mode=ret&from=ret'; 
-    }
-
-    // スキャン画面から「戻る」で帰ってきた際や、タブがアクティブになった時に最新のカートを反映する
-    window.addEventListener('pageshow', (event) => {
-        // ページがキャッシュから読み込まれた（戻るボタンなど）場合でも実行
-        restoreCart();
-    });
-    
-    // --- 検索機能のロジック ---
-    const openSearch = document.getElementById('openSearch');
-    const closeSearch = document.getElementById('closeSearch');
-    const searchWrapper = document.getElementById('searchWrapper');
-    const searchInput = document.getElementById('searchInput');
-    const searchResults = document.getElementById('searchResults');
-
-    openSearch.onclick = () => {
-        searchWrapper.classList.add('open');
-        searchInput.focus();
-        };
-
-    closeSearch.onclick = () => {
-        searchWrapper.classList.remove('open');
-        searchResults.classList.add('hidden');
-        searchInput.value = "";
-        };
-
-    searchInput.oninput = (e) => {
-        const val = e.target.value.toLowerCase();
-        if (!val) {
-            searchResults.classList.add('hidden');
-            return;
         }
 
-        // 全商品から検索（名前またはJAN）
-        const matches = allProducts.filter(p => 
-            (p.name && p.name.toLowerCase().includes(val)) || 
-            (p.jan && p.jan.includes(val))
-        ).slice(0, 10); // 上位10件表示
+        document.getElementById('checkoutBtn').onclick = () => {
+            if (cart.length === 0) return alert("カートが空です");
+            playRegisterSound();
+            setTimeout(() => {
+                location.href = 'returnpay.html';
+            }, 150);
+        };
 
-        if (matches.length > 0) {
-            searchResults.innerHTML = matches.map(p => `
+        const menuBtn = document.getElementById('menu-btn');
+        const sideMenu = document.getElementById('side-menu');
+
+        menuBtn.onclick = () => {
+            menuBtn.classList.toggle('open');
+            sideMenu.classList.toggle('hidden');
+        };
+
+        // --- 現在のページをメニューで強調表示する処理 ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const currentPath = window.location.pathname.split("/").pop();
+            const menuLinks = document.querySelectorAll('.menu-link');
+
+            const alertOverlay = document.getElementById('refundAlert');
+            if (alertOverlay) {
+                // アニメーション終了後に要素を完全に削除してメモリを解放
+                alertOverlay.addEventListener('animationend', () => {
+                    alertOverlay.remove();
+                });
+            }
+
+            menuLinks.forEach(link => {
+                const linkPath = link.getAttribute('href');
+                // 現在のファイル名と href が一致したら 'active' クラスをつける
+                if (currentPath === linkPath) {
+                    link.classList.add('active');
+                }
+            });
+        });
+
+        function goToScanFromRegister() {
+            // 現在のカート状態（中身、合計金額、税計算すべて）をそのまま保持して移動
+            const orderData = JSON.parse(sessionStorage.getItem('currentOrder') || '{"items":[]}');
+            sessionStorage.setItem('currentOrder', JSON.stringify(orderData));
+            location.href = 'scan.html?mode=ret&from=ret';
+        }
+
+        // スキャン画面から「戻る」で帰ってきた際や、タブがアクティブになった時に最新のカートを反映する
+        window.addEventListener('pageshow', (event) => {
+            // ページがキャッシュから読み込まれた（戻るボタンなど）場合でも実行
+            restoreCart();
+        });
+
+        // --- 検索機能のロジック ---
+        const openSearch = document.getElementById('openSearch');
+        const closeSearch = document.getElementById('closeSearch');
+        const searchWrapper = document.getElementById('searchWrapper');
+        const searchInput = document.getElementById('searchInput');
+        const searchResults = document.getElementById('searchResults');
+
+        openSearch.onclick = () => {
+            searchWrapper.classList.add('open');
+            searchInput.focus();
+        };
+
+        closeSearch.onclick = () => {
+            searchWrapper.classList.remove('open');
+            searchResults.classList.add('hidden');
+            searchInput.value = "";
+        };
+
+        searchInput.oninput = (e) => {
+            const val = e.target.value.toLowerCase();
+            if (!val) {
+                searchResults.classList.add('hidden');
+                return;
+            }
+
+            // 全商品から検索（名前またはJAN）
+            const matches = allProducts.filter(p =>
+                (p.name && p.name.toLowerCase().includes(val)) ||
+                (p.jan && p.jan.includes(val))
+            ).slice(0, 10); // 上位10件表示
+
+            if (matches.length > 0) {
+                searchResults.innerHTML = matches.map(p => `
                 <div class="search-result-item" onclick="jumpToProduct('${p.category}', ${p.index})">
                     ${p.name} <small style="color:#666;">(${p.category})</small>
                 </div>
             `).join('');
-            searchResults.classList.remove('hidden');
-        } else {
-            searchResults.classList.add('hidden');
-        }
-    };  
-
-    // 該当商品へジャンプする関数
-    window.jumpToProduct = (catName, index) => {
-        // 1. カテゴリを切り替え
-        switchCategory(catName);
-        
-        // 2. 検索窓を閉じる
-        closeSearch.onclick();
-
-        // 3. 描画を待ってからスクロール
-        setTimeout(() => {
-            const grid = document.getElementById('productGrid');
-            const target = grid.children[index];
-            if (target) {
-                target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                target.style.outline = "4px solid var(--accent)";
-                setTimeout(() => target.style.outline = "none", 1500);
+                searchResults.classList.remove('hidden');
+            } else {
+                searchResults.classList.add('hidden');
             }
-        }, 150);
-    };
-</script>
+        };
+
+        // 該当商品へジャンプする関数
+        window.jumpToProduct = (catName, index) => {
+            // 1. カテゴリを切り替え
+            switchCategory(catName);
+
+            // 2. 検索窓を閉じる
+            closeSearch.onclick();
+
+            // 3. 描画を待ってからスクロール
+            setTimeout(() => {
+                const grid = document.getElementById('productGrid');
+                const target = grid.children[index];
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    target.style.outline = "4px solid var(--accent)";
+                    setTimeout(() => target.style.outline = "none", 1500);
+                }
+            }, 150);
+        };
+    </script>
 </body>
+
 </html>
