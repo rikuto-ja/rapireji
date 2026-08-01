@@ -685,69 +685,43 @@
 
         // 自動割引を計算して適用する関数
         function calculateAutoDiscounts(cartItems) {
-            // グローバル設定がオフの場合は割引適用なし
+            const globalConfig = JSON.parse(localStorage.getItem('rapireji_config') || '{"autoDiscountEnabled": true}');
+            console.log("【デバッグ】グローバル設定:", globalConfig);
             if (!globalConfig.autoDiscountEnabled) return { discountTotal: 0, appliedList: [] };
 
             let totalDiscount = 0;
             let appliedList = [];
-            const currentTime = new Date().toTimeString().slice(0, 5); // "HH:MM" 形式
+            const currentTime = new Date().toTimeString().slice(0, 5);
 
-            autoDiscounts.forEach(rule => {
-                if (!rule.enabled) return;
+            const currentDiscounts = JSON.parse(localStorage.getItem('rapireji_auto_discounts') || '[]');
+            console.log("【デバッグ】読み込んだ全割引ルール:", currentDiscounts);
 
-                // 対象商品のカート内での数量や合致状況をチェック
-                // ※cartItemsの構造に合わせて調整してください (例: { id, price, quantity })
+            currentDiscounts.forEach(rule => {
+                console.log(`【デバッグ】ルール名: [${rule.customName || rule.name}], enabledの値:`, rule.enabled, "型:", typeof rule.enabled);
+
+                // ここであえて "!rule.enabled" の動きを確認
+                if (rule.enabled === false) {
+                    console.log(`→ スイッチがオフのためスキップします`);
+                    return;
+                }
+
                 let matchedItems = cartItems.filter(item => rule.targetIds.includes(item.id));
                 let totalMatchedQty = matchedItems.reduce((sum, item) => sum + item.quantity, 0);
 
                 let ruleDiscount = 0;
 
-                if (rule.type === 'bundle') {
-                    // バンドル販売（特定の商品n個で◯円/％割引）
-                    const requiredQty = Number(rule.qty);
-                    if (totalMatchedQty >= requiredQty) {
-                        const sets = Math.floor(totalMatchedQty / requiredQty);
-                        if (rule.unit === 'yen') {
-                            ruleDiscount = Number(rule.val) * (rule.apply === 'total' ? sets : sets * requiredQty);
-                        } else {
-                            // %割引の場合の計算
-                            const targetSubtotal = matchedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-                            ruleDiscount = Math.floor(targetSubtotal * (Number(rule.val) / 100));
-                        }
-                    }
-                } else if (rule.type === 'step') {
-                    // 数量スライド（n個以上で値引き）
-                    const requiredQty = Number(rule.qty);
-                    if (totalMatchedQty >= requiredQty) {
-                        if (rule.unit === 'yen') {
-                            ruleDiscount = rule.apply === 'total' ? Number(rule.val) : Number(rule.val) * totalMatchedQty;
-                        } else {
-                            const targetSubtotal = matchedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-                            ruleDiscount = Math.floor(targetSubtotal * (Number(rule.val) / 100));
-                        }
-                    }
-                } else if (rule.type === 'time') {
-                    // 時間帯割引（◯時〜◯時は割引）
-                    if (currentTime >= rule.start && currentTime <= rule.end && matchedItems.length > 0) {
-                        const targetSubtotal = matchedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-                        if (rule.unit === 'yen') {
-                            ruleDiscount = rule.apply === 'total' ? Number(rule.val) : Number(rule.val) * totalMatchedQty;
-                        } else {
-                            ruleDiscount = Math.floor(targetSubtotal * (Number(rule.val) / 100));
-                        }
-                    }
-                } else if (rule.type === 'combo') {
-                    // コンボ割引（指定の商品セットがすべて揃った場合）
+                // --- (中略: 各種割引計算ロジック) ---
+                // ※ ここでどの種類の割引として判定されているかもログに出すと確実です
+                if (rule.type === 'combo') {
                     const allTargetIdsPresent = rule.targetIds.every(id => cartItems.some(item => item.id === id && item.quantity > 0));
+                    console.log(`【デバッグ:コンボ判定】 全商品揃っているか: ${allTargetIdsPresent}`);
                     if (allTargetIdsPresent) {
-                        if (rule.unit === 'yen') {
-                            ruleDiscount = Number(rule.val);
-                        } else {
-                            const targetSubtotal = matchedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-                            ruleDiscount = Math.floor(targetSubtotal * (Number(rule.val) / 100));
-                        }
+                        ruleDiscount = Number(rule.val); // 簡易的に
                     }
                 }
+                // ---------------------------------
+
+                console.log(`【デバッグ】計算された割引額 (ruleDiscount):`, ruleDiscount);
 
                 if (ruleDiscount > 0) {
                     totalDiscount += ruleDiscount;
@@ -758,6 +732,7 @@
                 }
             });
 
+            console.log("【デバッグ】最終的な合計割引額:", totalDiscount);
             return { discountTotal: totalDiscount, appliedList };
         }
 
@@ -890,22 +865,61 @@
 
             if (globalConfig.autoDiscountEnabled && autoDiscounts.length > 0 && order.items) {
                 autoDiscounts.forEach(rule => {
+                    // 個別スイッチがオフのものはスキップ
+                    if (rule.enabled === false) return;
+
                     let targetQty = 0;
                     let targetSubtotal = 0;
 
-                    order.items.forEach(item => {
-                        const isTarget = rule.targetIds && rule.targetIds.some(id => String(id) === String(item.id));
-                        if (isTarget) {
-                            targetQty += Number(item.qty || 0);
-                            targetSubtotal += Number(item.price || 0) * Number(item.qty || 0);
+                    // ★コンボ割引の判定：対象商品がすべてカートに含まれているかチェック
+                    let isComboValid = true;
+                    if (rule.type === 'combo') {
+                        if (!rule.targetIds || rule.targetIds.length === 0) {
+                            isComboValid = false;
+                        } else {
+                            // targetIdsに含まれるすべての商品が、order.itemsに存在するか（かつ数量が1以上か）
+                            isComboValid = rule.targetIds.every(targetId => {
+                                return order.items.some(item => String(item.id) === String(targetId) && Number(item.qty || 0) > 0);
+                            });
                         }
-                    });
 
+                        // コンボが成立している場合、対象商品の合計金額などを計算用に集計しておく
+                        if (isComboValid) {
+                            order.items.forEach(item => {
+                                const isTarget = rule.targetIds.some(id => String(id) === String(item.id));
+                                if (isTarget) {
+                                    targetSubtotal += Number(item.price || 0) * Number(item.qty || 0);
+                                }
+                            });
+                        }
+                    } else {
+                        // --- 従来の通常・ステップ・パーセント割引の集計 ---
+                        order.items.forEach(item => {
+                            const isTarget = rule.targetIds && rule.targetIds.some(id => String(id) === String(item.id));
+                            if (isTarget) {
+                                targetQty += Number(item.qty || 0);
+                                targetSubtotal += Number(item.price || 0) * Number(item.qty || 0);
+                            }
+                        });
+                    }
+
+                    // 割引額の計算
+                    let discountAmount = 0;
+                    const ruleVal = Number(rule.val || 0);
                     const requiredQty = Number(rule.qty || 1);
-                    if (targetQty >= requiredQty) {
-                        let discountAmount = 0;
-                        const ruleVal = Number(rule.val || 0);
 
+                    // ルールタイプに応じた適用条件の判定
+                    if (rule.type === 'combo') {
+                        // コンボ割引が有効（すべての商品が揃っている）場合のみ計算
+                        if (isComboValid) {
+                            if (rule.unit === 'percent') {
+                                discountAmount = Math.floor(targetSubtotal * (ruleVal / 100));
+                            } else {
+                                discountAmount = ruleVal; // 固定額引き
+                            }
+                        }
+                    } else if (targetQty >= requiredQty) {
+                        // --- 従来の step や他の割引計算 ---
                         if (rule.type === 'step') {
                             if (rule.apply === 'each') {
                                 discountAmount = targetQty * ruleVal;
@@ -917,12 +931,11 @@
                         } else {
                             discountAmount = ruleVal;
                         }
+                    }
 
-                        if (discountAmount > 0) {
-                            totalAutoDiscount += discountAmount;
-                            // ★修正: customName があればそちらを優先し、なければ rule.name を使う
-                            autoDiscountNames.push(rule.customName || rule.name);
-                        }
+                    if (discountAmount > 0) {
+                        totalAutoDiscount += discountAmount;
+                        autoDiscountNames.push(rule.customName || rule.name);
                     }
                 });
             }
@@ -1203,10 +1216,10 @@
             // 3. 割引処理
             if (keypadMode === 'discount') {
                 playSnd('snd-beep1');
-                
+
                 let currentOrderData = JSON.parse(sessionStorage.getItem('currentOrder') || '{}');
                 let totalExcl = new BigNumber(0);
-                
+
                 if (currentOrderData.finalCalculated && currentOrderData.finalCalculated.details) {
                     Object.values(currentOrderData.finalCalculated.details).forEach(detail => {
                         totalExcl = totalExcl.plus(detail.excl || 0);
@@ -1245,10 +1258,10 @@
                 discountVal = calculatedDiscount.toNumber();
                 savePaymentState();
                 updateDisplay();
-                
+
                 // ★修正: order ではなく currentOrderData から安全に total を取得
                 pendingAmount = currentOrderData.finalCalculated ? currentOrderData.finalCalculated.total : 0;
-                
+
                 if (pendingAmount <= 0) {
                     if (!window.isFinalizing) {
                         window.isFinalizing = true;
@@ -1256,7 +1269,7 @@
                         finalizeTransaction();
                     }
                 }
-                
+
                 // 必ずモーダルが閉じるように最後に配置
                 closeModal('keypadModal');
             }
@@ -1300,11 +1313,11 @@
             // ★修正: セッションストレージから最新の完全なデータを再取得（appliedAutoDiscountsも含める）
             let storedOrder = JSON.parse(sessionStorage.getItem('currentOrder') || '{}');
             let currentOrderData = (typeof order !== 'undefined' && order && order.appliedAutoDiscounts) ? order : storedOrder;
-            
+
             // 万が一、グローバルの order に appliedAutoDiscounts が無くて storedOrder にある場合のフォールバック
             if (!currentOrderData.appliedAutoDiscounts && storedOrder.appliedAutoDiscounts) {
                 currentOrderData.appliedAutoDiscounts = storedOrder.appliedAutoDiscounts;
-            }else if (!currentOrderData.finalCalculated.details) {
+            } else if (!currentOrderData.finalCalculated.details) {
                 currentOrderData.finalCalculated.details = {};
             }
             if (!currentOrderData.items) {
