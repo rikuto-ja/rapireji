@@ -447,6 +447,11 @@
                 <div class="filter-group"><label>開始日時</label><input type="datetime-local" id="filter-start"></div>
                 <div class="filter-group"><label>終了日時</label><input type="datetime-local" id="filter-end"></div>
             </div>
+            <div style="margin-top: 10px;">
+                <label>会員番号で絞り込み</label>
+                <input type="text" id="historyCardIdSearch" placeholder="会員番号を入力..." 
+                    style="padding: 5px; width: 200px;">
+            </div>
             <div class="btn-row">
                 <button id="btn-search">絞り込み表示</button>
                 <button class="btn-outline" id="btn-csv-export">取引明細CSV</button>
@@ -507,6 +512,9 @@
 
             const startVal = document.getElementById('filter-start').value;
             const endVal = document.getElementById('filter-end').value;
+            
+            // ★追加: 会員番号の入力値を取得
+            const searchCardId = document.getElementById('historyCardIdSearch').value.trim();
 
             let displayData = [...historyData].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
@@ -519,7 +527,17 @@
                 displayData = displayData.filter(h => new Date(h.createdAt).getTime() <= end);
             }
 
-            filteredData = displayData; // ★ここを追加：絞り込み結果を保持
+            // --- 会員番号（カードID）による絞り込み ---
+            if (searchCardId !== "") {
+                displayData = displayData.filter(h => {
+                    // ★修正: memberInfo 内の cardId を参照するように変更
+                    const hCardId = String((h.memberInfo && h.memberInfo.cardId) || h.cardId || h.memberId || "");
+                    return hCardId.includes(searchCardId);
+                });
+            }
+            // ----------------------------------------------------
+
+            filteredData = displayData; // 絞り込み結果を保持
             renderHistory(displayData);
         }
 
