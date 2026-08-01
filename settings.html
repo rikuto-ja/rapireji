@@ -641,7 +641,7 @@
                 <label class="data-option"><input type="checkbox" value="members" checked> QRカード情報</label>
                 <label class="data-option"><input type="checkbox" value="profile" checked> 店舗情報</label>
                 <label class="data-option"><input type="checkbox" value="payments" checked> 決済手段</label>
-                <label class="data-option"><input type="checkbox" value="discounts" checked> 割引情報</label>
+                <label class="data-option"><input type="checkbox" value="discounts" checked> 割引・自動割引情報</label>
                 <label class="data-option"><input type="checkbox" value="points" checked> ポイント付与率</label>
                 <label class="data-option"><input type="checkbox" value="settings" checked> 通知音・プレビュー設定</label>
                 <label class="data-option"><input type="checkbox" value="selfcheckout" checked> セルフレジ設定</label>
@@ -714,7 +714,7 @@
         const STORAGE_KEYS = {
             profile: ['rapireji_profile'],
             payments: ['rapireji_payments'],
-            discounts: ['rapireji_discounts'],
+            discounts: ['rapireji_discounts', 'rapireji_auto_discount'],
             pointRate: ['rapireji_point_rate'],
             sounds: ['rapireji_sounds'],
             products: ['rapireji_products', 'rapireji_categories'],
