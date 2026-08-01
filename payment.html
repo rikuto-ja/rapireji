@@ -488,7 +488,9 @@
             PAYMENTS: 'rapireji_payments',
             DISCOUNTS: 'rapireji_discounts',
             PRODUCTS: 'rapireji_products',
-            STOCK_CONFIG: 'rapireji_stock_config'
+            STOCK_CONFIG: 'rapireji_stock_config',
+            AUTO_DISCOUNTS: 'rapireji_auto_discounts',
+            CONFIG: 'rapireji_config'
         };
 
         const savedProfile = JSON.parse(localStorage.getItem(STORAGE_KEYS.PROFILE)) || {};
@@ -508,6 +510,8 @@
         let pendingAmount = 0;
         let paymentDetails = JSON.parse(sessionStorage.getItem('rapireji_payment_details')) || [];
         let discountVal = Number(sessionStorage.getItem('rapireji_discount_val')) || 0;
+        let autoDiscounts = JSON.parse(localStorage.getItem(STORAGE_KEYS.AUTO_DISCOUNTS) || '[]');
+        let globalConfig = JSON.parse(localStorage.getItem(STORAGE_KEYS.CONFIG) || '{"autoDiscountEnabled": true}');
         window.currentDiscountName = sessionStorage.getItem('rapireji_discount_name') || "";
 
         window.discountCounts = {};
@@ -640,13 +644,15 @@
 
             updateDisplay();
             const paidAmount = paymentDetails.reduce((sum, p) => sum + p.amount, 0);
-            pendingAmount = order.finalCalculated.total - paidAmount;
+            // order.finalCalculated が確実に存在するように安全に参照する
+            const finalTotal = (order.finalCalculated && order.finalCalculated.total) ? order.finalCalculated.total : 0;
+            pendingAmount = finalTotal - paidAmount;
             // 残り支払額（pendingAmount）が算出された直後あたりに入れる
-            if (pendingAmount <= 0) {
-                // すでに決済処理が走り始めていないか重複を防ぐガードを入れるとなお安全です
+            // 残額が0以下、かつ、お客さまから何らかの入金（paidAmount > 0）がある場合のみ自動決済する
+            if (pendingAmount <= 0 && paidAmount > 0) {
                 if (!window.isFinalizing) {
                     window.isFinalizing = true;
-                    console.log('[DEBUG] 支払残額が0円になったため、決済処理を自動実行します');
+                    console.log('[DEBUG] 支払残額が0円になり、入金も確認できたため、決済処理を自動実行します');
 
                     // 完了処理を呼び出す
                     finalizeTransaction();
@@ -676,6 +682,84 @@
                 }
             }
         });
+
+        // 自動割引を計算して適用する関数
+        function calculateAutoDiscounts(cartItems) {
+            // グローバル設定がオフの場合は割引適用なし
+            if (!globalConfig.autoDiscountEnabled) return { discountTotal: 0, appliedList: [] };
+
+            let totalDiscount = 0;
+            let appliedList = [];
+            const currentTime = new Date().toTimeString().slice(0, 5); // "HH:MM" 形式
+
+            autoDiscounts.forEach(rule => {
+                if (!rule.enabled) return;
+
+                // 対象商品のカート内での数量や合致状況をチェック
+                // ※cartItemsの構造に合わせて調整してください (例: { id, price, quantity })
+                let matchedItems = cartItems.filter(item => rule.targetIds.includes(item.id));
+                let totalMatchedQty = matchedItems.reduce((sum, item) => sum + item.quantity, 0);
+
+                let ruleDiscount = 0;
+
+                if (rule.type === 'bundle') {
+                    // バンドル販売（特定の商品n個で◯円/％割引）
+                    const requiredQty = Number(rule.qty);
+                    if (totalMatchedQty >= requiredQty) {
+                        const sets = Math.floor(totalMatchedQty / requiredQty);
+                        if (rule.unit === 'yen') {
+                            ruleDiscount = Number(rule.val) * (rule.apply === 'total' ? sets : sets * requiredQty);
+                        } else {
+                            // %割引の場合の計算
+                            const targetSubtotal = matchedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                            ruleDiscount = Math.floor(targetSubtotal * (Number(rule.val) / 100));
+                        }
+                    }
+                } else if (rule.type === 'step') {
+                    // 数量スライド（n個以上で値引き）
+                    const requiredQty = Number(rule.qty);
+                    if (totalMatchedQty >= requiredQty) {
+                        if (rule.unit === 'yen') {
+                            ruleDiscount = rule.apply === 'total' ? Number(rule.val) : Number(rule.val) * totalMatchedQty;
+                        } else {
+                            const targetSubtotal = matchedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                            ruleDiscount = Math.floor(targetSubtotal * (Number(rule.val) / 100));
+                        }
+                    }
+                } else if (rule.type === 'time') {
+                    // 時間帯割引（◯時〜◯時は割引）
+                    if (currentTime >= rule.start && currentTime <= rule.end && matchedItems.length > 0) {
+                        const targetSubtotal = matchedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                        if (rule.unit === 'yen') {
+                            ruleDiscount = rule.apply === 'total' ? Number(rule.val) : Number(rule.val) * totalMatchedQty;
+                        } else {
+                            ruleDiscount = Math.floor(targetSubtotal * (Number(rule.val) / 100));
+                        }
+                    }
+                } else if (rule.type === 'combo') {
+                    // コンボ割引（指定の商品セットがすべて揃った場合）
+                    const allTargetIdsPresent = rule.targetIds.every(id => cartItems.some(item => item.id === id && item.quantity > 0));
+                    if (allTargetIdsPresent) {
+                        if (rule.unit === 'yen') {
+                            ruleDiscount = Number(rule.val);
+                        } else {
+                            const targetSubtotal = matchedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                            ruleDiscount = Math.floor(targetSubtotal * (Number(rule.val) / 100));
+                        }
+                    }
+                }
+
+                if (ruleDiscount > 0) {
+                    totalDiscount += ruleDiscount;
+                    appliedList.push({
+                        name: rule.customName || rule.name,
+                        discount: ruleDiscount
+                    });
+                }
+            });
+
+            return { discountTotal: totalDiscount, appliedList };
+        }
 
         function initSettings() {
             const paymentGrid = document.getElementById('paymentGrid');
@@ -792,8 +876,66 @@
         }
 
         function updateDisplay() {
-            // 割引額をBigNumber化
-            let remainingDiscount = new BigNumber(discountVal || 0);
+            // --- 0. 注文データ（カートの中身など）を sessionStorage から取得 ---
+            let order = JSON.parse(sessionStorage.getItem('currentOrder') || '{}');
+            console.log("[DEBUG 調査] sessionStorage から読み込んだ order データ:", order);
+            console.log("[DEBUG 調査] 外部から渡ってきた discountVal の値:", typeof discountVal !== 'undefined' ? discountVal : "変数自体が存在しません");
+
+            // --- 1. 自動割引の読み込みと算出 ---
+            const autoDiscounts = JSON.parse(localStorage.getItem('rapireji_auto_discounts') || '[]');
+            const globalConfig = JSON.parse(localStorage.getItem('rapireji_config') || '{"autoDiscountEnabled": true}');
+
+            let totalAutoDiscount = 0;
+            let autoDiscountNames = [];
+
+            if (globalConfig.autoDiscountEnabled && autoDiscounts.length > 0 && order.items) {
+                autoDiscounts.forEach(rule => {
+                    let targetQty = 0;
+                    let targetSubtotal = 0;
+
+                    order.items.forEach(item => {
+                        const isTarget = rule.targetIds && rule.targetIds.some(id => String(id) === String(item.id));
+                        if (isTarget) {
+                            targetQty += Number(item.qty || 0);
+                            targetSubtotal += Number(item.price || 0) * Number(item.qty || 0);
+                        }
+                    });
+
+                    const requiredQty = Number(rule.qty || 1);
+                    if (targetQty >= requiredQty) {
+                        let discountAmount = 0;
+                        const ruleVal = Number(rule.val || 0);
+
+                        if (rule.type === 'step') {
+                            if (rule.apply === 'each') {
+                                discountAmount = targetQty * ruleVal;
+                            } else {
+                                discountAmount = ruleVal;
+                            }
+                        } else if (rule.type === 'percent') {
+                            discountAmount = Math.floor(targetSubtotal * (ruleVal / 100));
+                        } else {
+                            discountAmount = ruleVal;
+                        }
+
+                        if (discountAmount > 0) {
+                            totalAutoDiscount += discountAmount;
+                            // ★修正: customName があればそちらを優先し、なければ rule.name を使う
+                            autoDiscountNames.push(rule.customName || rule.name);
+                        }
+                    }
+                });
+            }
+            console.log("[DEBUG] 自動割引計算結果:", { totalAutoDiscount, autoDiscountNames });
+
+            order.appliedAutoDiscounts = {
+                total: totalAutoDiscount,
+                names: autoDiscountNames
+            };
+
+            // --- 2. 割引の適用順序の変更（自動割引後の金額に対して手動割引を適用） ---
+            let baseDiscountVal = Number(discountVal || 0);
+
             let workingTaxDetails = JSON.parse(JSON.stringify(order.taxDetails || {}));
             let rates = Object.keys(workingTaxDetails).map(Number).sort((a, b) => b - a);
 
@@ -803,25 +945,54 @@
             let afterDiscountExclTotal = new BigNumber(0);
             let subtotalExcl = new BigNumber(0);
 
+            let remainingAutoDiscount = new BigNumber(totalAutoDiscount);
+
             rates.forEach(rate => {
                 const originalExcl = new BigNumber(workingTaxDetails[rate]);
                 subtotalExcl = subtotalExcl.plus(originalExcl);
 
-                let appliedDiscountForThisRate = new BigNumber(0);
-                if (remainingDiscount.gt(0)) {
-                    if (remainingDiscount.gte(originalExcl)) {
-                        appliedDiscountForThisRate = originalExcl;
-                        remainingDiscount = remainingDiscount.minus(originalExcl);
+                let appliedAutoForThisRate = new BigNumber(0);
+                if (remainingAutoDiscount.gt(0)) {
+                    if (remainingAutoDiscount.gte(originalExcl)) {
+                        appliedAutoForThisRate = originalExcl;
+                        remainingAutoDiscount = remainingAutoDiscount.minus(originalExcl);
                     } else {
-                        appliedDiscountForThisRate = remainingDiscount;
-                        remainingDiscount = new BigNumber(0);
+                        appliedAutoForThisRate = remainingAutoDiscount;
+                        remainingAutoDiscount = new BigNumber(0);
                     }
                 }
 
-                const finalExcl = originalExcl.minus(appliedDiscountForThisRate);
+                const afterAutoExcl = originalExcl.minus(appliedAutoForThisRate);
+
+                workingTaxDetails[rate] = {
+                    originalExcl: originalExcl.toNumber(),
+                    autoDiscountApplied: appliedAutoForThisRate.toNumber(),
+                    afterAutoExcl: afterAutoExcl.toNumber()
+                };
+            });
+
+            let remainingManualDiscount = new BigNumber(baseDiscountVal);
+
+            rates.forEach(rate => {
+                const data = workingTaxDetails[rate];
+                const currentExcl = new BigNumber(data.afterAutoExcl);
+
+                let appliedManualForThisRate = new BigNumber(0);
+                if (remainingManualDiscount.gt(0)) {
+                    if (remainingManualDiscount.gte(currentExcl)) {
+                        appliedManualForThisRate = currentExcl;
+                        remainingManualDiscount = remainingManualDiscount.minus(currentExcl);
+                    } else {
+                        appliedManualForThisRate = remainingManualDiscount;
+                        remainingManualDiscount = new BigNumber(0);
+                    }
+                }
+
+                const finalExcl = currentExcl.minus(appliedManualForThisRate);
                 afterDiscountExclTotal = afterDiscountExclTotal.plus(finalExcl);
 
-                // 消費税計算: 税抜 * (税率 / 100) -> 小数点以下切り捨て
+                const totalAppliedDiscountForThisRate = new BigNumber(data.autoDiscountApplied).plus(appliedManualForThisRate);
+
                 const finalTax = finalExcl.times(rate).dividedBy(100).integerValue(BigNumber.ROUND_FLOOR);
                 const finalIncl = finalExcl.plus(finalTax);
                 totalAfterDiscount = totalAfterDiscount.plus(finalIncl);
@@ -829,32 +1000,39 @@
                 finalTaxDetails[rate] = {
                     excl: finalExcl.toNumber(),
                     tax: finalTax.toNumber(),
-                    originalExcl: originalExcl.toNumber(),
-                    discountApplied: appliedDiscountForThisRate.toNumber()
+                    originalExcl: data.originalExcl,
+                    discountApplied: totalAppliedDiscountForThisRate.toNumber(),
+                    autoDiscountApplied: data.autoDiscountApplied,
+                    manualDiscountApplied: appliedManualForThisRate.toNumber()
                 };
 
-                if (originalExcl > 0) {
+                if (data.originalExcl > 0) {
                     taxHtml += `<div class="tax-line" style="margin-bottom:8px; border-bottom:1px solid #eee; padding-bottom:4px;">
                     <div style="display:flex; justify-content:space-between; width:100%;">
-                        <span>${rate}%対象 (税抜 ¥${originalExcl.toLocaleString()})</span>
-                        <span>内消費税 ¥${Math.floor(originalExcl * (rate / 100)).toLocaleString()}</span>
+                        <span>${rate}%対象 (税抜 ¥${data.originalExcl.toLocaleString()})</span>
+                        <span>内消費税 ¥${Math.floor(data.originalExcl * (rate / 100)).toLocaleString()}</span>
                     </div>`;
-                    if (appliedDiscountForThisRate > 0) {
+                    if (totalAppliedDiscountForThisRate.gt(0)) {
                         taxHtml += `<div style="color:var(--danger); font-size:0.75rem; text-align:right;">
-                        割引:-¥${appliedDiscountForThisRate.toLocaleString()}
-                    </div>`;
+                        割引:-¥${totalAppliedDiscountForThisRate.toLocaleString()}`;
+                        if (autoDiscountNames.length > 0) {
+                            taxHtml += ` (自動: ${autoDiscountNames.join(', ')})`;
+                        }
+                        taxHtml += `</div>`;
                     }
                     taxHtml += `</div>`;
                 }
             });
 
+            let combinedDiscountVal = totalAutoDiscount + baseDiscountVal;
+            console.log("[DEBUG] 割引内訳（自動+手動）:", { totalAutoDiscount, baseDiscountVal, combinedDiscountVal });
+
             document.getElementById('subtotal').innerText = `¥${subtotalExcl.toNumber().toLocaleString()}`;
-            document.getElementById('discountAmount').innerText = `-¥${new BigNumber(discountVal).toNumber().toLocaleString()}`;
+            document.getElementById('discountAmount').innerText = `-¥${new BigNumber(combinedDiscountVal).toNumber().toLocaleString()}`;
             document.getElementById('finalTotal').innerText = `¥${totalAfterDiscount.toNumber().toLocaleString()}`;
 
-            // 割引後小計（税抜）の表示更新
             const afterDiscountLine = document.getElementById('afterDiscountExclLine');
-            if (discountVal > 0) {
+            if (combinedDiscountVal > 0) {
                 document.getElementById('afterDiscountExcl').innerText = `¥${afterDiscountExclTotal.toNumber().toLocaleString()}`;
                 afterDiscountLine.style.display = 'flex';
             } else {
@@ -865,23 +1043,36 @@
             taxArea.innerHTML = taxHtml;
             taxHtml !== "" ? taxArea.classList.remove('hidden') : taxArea.classList.add('hidden');
 
-            order.finalCalculated = { total: totalAfterDiscount.toNumber(), details: finalTaxDetails };
-            const paidAmount = paymentDetails.reduce((sum, p) => sum + p.amount, 0);
-            pendingAmount = totalAfterDiscount.minus(paidAmount).toNumber();
-            // 残り支払額（pendingAmount）が算出された直後あたりに入れる
-            if (pendingAmount <= 0) {
-                // すでに決済処理が走り始めていないか重複を防ぐガードを入れるとなお安全です
+            order.finalCalculated = {
+                total: totalAfterDiscount.toNumber(),
+                details: finalTaxDetails
+            };
+
+            sessionStorage.setItem('currentOrder', JSON.stringify(order));
+            console.log("[DEBUG 調査] sessionStorage に保存し直した order データ:", order);
+
+            // --- 3. 決済自動判定（古い重複ロジックはすべて削除し、ここだけに一本化） ---
+            const paidAmount = (typeof paymentDetails !== 'undefined' && Array.isArray(paymentDetails))
+                ? paymentDetails.reduce((sum, p) => sum + p.amount, 0)
+                : 0;
+
+            const finalTotal = (order.finalCalculated && order.finalCalculated.total) ? order.finalCalculated.total : 0;
+            pendingAmount = finalTotal - paidAmount;
+
+            console.log("[DEBUG 調査] 決済自動判定:", { finalTotal, paidAmount, pendingAmount });
+
+            // 残額が0以下、かつ「実際に何らかの支払い（paidAmount > 0）」が行われている場合のみ自動決済
+            if (pendingAmount <= 0 && paidAmount > 0) {
                 if (!window.isFinalizing) {
                     window.isFinalizing = true;
-                    console.log('[DEBUG] 支払残額が0円になったため、決済処理を自動実行します');
-
-                    // 完了処理を呼び出す
+                    console.log('[DEBUG] 支払残額が0円になり、入金も確認できたため、決済処理を自動実行します');
                     finalizeTransaction();
                 }
             }
 
-            // 表示を更新
-            updatePendingDisplay();
+            if (typeof updatePendingDisplay === 'function') {
+                updatePendingDisplay();
+            }
         }
 
         function updatePendingDisplay() {
@@ -1009,14 +1200,24 @@
                 return;
             }
 
-            // 3. 割引処理（既存のロジック）
+            // 3. 割引処理
             if (keypadMode === 'discount') {
                 playSnd('snd-beep1');
-                const totalExcl = new BigNumber(Object.values(order.taxDetails || {}).reduce((a, b) => a + b, 0));
+                
+                let currentOrderData = JSON.parse(sessionStorage.getItem('currentOrder') || '{}');
+                let totalExcl = new BigNumber(0);
+                
+                if (currentOrderData.finalCalculated && currentOrderData.finalCalculated.details) {
+                    Object.values(currentOrderData.finalCalculated.details).forEach(detail => {
+                        totalExcl = totalExcl.plus(detail.excl || 0);
+                    });
+                } else {
+                    totalExcl = new BigNumber(Object.values(currentOrderData.taxDetails || {}).reduce((a, b) => a + b, 0));
+                }
+
                 let calculatedDiscount = new BigNumber(0);
                 const inputVal = new BigNumber(val);
                 if (discountUnit === "%") {
-                    // パーセント計算: 税抜合計 * (入力値 / 100) -> 端数切り捨て
                     calculatedDiscount = totalExcl.times(inputVal).dividedBy(100).integerValue(BigNumber.ROUND_FLOOR);
                 } else {
                     calculatedDiscount = inputVal;
@@ -1037,26 +1238,26 @@
                 window.currentDiscountName = finalName;
 
                 if (calculatedDiscount.gt(totalExcl)) {
-                    alert(`割引額が税抜小計（¥${totalExcl.toNumber().toLocaleString()}）を超えています。`);
+                    alert(`割引額が自動割引適用後の税抜小計（¥${totalExcl.toNumber().toLocaleString()}）を超えています。`);
                     return;
                 }
 
                 discountVal = calculatedDiscount.toNumber();
                 savePaymentState();
                 updateDisplay();
-                // 割引適用後、残りの支払い必要額を更新
-                pendingAmount = order.finalCalculated.total;
-                // 残り支払額（pendingAmount）が算出された直後あたりに入れる
+                
+                // ★修正: order ではなく currentOrderData から安全に total を取得
+                pendingAmount = currentOrderData.finalCalculated ? currentOrderData.finalCalculated.total : 0;
+                
                 if (pendingAmount <= 0) {
-                    // すでに決済処理が走り始めていないか重複を防ぐガードを入れるとなお安全です
                     if (!window.isFinalizing) {
                         window.isFinalizing = true;
                         console.log('[DEBUG] 支払残額が0円になったため、決済処理を自動実行します');
-
-                        // 完了処理を呼び出す
                         finalizeTransaction();
                     }
                 }
+                
+                // 必ずモーダルが閉じるように最後に配置
                 closeModal('keypadModal');
             }
         }
@@ -1091,11 +1292,29 @@
 
         // 完了処理（履歴保存の項目を落とさないように統合）
         function finalizeTransaction() {
+            console.trace("[DEBUG 追跡] finalizeTransaction が呼び出されました！");
             playSnd('snd-beep2');
             const now = new Date();
             lastHistoryId = Date.now();
 
-            const itemsWithDiscount = order.items.map(item => {
+            // ★修正: セッションストレージから最新の完全なデータを再取得（appliedAutoDiscountsも含める）
+            let storedOrder = JSON.parse(sessionStorage.getItem('currentOrder') || '{}');
+            let currentOrderData = (typeof order !== 'undefined' && order && order.appliedAutoDiscounts) ? order : storedOrder;
+            
+            // 万が一、グローバルの order に appliedAutoDiscounts が無くて storedOrder にある場合のフォールバック
+            if (!currentOrderData.appliedAutoDiscounts && storedOrder.appliedAutoDiscounts) {
+                currentOrderData.appliedAutoDiscounts = storedOrder.appliedAutoDiscounts;
+            }else if (!currentOrderData.finalCalculated.details) {
+                currentOrderData.finalCalculated.details = {};
+            }
+            if (!currentOrderData.items) {
+                currentOrderData.items = [];
+            }
+
+            console.log("[DEBUG レシート調査修正版] currentOrderData:", currentOrderData);
+            console.log("[DEBUG レシート調査修正版] appliedAutoDiscounts:", currentOrderData.appliedAutoDiscounts);
+
+            const itemsWithDiscount = currentOrderData.items.map(item => {
                 const bnPrice = new BigNumber(item.price);
                 const bnQty = new BigNumber(item.qty);
                 const bnDiscount = new BigNumber(item.appliedDiscount ? item.appliedDiscount.amount : 0);
@@ -1115,15 +1334,20 @@
 
             const methodSummary = paymentDetails.map(p => p.method).join('・');
 
+            // finalizeTransaction 関数内など、履歴オブジェクトを作る手前に配置
+            console.log("[DEBUG レシート調査] currentOrderData:", currentOrderData);
+            console.log("[DEBUG レシート調査] appliedAutoDiscounts:", currentOrderData.appliedAutoDiscounts);
+
             const historyEntry = {
                 id: lastHistoryId,
                 items: itemsWithDiscount,
-                subtotal: new BigNumber(order.totalAmount).toNumber(), // 税抜小計
-                taxDetails: order.taxDetails,
-                finalTaxDetails: order.finalCalculated.details,
-                discount: new BigNumber(discountVal).toNumber(),
+                subtotal: new BigNumber(currentOrderData.totalAmount || 0).toNumber(), // 税抜小計
+                taxDetails: currentOrderData.taxDetails || {},
+                finalTaxDetails: currentOrderData.finalCalculated.details,
+                appliedAutoDiscounts: currentOrderData.appliedAutoDiscounts || null,
+                discount: new BigNumber(typeof discountVal !== 'undefined' ? discountVal : 0).toNumber(),
                 discountName: window.currentDiscountName || "",
-                totalAmount: new BigNumber(order.finalCalculated.total).toNumber(),
+                totalAmount: new BigNumber(currentOrderData.finalCalculated.total || 0).toNumber(),
                 paymentMethod: methodSummary,
                 paymentDetails: paymentDetails,
                 cashReceived: paymentDetails.reduce((sum, p) => sum.plus(p.cashReceived || 0), new BigNumber(0)).toNumber(),
@@ -1132,6 +1356,7 @@
                 isVoided: false,
                 receiptIssued: false,
                 billIssued: false,
+                // ★修正箇所：三項演算子の構文ミス（ ? null ）を修正
                 memberInfo: window.lastReceiptData ? {
                     cardId: window.lastReceiptData.cardId,
                     cardName: window.lastReceiptData.cardName,
@@ -1157,13 +1382,12 @@
 
                 // 在庫設定が存在する場合のみ減算
                 if (pIdx !== -1 && products[pIdx].stock !== undefined) {
-                    // 払い戻しは「足す」でしたが、会計完了時は「引く」
                     products[pIdx].stock = Number(products[pIdx].stock) - Number(item.qty);
                     stockChanged = true;
                 }
             });
 
-            // 3. 変更があった場合のみPRODUCTSを保存（STOCK_CONFIGではなく）
+            // 3. 変更があった場合のみPRODUCTSを保存
             if (stockChanged) {
                 localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products));
             }
@@ -1191,7 +1415,6 @@
             sessionStorage.removeItem('currentOrder');
             generateContent('receipt');
             openModal('receiptModal');
-
         }
 
         // --- 追加：状態保存用関数 ---
@@ -1348,10 +1571,20 @@
                 const originalExclTotal = Object.values(details).reduce((a, b) => a.plus(b.originalExcl || 0), new BigNumber(0));
                 t += formatLine("小計(税抜)", `¥${originalExclTotal.toNumber().toLocaleString()}`);
 
+                // --- 【追加】自動割引の名称と金額の印字 ---
+                if (info.appliedAutoDiscounts && info.appliedAutoDiscounts.total > 0) {
+                    const autoNames = (info.appliedAutoDiscounts.names || []).join('、') || "自動割引";
+                    t += formatLine(`割引(${autoNames})`, `-¥${new BigNumber(info.appliedAutoDiscounts.total).toNumber().toLocaleString()}`);
+                }
+                // ------------------------------------------
+
                 const bnTotalDisc = new BigNumber(info.discount || 0);
                 if (bnTotalDisc.gt(0)) {
                     t += formatLine(`割引(${info.discountName || "割引"})`, `-¥${bnTotalDisc.toNumber().toLocaleString()}`);
-                    const afterDiscountExclTotal = Object.values(details).reduce((a, b) => a.plus(b.excl), new BigNumber(0));
+                }
+
+                const afterDiscountExclTotal = Object.values(details).reduce((a, b) => a.plus(b.excl), new BigNumber(0));
+                if ((info.appliedAutoDiscounts && info.appliedAutoDiscounts.total > 0) || bnTotalDisc.gt(0)) {
                     t += formatLine("割引後小計(税抜)", `¥${afterDiscountExclTotal.toNumber().toLocaleString()}`);
                 }
 
