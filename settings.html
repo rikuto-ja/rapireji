@@ -637,11 +637,14 @@
             <div class="data-selector" id="dataSelector">
                 <label class="data-option"><input type="checkbox" value="products" checked> 商品＋カテゴリ</label>
                 <label class="data-option"><input type="checkbox" value="history" checked> 販売履歴</label>
+                <label class="data-option"><input type="checkbox" value="stock" checked> 在庫情報</label>
+                <label class="data-option"><input type="checkbox" value="members" checked> QRカード情報</label>
                 <label class="data-option"><input type="checkbox" value="profile" checked> 店舗情報</label>
                 <label class="data-option"><input type="checkbox" value="payments" checked> 決済手段</label>
                 <label class="data-option"><input type="checkbox" value="discounts" checked> 割引情報</label>
-                <label class="data-option"><input type="checkbox" value="stock" checked> 在庫情報</label>
-                <label class="data-option"><input type="checkbox" value="members" checked> QRカード・会員情報</label>
+                <label class="data-option"><input type="checkbox" value="points" checked> ポイント付与率</label>
+                <label class="data-option"><input type="checkbox" value="settings" checked> 通知音・プレビュー設定</label>
+                <label class="data-option"><input type="checkbox" value="selfcheckout" checked> セルフレジ設定</label>
             </div>
 
             <label>データの書き出し</label>
@@ -701,6 +704,7 @@
                 選択されたデータが削除されます。ご注意ください。</p>
             <button id="resetSalesBtn" class="reset-btn">販売履歴をすべてリセット</button>
             <button id="resetProductsBtn" class="reset-btn">商品・カテゴリ一覧をすべてリセット</button>
+            <button id="resetQRCardsBtn" class="reset-btn">QRカード情報をすべてリセット</button>
             <button id="resetAllDataBtn" class="reset-btn">すべてのデータをリセット</button>
         </div>
 
@@ -718,6 +722,9 @@
             stock: ['rapireji_stock_config'],
             self: ['rapireji_self_config'],
             members: ['rapireji_qrcards'],
+            points: ['rapireji_point_rate'],
+            settings: ['rapireji_sounds', 'rapireji_scanner_config', 'rapireji_preview_config', 'rapireji_qr_button_config'],
+            selfcheckout: ['rapireji_self_config']
         };
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -1067,6 +1074,7 @@
 
         document.getElementById('resetSalesBtn').onclick = () => { if (confirm("販売履歴を削除しますか？")) localStorage.removeItem('rapireji_history'); };
         document.getElementById('resetProductsBtn').onclick = () => { if (confirm("商品・カテゴリを削除しますか？")) { localStorage.removeItem('rapireji_products'); localStorage.removeItem('rapireji_categories'); } };
+        document.getElementById('resetQRCardsBtn').onclick = () => { if (confirm("QRカード情報を削除しますか？")) { localStorage.removeItem('rapireji_qrcards'); } };
         document.getElementById('resetAllDataBtn').onclick = () => { if (confirm("すべて初期化しますか？")) { localStorage.clear(); location.reload(); } };
 
         const menuBtn = document.getElementById('menu-btn');
