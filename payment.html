@@ -903,25 +903,25 @@
                         });
                     }
 
-                    // 割引額の計算
+                    // --- 割引額の計算 ---
                     let discountAmount = 0;
                     const ruleVal = Number(rule.val || 0);
                     const requiredQty = Number(rule.qty || 1);
 
                     // ルールタイプに応じた適用条件の判定
                     if (rule.type === 'combo') {
-                        // コンボ割引が有効（すべての商品が揃っている）場合のみ計算
+                        // （コンボ割引の処理はそのまま）
                         if (isComboValid) {
                             if (rule.unit === 'percent') {
                                 discountAmount = Math.floor(targetSubtotal * (ruleVal / 100));
                             } else {
-                                discountAmount = ruleVal; // 固定額引き
+                                discountAmount = ruleVal;
                             }
                         }
                     } else if (targetQty >= requiredQty) {
-                        // --- 従来の step や他の割引計算 ---
                         if (rule.type === 'step') {
                             if (rule.apply === 'each') {
+                                // ★【修正】「各」設定の場合は、対象商品の合計個数（targetQty）を掛け算する
                                 discountAmount = targetQty * ruleVal;
                             } else {
                                 discountAmount = ruleVal;
@@ -929,7 +929,12 @@
                         } else if (rule.type === 'percent') {
                             discountAmount = Math.floor(targetSubtotal * (ruleVal / 100));
                         } else {
-                            discountAmount = ruleVal;
+                            // ★【追加】通常（固定額）の割引で「各」設定がある場合も考慮する場合
+                            if (rule.apply === 'each') {
+                                discountAmount = targetQty * ruleVal;
+                            } else {
+                                discountAmount = ruleVal;
+                            }
                         }
                     }
 
