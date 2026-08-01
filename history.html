@@ -6,6 +6,7 @@
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>販売履歴 | らぴレジ</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bignumber.js/9.1.2/bignumber.min.js"></script>
     <style>
         :root {
             --black: #000000;
@@ -829,18 +830,27 @@
 
                 t += formatLine("小計(税抜)", `¥${originalExclTotal.toLocaleString()}`);
 
+                // --- 【追加】自動割引の名称と金額の印字（infoではなくdataを使用） ---
+                if (data.appliedAutoDiscounts && data.appliedAutoDiscounts.total > 0) {
+                    const autoNames = (data.appliedAutoDiscounts.names || []).join('、') || "自動割引";
+                    t += formatLine(`割引(${autoNames})`, `-¥${new BigNumber(data.appliedAutoDiscounts.total).toNumber().toLocaleString()}`);
+                }
+                // -----------------------------------------------------------------
+
                 // --- generatePreview 関数内 ---
 
                 if (data.discount > 0) {
                     const dName = data.discountName || "割引";
                     t += formatLine(`割引(${dName})`, `-¥${(data.discount || 0).toLocaleString()}`);
+                }
 
-                    // 3. 割引後小計(税抜)の算出
+                // 3. 割引後小計(税抜)の算出（自動割引または手動割引のいずれかが存在する場合に表示）
+                const hasAnyDiscount = (data.appliedAutoDiscounts && data.appliedAutoDiscounts.total > 0) || (data.discount > 0);
+                if (hasAnyDiscount) {
                     const afterDiscountExclTotal = Object.values(targetDetails).reduce((sum, val) => {
                         return sum + (Number(val.excl) || Number(val.subtotal) || 0);
                     }, 0);
 
-                    // 【修正箇所】finalExcl ではなく afterDiscountExclTotal を使用する
                     t += formatLine("割引後小計(税抜)", `¥${Math.round(afterDiscountExclTotal).toLocaleString()}`);
                 }
 
